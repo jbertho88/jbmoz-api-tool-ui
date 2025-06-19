@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en" class="dark"> <!-- Force dark mode -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Moz API Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: #ffffff;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .input-section {
+            display: none;
+            @apply border-t border-slate-700 mt-6 pt-6;
+        }
+        option[disabled] {
+            font-weight: bold;
+            @apply bg-slate-800;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white">
+
+    <div class="w-full max-w-4xl mx-auto bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-slate-700 my-8">
+        
+        <div class="relative text-center mb-6">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz Logo" class="mx-auto h-12 mb-4">
+            <h1 class="text-3xl font-bold text-sky-400">Advanced Moz API Tool</h1>
+            <p class="text-white mt-2">Add your key and select an API method to get started.</p>
+        </div>
+        
+        <div class="mb-6 bg-slate-900/50 p-4 rounded-lg">
+            <label for="apiKey" class="block text-sm font-medium text-slate-300 mb-2">Moz API Key</label>
+            <div id="apiKeyDisplay" class="hidden items-center justify-between">
+                <span id="apiKeyText" class="text-slate-400 font-mono"></span>
+                <button id="editApiKeyBtn" class="text-sm text-sky-500 hover:text-sky-400 font-semibold">Edit</button>
+            </div>
+            <div id="apiKeyInputArea" class="flex items-center gap-2">
+                <input type="password" id="apiKeyInput" class="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" placeholder="mozscape-1234abcd...">
+                <button id="saveApiKeyBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-4 py-2 text-sm rounded-md transition">Save</button>
+            </div>
+        </div>
+
+        <div>
+            <label for="methodSelector" class="block text-sm font-medium text-slate-300 mb-2">API Method</label>
+            <select id="methodSelector" class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                <option value="" disabled selected>-- Select a Method --</option>
+                <option value="siteMetrics">Fetch Site Metrics</option>
+                <option value="keywordMetrics">Fetch Keyword Metrics</option>
+                <option value="brandAuthority">Fetch Brand Authority</option>
+                <option value="searchIntent">Fetch Search Intent</option>
+                <option value="rankingKeywords">Fetch Ranking Keywords</option>
+                <option value="relatedKeywords">List Related Keywords</option>
+                <option value="keywordCount">Count Ranking Keywords</option>
+            </select>
+        </div>
+
+        <form id="api-form">
+            <div id="inputsContainer" class="mt-4">
+                <div id="siteMetricsInputs" class="input-section space-y-4"></div>
+                <div id="keywordMetricsInputs" class="input-section space-y-4"></div>
+                <div id="brandAuthorityInputs" class="input-section space-y-4"></div>
+                <div id="searchIntentInputs" class="input-section space-y-4"></div>
+                <div id="rankingKeywordsInputs" class="input-section space-y-4"></div>
+                <div id="relatedKeywordsInputs" class="input-section space-y-4"></div>
+                <div id="keywordCountInputs" class="input-section space-y-4"></div>
+            </div>
+            <div class="mt-8 text-center">
+                 <button type="submit" id="submit-btn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-slate-600 disabled:cursor-not-allowed">
+                    Run Request
+                </button>
+            </div>
+        </form>
+
+        <div id="status-container" class="mt-8">
+            <div id="error-message" class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-center"></div>
+            <div id="results-container" class="hidden bg-slate-900/70 p-4 md:p-6 rounded-xl border border-slate-700">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                    <h2 class="text-xl font-bold text-sky-400">API Results</h2>
+                    <div class="flex items-center gap-2">
+                        <button id="copy-json-btn" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300">Copy JSON</button>
+                        <button id="export-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300">Export Results to CSV</button>
+                    </div>
+                </div>
+                <div id="raw-wrapper">
+                    <pre class="whitespace-pre-wrap break-all text-sm bg-black/30 p-4 rounded-lg"><code></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- State ---
+            let currentResultsData = null;
+            let currentOriginalParams = null;
+            let currentMethod = null;
+
+            // --- DOM Elements ---
+            const apiKeyDisplay = document.getElementById('apiKeyDisplay');
+            const apiKeyText = document.getElementById('apiKeyText');
+            const editApiKeyBtn = document.getElementById('editApiKeyBtn');
+            const apiKeyInputArea = document.getElementById('apiKeyInputArea');
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+            
+            const methodSelector = document.getElementById('methodSelector');
+            const allInputSections = document.querySelectorAll('.input-section');
+            const form = document.getElementById('api-form');
+            const submitBtn = document.getElementById('submit-btn');
+            const errorMessage = document.getElementById('error-message');
+            const resultsContainer = document.getElementById('results-container');
+            const rawCode = document.querySelector('#raw-wrapper code');
+            const exportBtn = document.getElementById('export-btn');
+            const copyJsonBtn = document.getElementById('copy-json-btn');
+
+            // --- Populate Input Sections ---
+            const populateInputs = () => {
+                const createLabel = (text) => `<label class="block text-sm font-medium text-slate-300">${text}</label>`;
+                const createSelect = (id, options) => `<select id="${id}" class="w-full bg-slate-700 border-slate-600 rounded-md p-2 mt-1">${options}</select>`;
+                const createTextarea = (id, placeholder) => `<textarea id="${id}" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-md p-2 mt-1" placeholder="${placeholder}"></textarea>`;
+                const createDescription = text => `<p class="text-sm text-slate-400">${text}</p>`;
+
+                const scopeOptions = `<option value="domain" selected>Domain</option><option value="subdomain">Subdomain</option><option value="subfolder">Subfolder</option><option value="url">URL</option>`;
+                const limitedScopeOptions = `<option value="domain" selected>Domain</option><option value="subdomain">Subdomain</option><option value="url">URL</option>`;
+                const localeOptions = `<option value="en-US" selected>en-US</option><option value="en-CA">en-CA</option><option value="en-GB">en-GB</option><option value="en-AU">en-AU</option>`;
+                const keywordMetricOptions = `<option value="all" selected>All Metrics</option><option value="volume">Search Volume</option><option value="difficulty">Difficulty</option><option value="opportunity">Organic CTR</option><option value="priority">Priority</option>`;
+
+                document.getElementById('siteMetricsInputs').innerHTML = createDescription('Get metrics like DA, PA, Spam Score, and link counts for URLs.') + createLabel('Scope') + createSelect('smScopeSelect', scopeOptions) + createLabel('Domains / URLs') + createTextarea('smUrlsInput', 'One per line or comma-separated (must include http/https)');
+                document.getElementById('keywordMetricsInputs').innerHTML = createDescription('Get volume, difficulty, CTR, and priority for keywords.') + createLabel('Metric Type') + createSelect('kmMetricTypeSelect', keywordMetricOptions) + createLabel('Locale') + createSelect('kmLocaleSelect', localeOptions) + createLabel('Keywords') + createTextarea('kmKeywordsInput', 'One per line or comma-separated');
+                document.getElementById('brandAuthorityInputs').innerHTML = createDescription('Get the Brand Authority™ score for a given site.') + createLabel('Domains / URLs') + createTextarea('baUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('searchIntentInputs').innerHTML = createDescription('Retrieve search intent scores for any keyword.') + createLabel('Locale') + createSelect('siLocaleSelect', localeOptions) + createLabel('Keywords') + createTextarea('siKeywordsInput', 'One per line or comma-separated.');
+                document.getElementById('rankingKeywordsInputs').innerHTML = createDescription('List keywords for which a site ranks in the top 50.') + createLabel('Scope') + createSelect('rkScopeSelect', scopeOptions) + createLabel('Locale') + createSelect('rkLocaleSelect', localeOptions) + createLabel('Domains / URLs') + createTextarea('rkUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('relatedKeywordsInputs').innerHTML = createDescription('Get a list of related keyword suggestions.') + createLabel('Locale') + createSelect('rlLocaleSelect', localeOptions) + createLabel('Keywords') + createTextarea('rlKeywordsInput', 'One per line or comma-separated.');
+                document.getElementById('keywordCountInputs').innerHTML = createDescription('Count keywords for which a site ranks in the top 50.') + createLabel('Scope') + createSelect('kcScopeSelect', limitedScopeOptions) + createLabel('Locale') + createSelect('kcLocaleSelect', localeOptions) + createLabel('Domains / URLs') + createTextarea('kcUrlsInput', 'One per line or comma-separated.');
+            };
+            populateInputs();
+
+            // --- API Key Management ---
+            const loadApiKey = () => {
+                const savedKey = localStorage.getItem('mozApiKey');
+                if (savedKey) {
+                    apiKeyText.textContent = `${savedKey.substring(0, 6)}...${savedKey.substring(savedKey.length - 4)}`;
+                    apiKeyInput.value = savedKey;
+                    apiKeyDisplay.classList.remove('hidden');
+                    apiKeyDisplay.classList.add('flex');
+                    apiKeyInputArea.classList.add('hidden');
+                } else {
+                    apiKeyDisplay.classList.add('hidden');
+                    apiKeyInputArea.classList.remove('hidden');
+                }
+            };
+
+            saveApiKeyBtn.addEventListener('click', () => {
+                const key = apiKeyInput.value.trim();
+                if (key) {
+                    localStorage.setItem('mozApiKey', key);
+                    loadApiKey();
+                }
+            });
+
+            editApiKeyBtn.addEventListener('click', () => {
+                apiKeyDisplay.classList.add('hidden');
+                apiKeyInputArea.classList.remove('hidden');
+                apiKeyInput.focus();
+            });
+
+            loadApiKey();
+
+            // --- Event Listeners ---
+            submitBtn.disabled = true;
+
+            methodSelector.addEventListener('change', () => {
+                const selectedMethod = methodSelector.value;
+                allInputSections.forEach(section => section.style.display = 'none');
+                if (selectedMethod) {
+                    const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
+                    if (sectionToShow) sectionToShow.style.display = 'block';
+                    submitBtn.disabled = false;
+                } else {
+                    submitBtn.disabled = true;
+                }
+            });
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                errorMessage.classList.add('hidden');
+                resultsContainer.classList.add('hidden');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Processing...</span>';
+
+                const apiKey = apiKeyInput.value.trim();
+                const selectedMethod = methodSelector.value;
+
+                if (!apiKey || !selectedMethod) {
+                    displayError('Please provide an API Key and select a method.');
+                    resetSubmitButton();
+                    return;
+                }
+
+                let payload;
+                try {
+                    payload = buildPayload(apiKey, selectedMethod);
+                } catch (error) {
+                    displayError(error.message);
+                    resetSubmitButton();
+                    return;
+                }
+                
+                const PROXY_URL = 'https://mozapi-proxy-server.vercel.app/api/getMozData'; 
+                
+                try {
+                    const response = await fetch(PROXY_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || `Request failed with status ${response.status}`);
+                    
+                    currentResultsData = data;
+                    currentOriginalParams = payload.params;
+                    currentMethod = selectedMethod;
+                    
+                    showRawJsonResults(data);
+
+                } catch (error) {
+                    displayError(error.message);
+                } finally {
+                    resetSubmitButton();
+                }
+            });
+
+            copyJsonBtn.addEventListener('click', () => {
+                if (rawCode.textContent) {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = rawCode.textContent;
+                    textArea.style.position = 'fixed'; // Prevent scrolling to bottom of page in MS Edge.
+                    textArea.style.top = '0';
+                    textArea.style.left = '0';
+                    textArea.style.opacity = '0';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        const successful = document.execCommand('copy');
+                        if(successful){
+                            copyJsonBtn.textContent = 'Copied!';
+                            setTimeout(() => { copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
+                        } else {
+                            displayError('Failed to copy JSON.');
+                        }
+                    } catch (err) {
+                        displayError('Failed to copy JSON.');
+                    }
+                    document.body.removeChild(textArea);
+                }
+            });
+
+            exportBtn.addEventListener('click', () => {
+                if (currentResultsData) {
+                    exportDataToCsv(currentResultsData, currentMethod, currentOriginalParams);
+                } else {
+                    displayError("No data available to export.");
+                }
+            });
+            
+            // --- UI Functions ---
+
+            function showRawJsonResults(data) {
+                rawCode.textContent = JSON.stringify(data, null, 2);
+                resultsContainer.classList.remove('hidden');
+            }
+
+            function displayError(message) {
+                errorMessage.textContent = message;
+                errorMessage.classList.remove('hidden');
+            }
+            
+            function resetSubmitButton() {
+                submitBtn.disabled = methodSelector.value === "";
+                submitBtn.innerHTML = 'Run Request';
+            }
+
+            // --- Core Logic Functions ---
+
+            function buildPayload(apiKey, selectedMethod) {
+                let payload = { apiKey, method: selectedMethod, params: {} };
+                const getInputValue = (id) => document.getElementById(id)?.value;
+                const getCleanedList = (id) => getInputValue(id)?.split(/[\n,]/).map(item => item.trim()).filter(Boolean);
+
+                switch (selectedMethod) {
+                    case 'siteMetrics':
+                        payload.params = { scope: getInputValue('smScopeSelect'), targets: getCleanedList('smUrlsInput') }; break;
+                    case 'keywordMetrics':
+                        payload.params = { metricType: getInputValue('kmMetricTypeSelect'), locale: getInputValue('kmLocaleSelect'), keywords: getCleanedList('kmKeywordsInput'), device: "desktop", engine: "google" }; break;
+                    case 'brandAuthority':
+                        payload.params = { targets: getCleanedList('baUrlsInput') }; break;
+                    case 'searchIntent':
+                        payload.params = { locale: getInputValue('siLocaleSelect'), keywords: getCleanedList('siKeywordsInput') }; break;
+                    case 'rankingKeywords':
+                        payload.params = { scope: getInputValue('rkScopeSelect'), locale: getInputValue('rkLocaleSelect'), targets: getCleanedList('rkUrlsInput') }; break;
+                    case 'relatedKeywords':
+                        payload.params = { locale: getInputValue('rlLocaleSelect'), keywords: getCleanedList('rlKeywordsInput') }; break;
+                    case 'keywordCount':
+                        payload.params = { scope: getInputValue('kcScopeSelect'), locale: getInputValue('kcLocaleSelect'), targets: getCleanedList('kcUrlsInput') }; break;
+                    default:
+                        throw new Error('Invalid method selected.');
+                }
+                if ((payload.params.targets?.length === 0) && (payload.params.keywords?.length === 0)) {
+                    throw new Error('Please enter at least one URL or Keyword.');
+                }
+                return payload;
+            }
+
+            function exportDataToCsv(results, method, originalParams) {
+                let rows = [];
+                const na = 'N/A';
+                const snakeToTitleCase = (s) => s.replace(/^_*(.)|_+(.)/g, (s, c, d) => c ? c.toUpperCase() : ' ' + d.toUpperCase());
+
+                results.forEach((res, i) => {
+                    const query = (originalParams.targets || originalParams.keywords)[i] || na;
+                    if (res.status !== 'success') {
+                        rows.push({ Query: query, Status: `Error: ${res.reason || 'Unknown'}` });
+                        return;
+                    }
+
+                    switch (method) {
+                        case 'brandAuthority':
+                            rows.push({
+                                'Site Query': res.data.site_query?.query || na,
+                                'Scope': res.data.site_query?.scope || na,
+                                'Brand Authority Score': res.data.site_metrics?.brand_authority_score ?? na,
+                                'Original Query': res.data.site_query?.original_site_query?.query || query
+                            });
+                            break;
+                        
+                        case 'siteMetrics': {
+                            const metrics = res.data.site_metrics || {};
+                            const orderedMetrics = {
+                                'Page Authority': metrics.page_authority,
+                                'Domain Authority': metrics.domain_authority,
+                                'Spam Score': metrics.spam_score
+                            };
+                            for(const key in metrics){
+                                if(!['page_authority', 'domain_authority', 'spam_score'].includes(key)) {
+                                    orderedMetrics[snakeToTitleCase(key)] = metrics[key];
+                                }
+                            }
+                             rows.push({
+                                'Query': res.data.site_query?.query || query,
+                                'Scope': res.data.site_query?.scope || na,
+                                'Original Query': res.data.site_query?.original_site_query?.query || query,
+                                ...orderedMetrics
+                            });
+                            break;
+                        }
+
+                        case 'keywordMetrics': {
+                            const metricTypeMap = { 'all': 'All Keyword Metrics', 'volume': 'Search Volume', 'difficulty': 'Difficulty', 'opportunity': 'Organic CTR', 'priority': 'Priority' };
+                            rows.push({
+                                'Keyword': res.data.serp_query?.keyword || query,
+                                'API Call': metricTypeMap[originalParams.metricType] || originalParams.metricType,
+                                'Locale': res.data.serp_query?.locale || na,
+                                'Device': res.data.serp_query?.device || na,
+                                'Engine': res.data.serp_query?.engine || na,
+                                'Volume': res.data.keyword_metrics?.volume ?? na,
+                                'Difficulty': res.data.keyword_metrics?.difficulty ?? na,
+                                'Opportunity CTR': res.data.keyword_metrics?.organic_ctr ?? na,
+                                'Priority': res.data.keyword_metrics?.priority ?? na
+                            });
+                            break;
+                        }
+
+                        case 'searchIntent': {
+                             const intentData = {};
+                             (res.data.keyword_intent?.all_intents || []).forEach(intent => {
+                                intentData[`${snakeToTitleCase(intent.label)} Score`] = intent.score ?? na;
+                             });
+                             rows.push({
+                                'Keyword': res.data.serp_query?.keyword || query,
+                                'Locale': res.data.serp_query?.locale || na,
+                                'Device': res.data.serp_query?.device || na,
+                                'Engine': res.data.serp_query?.engine || na,
+                                'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || na,
+                                ...intentData
+                             });
+                             break;
+                        }
+                        
+                        case 'rankingKeywords': {
+                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale };
+                            if(res.data.ranking_keywords?.length > 0){
+                                res.data.ranking_keywords.forEach(kw => {
+                                    rows.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume });
+                                });
+                            } else {
+                                rows.push({ ...baseInfo, Status: 'No ranking keywords found' });
+                            }
+                            break;
+                        }
+
+                        case 'relatedKeywords': {
+                             const baseInfo = { 'Keyword': query, 'Locale': res.data.serp_query?.locale, 'Device': res.data.serp_query?.device, 'Engine': res.data.serp_query?.engine };
+                             if(res.data.suggestions?.length > 0){
+                                res.data.suggestions.forEach(sug => {
+                                     rows.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance });
+                                });
+                             } else {
+                                 rows.push({ ...baseInfo, Status: 'No suggestions found' });
+                             }
+                             break;
+                        }
+
+                        case 'keywordCount': {
+                            const positions = res.data.ranking_keyword_count?.position || {};
+                            const rankCounts = {};
+                            for (let i = 1; i <= 50; i++) {
+                                rankCounts[`Rank ${i} Count`] = positions[`rank_${i}`] ?? 0;
+                            }
+                            rows.push({
+                                'Query': query,
+                                'Scope': originalParams.scope,
+                                'Locale': originalParams.locale,
+                                'Total Ranking Count': res.data.ranking_keyword_count?.total ?? na,
+                                ...rankCounts
+                            });
+                            break;
+                        }
+                    }
+                });
+                
+                if (rows.length === 0) {
+                    displayError("No valid data to export."); return;
+                }
+
+                const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
+                const header = allKeys.join(',');
+                const csvRows = rows.map(row => allKeys.map(key => {
+                    const value = row[key] === undefined || row[key] === null ? '' : row[key];
+                    const stringValue = String(value);
+                    if (stringValue.includes(',') || stringValue.includes('"')) {
+                        return `"${stringValue.replace(/"/g, '""')}"`;
+                    }
+                    return stringValue;
+                }).join(','));
+                
+                const csvString = [header, ...csvRows].join('\n');
+                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `moz-api-results-${method}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        });
+    </script>
+</body>
+</html>
