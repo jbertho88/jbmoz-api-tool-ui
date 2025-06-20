@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark"> <!-- Force dark mode -->
+<html lang="en"> <!-- Theme class will be added here by JS -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,79 +10,137 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
         }
+
+        /* --- Theme Variables --- */
+        :root, .light {
+            --bg-body: #f9fafb;
+            --bg-container: #ffffff;
+            --bg-container-translucent: rgba(255, 255, 255, 0.5);
+            --bg-input: #f3f4f6;
+            --bg-input-secondary: #e5e7eb;
+            --bg-code: #fefce8;
+            --bg-disabled: #d1d5db;
+            --border-primary: #e5e7eb;
+            --border-secondary: #d1d5db;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --text-accent: #0284c7;
+            --text-accent-hover: #0369a1;
+            --text-heading: #0ea5e9;
+            --text-error: #b91c1c;
+            --btn-primary-bg: #0ea5e9;
+            --btn-primary-hover: #0284c7;
+            --btn-copy-bg: #f97316;
+            --btn-copy-hover: #ea580c;
+            --btn-export-bg: #10b981;
+            --btn-export-hover: #059669;
+            --error-bg: #fee2e2;
+            --error-border: #fca5a5;
+        }
+
+        .dark {
+            --bg-body: #020617;
+            --bg-container: #1e293b;
+            --bg-container-translucent: rgba(30, 41, 59, 0.5);
+            --bg-input: #0f172a;
+            --bg-input-secondary: #334155;
+            --bg-code: #000000;
+            --bg-disabled: #475569;
+            --border-primary: #334155;
+            --border-secondary: #475569;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-accent: #38bdf8;
+            --text-accent-hover: #7dd3fc;
+            --text-heading: #38bdf8;
+            --text-error: #f87171;
+            --btn-primary-bg: #0ea5e9;
+            --btn-primary-hover: #38bdf8;
+            --btn-copy-bg: #f97316;
+            --btn-copy-hover: #fb923c;
+            --btn-export-bg: #10b981;
+            --btn-export-hover: #34d399;
+            --error-bg: rgba(153, 27, 27, 0.5);
+            --error-border: #ef4444;
+        }
+
+        .funky {
+            --bg-body: #000000;
+            --bg-container: #1a001a;
+            --bg-container-translucent: rgba(26, 0, 26, 0.5);
+            --bg-input: #2a002a;
+            --bg-input-secondary: #3d003d;
+            --bg-code: #000000;
+            --bg-disabled: #4a148c;
+            --border-primary: #4a148c;
+            --border-secondary: #6a1b9a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #ad5eda;
+            --text-accent: #2de2e6;
+            --text-accent-hover: #81f7f9;
+            --text-heading: #9700cc;
+            --text-error: #f6019d;
+            --btn-primary-bg: #f6019d;
+            --btn-primary-hover: #d40078;
+            --btn-copy-bg: #9700cc;
+            --btn-copy-hover: #7b00a3;
+            --btn-export-bg: #2de2e6;
+            --btn-export-hover: #81f7f9;
+            --error-bg: rgba(246, 1, 157, 0.2);
+            --error-border: #f6019d;
+        }
+
         .spinner {
             border: 4px solid rgba(255, 255, 255, 0.2);
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
+            width: 24px; height: 24px; border-radius: 50%;
             border-left-color: #ffffff;
             animation: spin 1s ease infinite;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .input-section {
-            display: none;
-            @apply border-t border-slate-700 mt-6 pt-6;
-        }
-        option[disabled] {
-            font-weight: bold;
-            @apply bg-slate-800;
-        }
-        /* Styles for Read Me Modal */
-        #readme-modal-content h2 {
-            @apply border-b border-slate-700 pb-2 mb-4 mt-5 text-xl text-sky-400;
-        }
-        #readme-modal-content h3 {
-            @apply mt-5 mb-2 text-lg text-slate-200;
-        }
-        #readme-modal-content p, #readme-modal-content li {
-            @apply text-slate-400;
-        }
-        #readme-modal-content a {
-            @apply text-sky-500 hover:underline;
-        }
-         #readme-modal-content ul, #readme-modal-content ol {
-            @apply ml-5 list-disc;
-        }
-         #readme-modal-content ol {
-            @apply list-decimal;
-        }
-         #readme-modal-content code {
-            @apply bg-slate-900 px-1 py-0.5 rounded-md text-sm text-orange-400;
-        }
-        .readme-method {
-            margin-bottom: 1.5rem; /* Adds space between methods */
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .input-section { display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top-width: 1px; border-color: var(--border-primary); }
+        option[disabled] { font-weight: bold; background-color: var(--bg-input-secondary); }
+
+        /* Read Me Modal Styles */
+        #readme-modal-content h2 { @apply border-b pb-2 mb-4 mt-5 text-xl; border-color: var(--border-primary); color: var(--text-accent); }
+        #readme-modal-content h3 { @apply mt-5 mb-2 text-lg; color: var(--text-primary); }
+        #readme-modal-content p, #readme-modal-content li { color: var(--text-secondary); }
+        #readme-modal-content a { color: var(--text-accent); @apply hover:underline; }
+        #readme-modal-content ul, #readme-modal-content ol { @apply ml-5 list-disc; }
+        #readme-modal-content ol { @apply list-decimal; }
+        #readme-modal-content code { @apply bg-black/50 px-1 py-0.5 rounded-md text-sm; color: var(--btn-copy-bg); }
+        .readme-method { margin-bottom: 1.5rem; }
     </style>
 </head>
-<body class="bg-slate-900 text-white">
+<body class="transition-colors duration-300">
 
-    <div class="w-full max-w-4xl mx-auto bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-slate-700 my-8">
+    <div class="w-full max-w-4xl mx-auto bg-[var(--bg-container-translucent)] backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-[var(--border-primary)] my-8">
         
         <div class="relative text-center mb-6">
             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz Logo" class="mx-auto h-12 mb-4">
-            <h1 class="text-3xl font-bold text-sky-400">Advanced Moz API Tool</h1>
-            <p class="text-white mt-2">Add your key and select an API method to get started.</p>
+            <h1 class="text-3xl font-bold text-[var(--text-heading)]">Advanced Moz API Tool</h1>
+            <p class="text-[var(--text-primary)] mt-2">Add your key and select an API method to get started.</p>
         </div>
         
-        <div class="mb-6 bg-slate-900/50 p-4 rounded-lg">
-            <label for="apiKey" class="block text-sm font-medium text-slate-300 mb-2">Moz API Key</label>
+        <div class="mb-6 bg-[var(--bg-input)] p-4 rounded-lg">
+            <label for="apiKey" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Moz API Key</label>
             <div id="apiKeyDisplay" class="hidden items-center justify-between">
-                <span id="apiKeyText" class="text-slate-400 font-mono"></span>
-                <button id="editApiKeyBtn" class="text-sm text-sky-500 hover:text-sky-400 font-semibold">Edit</button>
+                <span id="apiKeyText" class="text-[var(--text-secondary)] font-mono"></span>
+                <button id="editApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold">Edit</button>
             </div>
             <div id="apiKeyInputArea" class="flex items-center gap-2">
-                <input type="password" id="apiKeyInput" class="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition" placeholder="mozscape-1234abcd...">
-                <button id="saveApiKeyBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-4 py-2 text-sm rounded-md transition">Save</button>
+                <input type="password" id="apiKeyInput" class="w-full bg-[var(--bg-body)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 ring-[var(--text-accent)]" placeholder="mozscape-1234abcd...">
+                <button id="saveApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition">Save</button>
             </div>
         </div>
 
         <div>
-            <label for="methodSelector" class="block text-sm font-medium text-slate-300 mb-2">API Method</label>
-            <select id="methodSelector" class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+            <label for="methodSelector" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">API Method</label>
+            <select id="methodSelector" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 ring-[var(--text-accent)]">
                 <option value="" disabled selected>-- Select a Method --</option>
                 <option value="siteMetrics">Fetch Site Metrics</option>
                 <option value="keywordMetrics">Fetch Keyword Metrics</option>
@@ -105,35 +163,39 @@
                 <div id="keywordCountInputs" class="input-section space-y-4"></div>
             </div>
             <div class="mt-8 text-center">
-                 <button type="submit" id="submit-btn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-slate-600 disabled:cursor-not-allowed">
+                 <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed">
                     Run Request
                 </button>
             </div>
         </form>
 
         <div id="status-container" class="mt-8">
-            <div id="error-message" class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-center"></div>
-            <div id="results-container" class="hidden bg-slate-900/70 p-4 md:p-6 rounded-xl border border-slate-700">
+            <div id="error-message" class="hidden bg-[var(--error-bg)] border border-[var(--error-border)] text-[var(--text-error)] px-4 py-3 rounded-lg text-center"></div>
+            <div id="results-container" class="hidden bg-[var(--bg-input)] p-4 md:p-6 rounded-xl border border-[var(--border-primary)]">
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                    <h2 class="text-xl font-bold text-sky-400">API Results</h2>
+                    <h2 class="text-xl font-bold text-[var(--text-heading)]">API Results</h2>
                     <div class="flex items-center gap-2">
-                        <button id="copy-json-btn" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300">Copy JSON</button>
-                        <button id="export-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300">Export Results to CSV</button>
+                        <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300">Copy JSON</button>
+                        <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300">Export Results to CSV</button>
                     </div>
                 </div>
                 <div id="raw-wrapper">
-                    <pre class="whitespace-pre-wrap break-all text-sm bg-black/30 p-4 rounded-lg"><code></code></pre>
+                    <pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg"><code></code></pre>
                 </div>
             </div>
         </div>
 
-        <!-- Footer -->
-        <footer class="text-center text-slate-500 text-sm mt-8 border-t border-slate-700 pt-6">
+        <footer class="text-center text-[var(--text-secondary)] text-sm mt-8 border-t border-[var(--border-primary)] pt-6">
+            <div class="mb-4 flex justify-center items-center gap-2">
+                <button data-theme="light" class="theme-btn p-2 rounded-lg">Light</button>
+                <button data-theme="dark" class="theme-btn p-2 rounded-lg">Dark</button>
+                <button data-theme="funky" class="theme-btn p-2 rounded-lg">Funky</button>
+            </div>
             <p>&copy; Jonathan Berthold 2025</p>
             <div class="mt-2 space-x-4">
-                <a href="https://moz.com/products/api/keys" target="_blank" class="hover:text-sky-400 transition">Get Moz API Key</a>
-                <span class="text-slate-600">|</span>
-                <button id="readme-btn" class="hover:text-sky-400 transition">Read Me</button>
+                <a href="https://moz.com/products/api/keys" target="_blank" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">Get Moz API Key</a>
+                <span class="text-[var(--text-secondary)]">|</span>
+                <button id="readme-btn" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">Read Me</button>
             </div>
         </footer>
 
@@ -141,26 +203,22 @@
 
     <!-- Read Me Modal -->
     <div id="readme-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-800 border border-slate-700 w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col">
-            <div class="flex justify-between items-center p-4 border-b border-slate-700">
-                <h2 class="text-lg font-semibold text-white">Read Me / Help</h2>
-                <button id="close-readme-btn" class="text-slate-400 hover:text-white">&times;</button>
+        <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-[var(--border-primary)]">
+                <h2 class="text-lg font-semibold text-[var(--text-primary)]">Read Me / Help</h2>
+                <button id="close-readme-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">&times;</button>
             </div>
-            <div id="readme-modal-content" class="p-6 overflow-y-auto">
-                <!-- Content will be injected here by JavaScript -->
-            </div>
+            <div id="readme-modal-content" class="p-6 overflow-y-auto"></div>
         </div>
     </div>
 
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- State ---
             let currentResultsData = null;
             let currentOriginalParams = null;
             let currentMethod = null;
 
-            // --- DOM Elements ---
             const apiKeyDisplay = document.getElementById('apiKeyDisplay');
             const apiKeyText = document.getElementById('apiKeyText');
             const editApiKeyBtn = document.getElementById('editApiKeyBtn');
@@ -170,7 +228,7 @@
             const readmeBtn = document.getElementById('readme-btn');
             const readmeModal = document.getElementById('readme-modal');
             const closeReadmeBtn = document.getElementById('close-readme-btn');
-            
+            const themeBtns = document.querySelectorAll('.theme-btn');
             const methodSelector = document.getElementById('methodSelector');
             const form = document.getElementById('api-form');
             const submitBtn = document.getElementById('submit-btn');
@@ -180,12 +238,11 @@
             const exportBtn = document.getElementById('export-btn');
             const copyJsonBtn = document.getElementById('copy-json-btn');
 
-            // --- Populate Input Sections ---
             const populateInputs = () => {
-                const createLabel = (text) => `<label class="block text-sm font-medium text-slate-300">${text}</label>`;
-                const createSelect = (id, options) => `<select id="${id}" class="w-full bg-slate-700 border-slate-600 rounded-md p-2 mt-1">${options}</select>`;
-                const createTextarea = (id, placeholder) => `<textarea id="${id}" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-md p-2 mt-1" placeholder="${placeholder}"></textarea>`;
-                const createDescription = text => `<p class="text-sm text-slate-400">${text}</p>`;
+                const createLabel = (text) => `<label class="block text-sm font-medium text-[var(--text-secondary)]">${text}</label>`;
+                const createSelect = (id, options) => `<select id="${id}" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1">${options}</select>`;
+                const createTextarea = (id, placeholder) => `<textarea id="${id}" rows="4" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md p-2 mt-1" placeholder="${placeholder}"></textarea>`;
+                const createDescription = text => `<p class="text-sm text-[var(--text-secondary)]">${text}</p>`;
 
                 const scopeOptions = `<option value="domain" selected>Domain</option><option value="subdomain">Subdomain</option><option value="subfolder">Subfolder</option><option value="url">URL</option>`;
                 const limitedScopeOptions = `<option value="domain" selected>Domain</option><option value="subdomain">Subdomain</option><option value="url">URL</option>`;
@@ -202,87 +259,30 @@
             };
             populateInputs();
 
-            // --- ReadMe Modal Logic ---
-            const readmeContent = `
-                <h2>Moz API Assistant - Help</h2>
-                <h3>Overview</h3>
-                <p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p>
-                <p>You can retrieve keyword metrics (Volume, Difficulty, CTR, Priority), site metrics (Domain Authority, Page Authority, Spam Score, link counts), Brand Authority scores, keyword search intent, ranking keywords for a site, and related keyword suggestions.</p>
-                <h2>Setup</h2>
-                <ol>
-                    <li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank">Moz API Dashboard</a>.</li>
-                    <li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li>
-                </ol>
-                <h2>Features</h2>
-                <p>Select a method from the dropdown to get started:</p>
-                <hr class="border-slate-700 my-4">
-                <div class="readme-method">
-                    <h3><strong><u>Fetch Keyword Metrics</u></strong></h3>
-                    <ul>
-                        <li><strong>Description:</strong> Get the most recent difficulty, volume, organic CTR, and priority metrics for any keyword in the Moz database.</li>
-                        <li><strong>Inputs:</strong> Keywords, Metric Type (All, Volume, Difficulty, CTR, Priority), Device, Engine, Locale.</li>
-                        <li><strong>Quota Note:</strong> "All Metrics" uses up to 4 API rows per keyword. Single metric calls use 1 row per keyword.</li>
-                    </ul>
-                </div>
-                <div class="readme-method">
-                    <h3><strong><u>Fetch Site Metrics</u></strong></h3>
-                    <ul>
-                        <li><strong>Description:</strong> Use this endpoint to get metrics such as Domain Authority, Page Authority, Spam Score, link counts and more for URLs.</li>
-                        <li><strong>Inputs:</strong> Domains / URLs (one per line, include http/https), Scope (Domain, Subdomain, Subfolder, URL).</li>
-                    </ul>
-                </div>
-                <div class="readme-method">
-                    <h3><strong><u>Fetch Brand Authority</u></strong></h3>
-                    <ul>
-                        <li><strong>Description:</strong> This endpoint returns a Brand Authority™ score for the provided site. Use this metric to understand the strength of your website’s brand, benchmark against competitors, and more.</li>
-                        <li><strong>Inputs:</strong> Domains / URLs (one per line). Scope is automatically 'domain'.</li>
-                    </ul>
-                </div>
-                <div class="readme-method">
-                    <h3><strong><u>Fetch Search Intent</u></strong></h3>
-                    <ul>
-                        <li><strong>Description:</strong> Retrieve the most recent search intent scores (navigational, informational, commercial, and transactional) for any keyword that exists in our database.</li>
-                        <li><strong>Inputs:</strong> Keywords (one per line), Locale (limited options: en-US, en-CA, en-GB, en-AU).</li>
-                    </ul>
-                </div>
-                <div class="readme-method">
-                    <h3><strong><u>Fetch Ranking Keywords</u></strong></h3>
-                    <ul>
-                        <li><strong>Description:</strong> Retrieve a list of keywords (up to 25) for which the provided site ranks in the top 50.</li>
-                        <li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Locale (limited options). (Limit fixed to 25).</li>
-                    </ul>
-                </div>
-                <div class="readme-method">
-                    <h3><strong><u>List Related Keywords</u></strong></h3>
-                    <ul>
-                        <li><strong>Description:</strong> Retrieve a list of related keyword suggestions for given input keywords.</li>
-                        <li><strong>Inputs:</strong> Keywords (one per line), Locale.</li>
-                    </ul>
-                </div>
-                <div class="readme-method">
-                     <h3><strong><u>Count Ranking Keywords</u></strong></h3>
-                    <ul>
-                        <li><strong>Description:</strong> Retrieve a summary of the number of keywords for which the provided query ranks in the top 50.</li>
-                        <li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Locale (limited options).</li>
-                    </ul>
-                </div>
-                <hr class="border-slate-700 my-4">
-                <h2>General Notes</h2>
-                <ul>
-                    <li><strong>API Usage:</strong> Each API call consumes rows from your Moz API subscription quota. Be mindful of limits.</li>
-                    <li><strong>Errors:</strong> If an API call fails, an error message will be displayed and the JSON response will contain details.</li>
-                    <li><strong>Processing Time:</strong> Fetching data for many items can take time due to API interaction.</li>
-                </ul>
-            `;
+            const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><p>You can retrieve keyword metrics (Volume, Difficulty, CTR, Priority), site metrics (Domain Authority, Page Authority, Spam Score, link counts), Brand Authority scores, keyword search intent, ranking keywords for a site, and related keyword suggestions.</p><h2>Setup</h2><ol><li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank">Moz API Dashboard</a>.</li><li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li></ol><h2>Features</h2><p>Select a method from the dropdown to get started:</p><hr class="border-slate-700 my-4"><div class="readme-method"><h3><strong><u>Fetch Keyword Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get the most recent difficulty, volume, organic CTR, and priority metrics for any keyword in the Moz database.</li><li><strong>Inputs:</strong> Keywords, Metric Type (All, Volume, Difficulty, CTR, Priority), Device, Engine, Locale.</li><li><strong>Quota Note:</strong> "All Metrics" uses up to 4 API rows per keyword. Single metric calls use 1 row per keyword.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Site Metrics</u></strong></h3><ul><li><strong>Description:</strong> Use this endpoint to get metrics such as Domain Authority, Page Authority, Spam Score, link counts and more for URLs.</li><li><strong>Inputs:</strong> Domains / URLs (one per line, include http/https), Scope (Domain, Subdomain, Subfolder, URL).</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Brand Authority</u></strong></h3><ul><li><strong>Description:</strong> This endpoint returns a Brand Authority™ score for the provided site. Use this metric to understand the strength of your website’s brand, benchmark against competitors, and more.</li><li><strong>Inputs:</strong> Domains / URLs (one per line). Scope is automatically 'domain'.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Search Intent</u></strong></h3><ul><li><strong>Description:</strong> Retrieve the most recent search intent scores (navigational, informational, commercial, and transactional) for any keyword that exists in our database.</li><li><strong>Inputs:</strong> Keywords (one per line), Locale (limited options: en-US, en-CA, en-GB, en-AU).</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a list of keywords (up to 25) for which the provided site ranks in the top 50.</li><li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Locale (limited options). (Limit fixed to 25).</li></ul></div><div class="readme-method"><h3><strong><u>List Related Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a list of related keyword suggestions for given input keywords.</li><li><strong>Inputs:</strong> Keywords (one per line), Locale.</li></ul></div><div class="readme-method"><h3><strong><u>Count Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a summary of the number of keywords for which the provided query ranks in the top 50.</li><li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Locale (limited options).</li></ul></div><hr class="border-slate-700 my-4"><h2>General Notes</h2><ul><li><strong>API Usage:</strong> Each API call consumes rows from your Moz API subscription quota. Be mindful of limits.</li><li><strong>Errors:</strong> If an API call fails, an error message will be displayed and the JSON response will contain details.</li><li><strong>Processing Time:</strong> Fetching data for many items can take time due to API interaction.</li></ul>`;
             document.getElementById('readme-modal-content').innerHTML = readmeContent;
             
             readmeBtn.addEventListener('click', () => readmeModal.classList.remove('hidden'));
             closeReadmeBtn.addEventListener('click', () => readmeModal.classList.add('hidden'));
             readmeModal.addEventListener('click', (e) => {
-                if (e.target === readmeModal) {
-                    readmeModal.classList.add('hidden');
-                }
+                if (e.target === readmeModal) readmeModal.classList.add('hidden');
             });
+
+            // --- Theme Management ---
+            const applyTheme = (theme) => {
+                document.documentElement.className = theme;
+                localStorage.setItem('theme', theme);
+                themeBtns.forEach(btn => {
+                    btn.classList.toggle('bg-[var(--btn-primary-bg)]', btn.dataset.theme === theme);
+                    btn.classList.toggle('text-white', btn.dataset.theme === theme);
+                    btn.classList.toggle('bg-transparent', btn.dataset.theme !== theme);
+                });
+            };
+            themeBtns.forEach(btn => {
+                btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
+            });
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            applyTheme(savedTheme);
 
 
             // --- API Key Management ---
@@ -299,7 +299,6 @@
                     apiKeyInputArea.classList.remove('hidden');
                 }
             };
-
             saveApiKeyBtn.addEventListener('click', () => {
                 const key = apiKeyInput.value.trim();
                 if (key) {
@@ -307,16 +306,14 @@
                     loadApiKey();
                 }
             });
-
             editApiKeyBtn.addEventListener('click', () => {
                 apiKeyDisplay.classList.add('hidden');
                 apiKeyInputArea.classList.remove('hidden');
                 apiKeyInput.focus();
             });
-
             loadApiKey();
 
-            // --- Event Listeners ---
+            // --- Form Submission & Logic ---
             submitBtn.disabled = true;
 
             methodSelector.addEventListener('change', () => {
@@ -337,27 +334,20 @@
                 resultsContainer.classList.add('hidden');
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Processing...</span>';
-
                 const apiKey = apiKeyInput.value.trim();
                 const selectedMethod = methodSelector.value;
-
                 if (!apiKey || !selectedMethod) {
                     displayError('Please provide an API Key and select a method.');
-                    resetSubmitButton();
-                    return;
+                    resetSubmitButton(); return;
                 }
-
                 let payload;
                 try {
                     payload = buildPayload(apiKey, selectedMethod);
                 } catch (error) {
                     displayError(error.message);
-                    resetSubmitButton();
-                    return;
+                    resetSubmitButton(); return;
                 }
-                
-                const PROXY_URL = 'https://mozapi-proxy-server.vercel.app/api/getMozData'; 
-                
+                const PROXY_URL = 'https://mozapi-proxy-server.vercel.app/api/getMozData';
                 try {
                     const response = await fetch(PROXY_URL, {
                         method: 'POST',
@@ -366,13 +356,10 @@
                     });
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.error || `Request failed with status ${response.status}`);
-                    
                     currentResultsData = data;
                     currentOriginalParams = payload.params;
                     currentMethod = selectedMethod;
-                    
                     showRawJsonResults(data);
-
                 } catch (error) {
                     displayError(error.message);
                 } finally {
@@ -384,16 +371,14 @@
                 if (rawCode.textContent) {
                     const textArea = document.createElement('textarea');
                     textArea.value = rawCode.textContent;
-                    textArea.style.position = 'fixed'; 
-                    textArea.style.top = '0';
-                    textArea.style.left = '0';
+                    textArea.style.position = 'fixed';
                     textArea.style.opacity = '0';
                     document.body.appendChild(textArea);
                     textArea.focus();
                     textArea.select();
                     try {
                         const successful = document.execCommand('copy');
-                        if(successful){
+                        if (successful) {
                             copyJsonBtn.textContent = 'Copied!';
                             setTimeout(() => { copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
                         } else {
@@ -414,8 +399,6 @@
                 }
             });
             
-            // --- UI Functions ---
-
             function showRawJsonResults(data) {
                 rawCode.textContent = JSON.stringify(data, null, 2);
                 resultsContainer.classList.remove('hidden');
@@ -431,30 +414,19 @@
                 submitBtn.innerHTML = 'Run Request';
             }
 
-            // --- Core Logic Functions ---
-
             function buildPayload(apiKey, selectedMethod) {
                 let payload = { apiKey, method: selectedMethod, params: {} };
                 const getInputValue = (id) => document.getElementById(id)?.value;
                 const getCleanedList = (id) => getInputValue(id)?.split(/[\n,]/).map(item => item.trim()).filter(Boolean);
-
                 switch (selectedMethod) {
-                    case 'siteMetrics':
-                        payload.params = { scope: getInputValue('smScopeSelect'), targets: getCleanedList('smUrlsInput') }; break;
-                    case 'keywordMetrics':
-                        payload.params = { metricType: getInputValue('kmMetricTypeSelect'), locale: getInputValue('kmLocaleSelect'), keywords: getCleanedList('kmKeywordsInput'), device: "desktop", engine: "google" }; break;
-                    case 'brandAuthority':
-                        payload.params = { targets: getCleanedList('baUrlsInput') }; break;
-                    case 'searchIntent':
-                        payload.params = { locale: getInputValue('siLocaleSelect'), keywords: getCleanedList('siKeywordsInput') }; break;
-                    case 'rankingKeywords':
-                        payload.params = { scope: getInputValue('rkScopeSelect'), locale: getInputValue('rkLocaleSelect'), targets: getCleanedList('rkUrlsInput') }; break;
-                    case 'relatedKeywords':
-                        payload.params = { locale: getInputValue('rlLocaleSelect'), keywords: getCleanedList('rlKeywordsInput') }; break;
-                    case 'keywordCount':
-                        payload.params = { scope: getInputValue('kcScopeSelect'), locale: getInputValue('kcLocaleSelect'), targets: getCleanedList('kcUrlsInput') }; break;
-                    default:
-                        throw new Error('Invalid method selected.');
+                    case 'siteMetrics': payload.params = { scope: getInputValue('smScopeSelect'), targets: getCleanedList('smUrlsInput') }; break;
+                    case 'keywordMetrics': payload.params = { metricType: getInputValue('kmMetricTypeSelect'), locale: getInputValue('kmLocaleSelect'), keywords: getCleanedList('kmKeywordsInput'), device: "desktop", engine: "google" }; break;
+                    case 'brandAuthority': payload.params = { targets: getCleanedList('baUrlsInput') }; break;
+                    case 'searchIntent': payload.params = { locale: getInputValue('siLocaleSelect'), keywords: getCleanedList('siKeywordsInput') }; break;
+                    case 'rankingKeywords': payload.params = { scope: getInputValue('rkScopeSelect'), locale: getInputValue('rkLocaleSelect'), targets: getCleanedList('rkUrlsInput') }; break;
+                    case 'relatedKeywords': payload.params = { locale: getInputValue('rlLocaleSelect'), keywords: getCleanedList('rlKeywordsInput') }; break;
+                    case 'keywordCount': payload.params = { scope: getInputValue('kcScopeSelect'), locale: getInputValue('kcLocaleSelect'), targets: getCleanedList('kcUrlsInput') }; break;
+                    default: throw new Error('Invalid method selected.');
                 }
                 if ((payload.params.targets?.length === 0) && (payload.params.keywords?.length === 0)) {
                     throw new Error('Please enter at least one URL or Keyword.');
@@ -466,123 +438,66 @@
                 let rows = [];
                 const na = 'N/A';
                 const snakeToTitleCase = (s) => s.replace(/^_*(.)|_+(.)/g, (s, c, d) => c ? c.toUpperCase() : ' ' + d.toUpperCase());
-
                 results.forEach((res, i) => {
                     const query = (originalParams.targets || originalParams.keywords)[i] || na;
                     if (res.status !== 'success') {
                         rows.push({ Query: query, Status: `Error: ${res.reason || 'Unknown'}` });
                         return;
                     }
-
                     switch (method) {
                         case 'brandAuthority':
-                            rows.push({
-                                'Site Query': res.data.site_query?.query || na,
-                                'Scope': res.data.site_query?.scope || na,
-                                'Brand Authority Score': res.data.site_metrics?.brand_authority_score ?? na,
-                                'Original Query': res.data.site_query?.original_site_query?.query || query
-                            });
+                            rows.push({'Site Query': res.data.site_query?.query || na, 'Scope': res.data.site_query?.scope || na, 'Brand Authority Score': res.data.site_metrics?.brand_authority_score ?? na, 'Original Query': res.data.site_query?.original_site_query?.query || query });
                             break;
-                        
                         case 'siteMetrics': {
                             const metrics = res.data.site_metrics || {};
-                            const orderedMetrics = {
-                                'Page Authority': metrics.page_authority,
-                                'Domain Authority': metrics.domain_authority,
-                                'Spam Score': metrics.spam_score
-                            };
+                            const orderedMetrics = {'Page Authority': metrics.page_authority, 'Domain Authority': metrics.domain_authority, 'Spam Score': metrics.spam_score };
                             for(const key in metrics){
                                 if(!['page_authority', 'domain_authority', 'spam_score'].includes(key)) {
                                     orderedMetrics[snakeToTitleCase(key)] = metrics[key];
                                 }
                             }
-                             rows.push({
-                                'Query': res.data.site_query?.query || query,
-                                'Scope': res.data.site_query?.scope || na,
-                                'Original Query': res.data.site_query?.original_site_query?.query || query,
-                                ...orderedMetrics
-                            });
+                             rows.push({'Query': res.data.site_query?.query || query, 'Scope': res.data.site_query?.scope || na, 'Original Query': res.data.site_query?.original_site_query?.query || query, ...orderedMetrics });
                             break;
                         }
-
                         case 'keywordMetrics': {
                             const metricTypeMap = { 'all': 'All Keyword Metrics', 'volume': 'Search Volume', 'difficulty': 'Difficulty', 'opportunity': 'Organic CTR', 'priority': 'Priority' };
-                            rows.push({
-                                'Keyword': res.data.serp_query?.keyword || query,
-                                'API Call': metricTypeMap[originalParams.metricType] || originalParams.metricType,
-                                'Locale': res.data.serp_query?.locale || na,
-                                'Device': res.data.serp_query?.device || na,
-                                'Engine': res.data.serp_query?.engine || na,
-                                'Volume': res.data.keyword_metrics?.volume ?? na,
-                                'Difficulty': res.data.keyword_metrics?.difficulty ?? na,
-                                'Opportunity CTR': res.data.keyword_metrics?.organic_ctr ?? na,
-                                'Priority': res.data.keyword_metrics?.priority ?? na
-                            });
+                            rows.push({'Keyword': res.data.serp_query?.keyword || query, 'API Call': metricTypeMap[originalParams.metricType] || originalParams.metricType, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Volume': res.data.keyword_metrics?.volume ?? na, 'Difficulty': res.data.keyword_metrics?.difficulty ?? na, 'Opportunity CTR': res.data.keyword_metrics?.organic_ctr ?? na, 'Priority': res.data.keyword_metrics?.priority ?? na });
                             break;
                         }
-
                         case 'searchIntent': {
                              const intentData = {};
                              (res.data.keyword_intent?.all_intents || []).forEach(intent => {
                                 intentData[`${snakeToTitleCase(intent.label)} Score`] = intent.score ?? na;
                              });
-                             rows.push({
-                                'Keyword': res.data.serp_query?.keyword || query,
-                                'Locale': res.data.serp_query?.locale || na,
-                                'Device': res.data.serp_query?.device || na,
-                                'Engine': res.data.serp_query?.engine || na,
-                                'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || na,
-                                ...intentData
-                             });
+                             rows.push({'Keyword': res.data.serp_query?.keyword || query, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || na, ...intentData });
                              break;
                         }
-                        
                         case 'rankingKeywords': {
                             const baseInfo = { 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale };
                             if(res.data.ranking_keywords?.length > 0){
-                                res.data.ranking_keywords.forEach(kw => {
-                                    rows.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume });
-                                });
-                            } else {
-                                rows.push({ ...baseInfo, Status: 'No ranking keywords found' });
-                            }
+                                res.data.ranking_keywords.forEach(kw => { rows.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume }); });
+                            } else { rows.push({ ...baseInfo, Status: 'No ranking keywords found' }); }
                             break;
                         }
-
                         case 'relatedKeywords': {
                              const baseInfo = { 'Keyword': query, 'Locale': res.data.serp_query?.locale, 'Device': res.data.serp_query?.device, 'Engine': res.data.serp_query?.engine };
                              if(res.data.suggestions?.length > 0){
-                                res.data.suggestions.forEach(sug => {
-                                     rows.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance });
-                                });
-                             } else {
-                                 rows.push({ ...baseInfo, Status: 'No suggestions found' });
-                             }
+                                res.data.suggestions.forEach(sug => { rows.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance }); });
+                             } else { rows.push({ ...baseInfo, Status: 'No suggestions found' }); }
                              break;
                         }
-
                         case 'keywordCount': {
                             const positions = res.data.ranking_keyword_count?.position || {};
                             const rankCounts = {};
                             for (let i = 1; i <= 50; i++) {
                                 rankCounts[`Rank ${i} Count`] = positions[`rank_${i}`] ?? 0;
                             }
-                            rows.push({
-                                'Query': query,
-                                'Scope': originalParams.scope,
-                                'Locale': originalParams.locale,
-                                'Total Ranking Count': res.data.ranking_keyword_count?.total ?? na,
-                                ...rankCounts
-                            });
+                            rows.push({'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale, 'Total Ranking Count': res.data.ranking_keyword_count?.total ?? na, ...rankCounts });
                             break;
                         }
                     }
                 });
-                
-                if (rows.length === 0) {
-                    displayError("No valid data to export."); return;
-                }
-
+                if (rows.length === 0) { displayError("No valid data to export."); return; }
                 const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
                 const header = allKeys.join(',');
                 const csvRows = rows.map(row => allKeys.map(key => {
@@ -593,7 +508,6 @@
                     }
                     return stringValue;
                 }).join(','));
-                
                 const csvString = [header, ...csvRows].join('\n');
                 const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
@@ -608,4 +522,4 @@
         });
     </script>
 </body>
-</html>
+</ht
