@@ -176,14 +176,27 @@
             <label for="methodSelector" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">API Method</label>
             <select id="methodSelector" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 ring-[var(--text-accent)]">
                 <option value="" disabled selected>-- Select a Method --</option>
-                <option value="siteMetrics">Fetch Site Metrics</option>
-                <option value="keywordMetrics">Fetch Keyword Metrics</option>
-                <option value="brandAuthority">Fetch Brand Authority</option>
-                <option value="searchIntent">Fetch Search Intent</option>
-                <option value="rankingKeywords">List Ranking Keywords</option>
-                <option value="relatedKeywords">List Related Keywords</option>
-                <option value="keywordCount">Count Ranking Keywords</option>
-                <option value="anchorText">Get Anchor Texts</option>
+                <optgroup label="Site Metrics">
+                    <option value="siteMetrics">Fetch Site Metrics</option>
+                    <option value="brandAuthority">Fetch Brand Authority</option>
+                    <option value="topPages">List Top Pages</option>
+                </optgroup>
+                 <optgroup label="Keyword Research">
+                    <option value="keywordMetrics">Fetch Keyword Metrics</option>
+                    <option value="searchIntent">Fetch Search Intent</option>
+                    <option value="rankingKeywords">List Ranking Keywords</option>
+                    <option value="relatedKeywords">List Related Keywords</option>
+                    <option value="keywordCount">Count Ranking Keywords</option>
+                </optgroup>
+                <optgroup label="Link Building">
+                    <option value="anchorText">Get Anchor Texts Lists</option>
+                    <option value="linkingDomains">List Linking Domains</option>
+                    <option value="recentlyGainedLinks">List Recently Gained Links</option>
+                    <option value="recentlyLostLinks">List Recently Lost Links</option>
+                </optgroup>
+                <optgroup label="Technical SEO">
+                     <option value="finalRedirect">Get Final Redirect Target</option>
+                </optgroup>
             </select>
         </div>
 
@@ -197,6 +210,11 @@
                 <div id="relatedKeywordsInputs" class="input-section space-y-4"></div>
                 <div id="keywordCountInputs" class="input-section space-y-4"></div>
                 <div id="anchorTextInputs" class="input-section space-y-4"></div>
+                <div id="recentlyGainedLinksInputs" class="input-section space-y-4"></div>
+                <div id="recentlyLostLinksInputs" class="input-section space-y-4"></div>
+                <div id="linkingDomainsInputs" class="input-section space-y-4"></div>
+                <div id="finalRedirectInputs" class="input-section space-y-4"></div>
+                <div id="topPagesInputs" class="input-section space-y-4"></div>
             </div>
             <div class="mt-8 text-center">
                  <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text">
@@ -293,6 +311,8 @@
                 const limitedScopeOptions = `<option value="domain" selected>Domain</option><option value="subdomain">Subdomain</option><option value="url">URL</option>`;
                 const localeOptions = `<option value="en-US" selected>en-US</option><option value="en-CA">en-CA</option><option value="en-GB">en-GB</option><option value="en-AU">en-AU</option>`;
                 const keywordMetricOptions = `<option value="all" selected>All Metrics</option><option value="volume">Search Volume</option><option value="difficulty">Difficulty</option><option value="opportunity">Organic CTR</option><option value="priority">Priority</option>`;
+                const topPagesFilterOptions = `<option value="all" selected>All</option><option value="status_200">Status 200</option><option value="status_301">Status 301</option><option value="status_302">Status 302</option><option value="status_4xx">Status 4xx</option><option value="status_5xx">Status 5xx</option>`;
+                const topPagesSortOptions = `<option value="page_authority" selected>Page Authority</option><option value="root_domains_to_page">Linking Root Domains</option><option value="external_pages_to_page">External Linking Pages</option>`;
 
                 document.getElementById('siteMetricsInputs').innerHTML = createDescription('Get metrics like DA, PA, Spam Score, and link counts for URLs.') + createLabel('Scope') + createSelect('smScopeSelect', scopeOptions) + createLabel('Domains / URLs') + createTextarea('smUrlsInput', 'One per line or comma-separated (must include http/https)');
                 document.getElementById('keywordMetricsInputs').innerHTML = createDescription('Get volume, difficulty, CTR, and priority for keywords.') + createLabel('Metric Type') + createSelect('kmMetricTypeSelect', keywordMetricOptions) + createLabel('Locale') + createSelect('kmLocaleSelect', localeOptions) + createLabel('Keywords') + createTextarea('kmKeywordsInput', 'One per line or comma-separated');
@@ -301,11 +321,17 @@
                 document.getElementById('rankingKeywordsInputs').innerHTML = createDescription('List keywords for which a site ranks in the top 50.') + createLabel('Scope') + createSelect('rkScopeSelect', scopeOptions) + createLabel('Locale') + createSelect('rkLocaleSelect', localeOptions) + createLabel('Limit (1-500)') + createNumberInput('rkLimit', 25, 1, 500) + createLabel('Domains / URLs') + createTextarea('rkUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('relatedKeywordsInputs').innerHTML = createDescription('Get a list of related keyword suggestions.') + createLabel('Locale') + createSelect('rlLocaleSelect', localeOptions) + createLabel('Keywords') + createTextarea('rlKeywordsInput', 'One per line or comma-separated.');
                 document.getElementById('keywordCountInputs').innerHTML = createDescription('Count keywords for which a site ranks in the top 50.') + createLabel('Scope') + createSelect('kcScopeSelect', limitedScopeOptions) + createLabel('Locale') + createSelect('kcLocaleSelect', localeOptions) + createLabel('Domains / URLs') + createTextarea('kcUrlsInput', 'One per line or comma-separated.');
-                document.getElementById('anchorTextInputs').innerHTML = createDescription('Use this endpoint to get data about anchor text used to link to a specified site. This can be helpful when trying to understand how people are linking to and talking about your brand.') + createLabel('Scope') + createSelect('atScopeSelect', scopeOptions) + createLabel('Limit (1-500)') + createNumberInput('atLimit', 25, 1, 500) + createLabel('Domains / URLs') + createTextarea('atUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('anchorTextInputs').innerHTML = createDescription('Get data about anchor text used to link to a specified site.') + createLabel('Scope') + createSelect('atScopeSelect', scopeOptions) + createLabel('Limit (1-50)') + createNumberInput('atLimit', 25, 1, 50) + createLabel('Domains / URLs') + createTextarea('atUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('recentlyGainedLinksInputs').innerHTML = createDescription('Get information about external root domains that added new links to a target during the past 60 days.') + createLabel('Scope') + createSelect('rglScopeSelect', scopeOptions) + createLabel('Limit (1-50)') + createNumberInput('rglLimit', 25, 1, 50) + createLabel('Domains / URLs') + createTextarea('rglUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('recentlyLostLinksInputs').innerHTML = createDescription('Get information about root domains that removed links to a target during the past 60 days.') + createLabel('Scope') + createSelect('rllScopeSelect', scopeOptions) + createLabel('Limit (1-50)') + createNumberInput('rllLimit', 25, 1, 50) + createLabel('Domains / URLs') + createTextarea('rllUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('linkingDomainsInputs').innerHTML = createDescription('Get a list of linking root domains to a target, with information about each root domain.') + createLabel('Scope') + createSelect('ldScopeSelect', scopeOptions) + createLabel('Limit (1-50)') + createNumberInput('ldLimit', 25, 1, 50) + createLabel('Domains / URLs') + createTextarea('ldUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('finalRedirectInputs').innerHTML = createDescription('See the final redirect target of a page after following known redirects.') + createLabel('Scope') + createSelect('frScopeSelect', scopeOptions) + createLabel('Domains / URLs') + createTextarea('frUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('topPagesInputs').innerHTML = createDescription('Return a list of the top pages on a target domain.') + createLabel('Scope') + createSelect('tpScopeSelect', scopeOptions) + createLabel('Filter') + createSelect('tpFilterSelect', topPagesFilterOptions) + createLabel('Sort') + createSelect('tpSortSelect', topPagesSortOptions) + createLabel('Limit (1-50)') + createNumberInput('tpLimit', 25, 1, 50) + createLabel('Domains / URLs') + createTextarea('tpUrlsInput', 'One per line or comma-separated.');
+
             };
             populateInputs();
 
-            const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><p>You can retrieve keyword metrics (Volume, Difficulty, CTR, Priority), site metrics (Domain Authority, Page Authority, Spam Score, link counts), Brand Authority scores, keyword search intent, ranking keywords for a site, and related keyword suggestions.</p><h2>Setup</h2><ol><li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank">Moz API Dashboard</a>.</li><li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li></ol><h2>Features</h2><p>Select a method from the dropdown to get started:</p><hr class="border-slate-700 my-4"><div class="readme-method"><h3><strong><u>Fetch Keyword Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get the most recent difficulty, volume, organic CTR, and priority metrics for any keyword in the Moz database.</li><li><strong>Inputs:</strong> Keywords, Metric Type (All, Volume, Difficulty, CTR, Priority), Device, Engine, Locale.</li><li><strong>Quota Note:</strong> "All Metrics" uses up to 4 API rows per keyword. Single metric calls use 1 row per keyword.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Site Metrics</u></strong></h3><ul><li><strong>Description:</strong> Use this endpoint to get metrics such as Domain Authority, Page Authority, Spam Score, link counts and more for URLs.</li><li><strong>Inputs:</strong> Domains / URLs (one per line, include http/https), Scope (Domain, Subdomain, Subfolder, URL).</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Brand Authority</u></strong></h3><ul><li><strong>Description:</strong> This endpoint returns a Brand Authority™ score for the provided site. Use this metric to understand the strength of your website’s brand, benchmark against competitors, and more.</li><li><strong>Inputs:</strong> Domains / URLs (one per line). Scope is automatically 'domain'.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Search Intent</u></strong></h3><ul><li><strong>Description:</strong> Retrieve the most recent search intent scores (navigational, informational, commercial, and transactional) for any keyword that exists in our database.</li><li><strong>Inputs:</strong> Keywords (one per line), Locale (limited options: en-US, en-CA, en-GB, en-AU).</li></ul></div><div class="readme-method"><h3><strong><u>List Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a list of keywords for which the provided site ranks in the top 50.</li><li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Locale (limited options), Limit (1-500).</li></ul></div><div class="readme-method"><h3><strong><u>List Related Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a list of related keyword suggestions for given input keywords.</li><li><strong>Inputs:</strong> Keywords (one per line), Locale.</li></ul></div><div class="readme-method"><h3><strong><u>Count Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a summary of the number of keywords for which the provided query ranks in the top 50.</li><li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Locale (limited options).</li></ul></div><div class="readme-method"><h3><strong><u>Get Anchor Texts</u></strong></h3><ul><li><strong>Description:</strong> Get data about anchor text used to link to a specified site.</li><li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Limit (1-500).</li></ul></div><hr class="border-slate-700 my-4"><h2>General Notes</h2><ul><li><strong>API Usage:</strong> Each API call consumes rows from your Moz API subscription quota. Be mindful of limits.</li><li><strong>Errors:</strong> If an API call fails, an error message will be displayed and the JSON response will contain details.</li><li><strong>Processing Time:</strong> Fetching data for many items can take time due to API interaction.</li></ul>`;
+            const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><p>You can retrieve keyword metrics (Volume, Difficulty, CTR, Priority), site metrics (Domain Authority, Page Authority, Spam Score, link counts), Brand Authority scores, keyword search intent, ranking keywords for a site, and related keyword suggestions.</p><h2>Setup</h2><ol><li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank">Moz API Dashboard</a>.</li><li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li></ol><h2>Features</h2><p>Select a method from the dropdown to get started:</p><hr class="border-slate-700 my-4"><div class="readme-method"><h3><strong><u>Fetch Keyword Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get the most recent difficulty, volume, organic CTR, and priority metrics for any keyword in the Moz database.</li><li><strong>Inputs:</strong> Keywords, Metric Type (All, Volume, Difficulty, CTR, Priority), Device, Engine, Locale.</li><li><strong>Quota Note:</strong> "All Metrics" uses up to 4 API rows per keyword. Single metric calls use 1 row per keyword.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Site Metrics</u></strong></h3><ul><li><strong>Description:</strong> Use this endpoint to get metrics such as Domain Authority, Page Authority, Spam Score, link counts and more for URLs.</li><li><strong>Inputs:</strong> Domains / URLs (one per line, include http/https), Scope (Domain, Subdomain, Subfolder, URL).</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Brand Authority</u></strong></h3><ul><li><strong>Description:</strong> This endpoint returns a Brand Authority™ score for the provided site. Use this metric to understand the strength of your website’s brand, benchmark against competitors, and more.</li><li><strong>Inputs:</strong> Domains / URLs (one per line). Scope is automatically 'domain'.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Search Intent</u></strong></h3><ul><li><strong>Description:</strong> Retrieve the most recent search intent scores (navigational, informational, commercial, and transactional) for any keyword that exists in our database.</li><li><strong>Inputs:</strong> Keywords (one per line), Locale (limited options: en-US, en-CA, en-GB, en-AU).</li></ul></div><div class="readme-method"><h3><strong><u>List Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a list of keywords for which the provided site ranks in the top 50.</li><li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Locale (limited options), Limit (1-500).</li></ul></div><div class="readme-method"><h3><strong><u>List Related Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a list of related keyword suggestions for given input keywords.</li><li><strong>Inputs:</strong> Keywords (one per line), Locale.</li></ul></div><div class="readme-method"><h3><strong><u>Count Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a summary of the number of keywords for which the provided query ranks in the top 50.</li><li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Locale (limited options).</li></ul></div><div class="readme-method"><h3><strong><u>Get Anchor Texts Lists</u></strong></h3><ul><li><strong>Description:</strong> Get data about anchor text used to link to a specified site.</li><li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Limit (1-50).</li></ul></div><hr class="border-slate-700 my-4"><h2>General Notes</h2><ul><li><strong>API Usage:</strong> Each API call consumes rows from your Moz API subscription quota. Be mindful of limits.</li><li><strong>Errors:</strong> If an API call fails, an error message will be displayed and the JSON response will contain details.</li><li><strong>Processing Time:</strong> Fetching data for many items can take time due to API interaction.</li></ul>`;
             document.getElementById('readme-modal-content').innerHTML = readmeContent;
             
             readmeBtn.addEventListener('click', () => readmeModal.classList.remove('hidden'));
@@ -503,6 +529,11 @@
                     case 'relatedKeywords': payload.params = { locale: getInputValue('rlLocaleSelect'), keywords: getCleanedList('rlKeywordsInput') }; break;
                     case 'keywordCount': payload.params = { scope: getInputValue('kcScopeSelect'), locale: getInputValue('kcLocaleSelect'), targets: getCleanedList('kcUrlsInput') }; break;
                     case 'anchorText': payload.params = { scope: getInputValue('atScopeSelect'), targets: getCleanedList('atUrlsInput'), limit: parseInt(getInputValue('atLimit'), 10) || 25 }; break;
+                    case 'recentlyGainedLinks': payload.params = { scope: getInputValue('rglScopeSelect'), targets: getCleanedList('rglUrlsInput'), limit: parseInt(getInputValue('rglLimit'), 10) || 25 }; break;
+                    case 'recentlyLostLinks': payload.params = { scope: getInputValue('rllScopeSelect'), targets: getCleanedList('rllUrlsInput'), limit: parseInt(getInputValue('rllLimit'), 10) || 25 }; break;
+                    case 'linkingDomains': payload.params = { scope: getInputValue('ldScopeSelect'), targets: getCleanedList('ldUrlsInput'), limit: parseInt(getInputValue('ldLimit'), 10) || 25 }; break;
+                    case 'finalRedirect': payload.params = { scope: getInputValue('frScopeSelect'), targets: getCleanedList('frUrlsInput') }; break;
+                    case 'topPages': payload.params = { scope: getInputValue('tpScopeSelect'), targets: getCleanedList('tpUrlsInput'), limit: parseInt(getInputValue('tpLimit'), 10) || 25, filter: getInputValue('tpFilterSelect'), sort: getInputValue('tpSortSelect') }; break;
                     default: throw new Error('Invalid method selected.');
                 }
                 if ((payload.params.targets?.length === 0) && (payload.params.keywords?.length === 0)) {
@@ -515,6 +546,21 @@
                 let rows = [];
                 const na = 'N/A';
                 const snakeToTitleCase = (s) => s.replace(/^_*(.)|_+(.)/g, (s, c, d) => c ? c.toUpperCase() : ' ' + d.toUpperCase());
+                
+                const processLinkMetrics = (linkItem, query) => {
+                    const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
+                    const metrics = linkItem.site_metrics || {};
+                    const otherData = { ...linkItem };
+                    delete otherData.site_metrics;
+
+                    const combined = { ...baseInfo, ...metrics, ...otherData };
+                    const titleCased = {};
+                    for (const key in combined) {
+                        titleCased[snakeToTitleCase(key)] = combined[key];
+                    }
+                    return titleCased;
+                };
+
                 results.forEach((res, i) => {
                     const query = (originalParams.targets || originalParams.keywords)[i] || na;
                     if (res.status !== 'success') {
@@ -575,19 +621,34 @@
                         case 'anchorText': {
                             const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
                             if(res.data.anchor_texts?.length > 0){
-                                res.data.anchor_texts.forEach(at => {
-                                    rows.push({
-                                        ...baseInfo,
-                                        'Anchor Text': at.text,
-                                        'External Root Domains': at.external_root_domains,
-                                        'External Pages': at.external_pages
-                                    });
-                                });
-                            } else {
-                                rows.push({ ...baseInfo, Status: 'No anchor texts found' });
-                            }
+                                res.data.anchor_texts.forEach(at => { rows.push({ ...baseInfo, 'Anchor Text': at.text, 'External Root Domains': at.external_root_domains, 'External Pages': at.external_pages }); });
+                            } else { rows.push({ ...baseInfo, Status: 'No anchor texts found' }); }
                             break;
                         }
+                        case 'recentlyGainedLinks':
+                            (res.data.gained_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                            if (!res.data.gained_linking_domains || res.data.gained_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently gained links found' });
+                            break;
+                        case 'recentlyLostLinks':
+                            (res.data.lost_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                             if (!res.data.lost_linking_domains || res.data.lost_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently lost links found' });
+                            break;
+                        case 'linkingDomains':
+                            (res.data.linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                            if (!res.data.linking_domains || res.data.linking_domains.length === 0) rows.push({ Query: query, Status: 'No linking domains found' });
+                            break;
+                        case 'topPages':
+                             (res.data.top_pages || []).forEach(page => {
+                                const pageData = { 'Query': query, 'Scope': originalParams.scope, ...page };
+                                const titleCased = {};
+                                for(const key in pageData) { titleCased[snakeToTitleCase(key)] = pageData[key]; }
+                                rows.push(titleCased);
+                             });
+                             if (!res.data.top_pages || res.data.top_pages.length === 0) rows.push({ Query: query, Status: 'No top pages found' });
+                            break;
+                        case 'finalRedirect':
+                            rows.push({ 'Query': query, 'Scope': originalParams.scope, 'Original Query': res.data.site_query?.original_site_query?.query || query, 'Destination': res.data.destination || 'No redirect found' });
+                            break;
                     }
                 });
                 if (rows.length === 0) { displayError("No valid data to export."); return; }
