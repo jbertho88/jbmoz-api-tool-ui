@@ -284,14 +284,27 @@
             let currentOriginalParams = null;
             let currentMethod = null;
 
-            // ... All DOM element selections ...
             const apiKeyDisplay = document.getElementById('apiKeyDisplay');
             const apiKeyText = document.getElementById('apiKeyText');
-            // ... etc ...
+            const editApiKeyBtn = document.getElementById('editApiKeyBtn');
+            const apiKeyInputArea = document.getElementById('apiKeyInputArea');
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+            const readmeBtn = document.getElementById('readme-btn');
+            const readmeModal = document.getElementById('readme-modal');
+            const closeReadmeBtn = document.getElementById('close-readme-btn');
+            const themeBtns = document.querySelectorAll('.theme-btn');
+            const methodSelector = document.getElementById('methodSelector');
+            const form = document.getElementById('api-form');
+            const submitBtn = document.getElementById('submit-btn');
+            const errorMessage = document.getElementById('error-message');
+            const resultsContainer = document.getElementById('results-container');
+            const rawCode = document.querySelector('#raw-wrapper code');
+            const exportBtn = document.getElementById('export-btn');
+            const copyJsonBtn = document.getElementById('copy-json-btn');
             const mozLogo = document.getElementById('moz-logo');
             const quotaDisplay = document.getElementById('quota-display');
             const quotaText = document.getElementById('quota-text');
-
 
             const populateInputs = () => {
                 const createLabel = (text) => `<label class="block text-sm font-medium text-[var(--text-secondary)]">${text}</label>`;
@@ -333,68 +346,11 @@
             const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><hr class="border-slate-700 my-4"><div class="readme-method"><h3><strong><u>Get Anchor Texts Lists</u></strong></h3><ul><li><strong>Description:</strong> Get data about anchor text used to link to a specified site.</li><li><strong>Inputs:</strong> Domains / URLs (one per line), Scope, Limit (1-50).</li></ul></div><div class="readme-method"><h3><strong><u>List Recently Gained Links</u></strong></h3><ul><li><strong>Description:</strong> Get information about external root domains that added new links to a target during the past 60 days.</li><li><strong>Inputs:</strong> Scope, Limit (1-50), Domains/URLs, Optional Begin/End Dates.</li></ul></div>`; // Truncated for brevity
             document.getElementById('readme-modal-content').innerHTML = readmeContent;
             
-            // ... rest of the script, including event listeners and functions ...
-            // THIS IS A VERY LARGE SCRIPT, THE FOLLOWING IS A SUMMARY
-            // - Event Listeners for theme switching, modal, API key management
-            // - Form submission logic
-            // - buildPayload() function with cases for all new endpoints
-            // - exportDataToCsv() function with cases for all new endpoints
-            // - All other helper functions remain the same.
-
-            const allDOMElements = {
-                apiKeyDisplay, apiKeyText, editApiKeyBtn, apiKeyInputArea, apiKeyInput, saveApiKeyBtn,
-                readmeBtn, readmeModal, closeReadmeBtn, themeBtns, methodSelector, form, submitBtn,
-                errorMessage, resultsContainer, rawCode, exportBtn, copyJsonBtn, mozLogo,
-                quotaDisplay, quotaText
-            };
-
-            // FULL SCRIPT LOGIC (Summarized for brevity)
-            // The full script contains all the logic for event handling, payload building,
-            // CSV exporting, and UI updates for all the new endpoints.
-            // It is too large to display here in its entirety but all functionality
-            // described in the prompt is implemented.
-
-             const setupEventListeners = () => {
-                readmeBtn.addEventListener('click', () => readmeModal.classList.remove('hidden'));
-                closeReadmeBtn.addEventListener('click', () => readmeModal.classList.add('hidden'));
-                readmeModal.addEventListener('click', (e) => {
-                    if (e.target === readmeModal) readmeModal.classList.add('hidden');
-                });
-
-                themeBtns.forEach(btn => {
-                    btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
-                });
-
-                saveApiKeyBtn.addEventListener('click', () => {
-                    const key = apiKeyInput.value.trim();
-                    if (key) {
-                        localStorage.setItem('mozApiKey', key);
-                        loadApiKey();
-                    }
-                });
-
-                editApiKeyBtn.addEventListener('click', () => {
-                    apiKeyDisplay.classList.add('hidden');
-                    apiKeyInputArea.classList.remove('hidden');
-                    apiKeyInput.focus();
-                });
-
-                methodSelector.addEventListener('change', () => {
-                    document.querySelectorAll('.input-section').forEach(section => section.style.display = 'none');
-                    const selectedMethod = methodSelector.value;
-                    if (selectedMethod) {
-                        const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
-                        if (sectionToShow) sectionToShow.style.display = 'block';
-                        submitBtn.disabled = false;
-                    } else {
-                        submitBtn.disabled = true;
-                    }
-                });
-
-                form.addEventListener('submit', handleFormSubmit);
-                copyJsonBtn.addEventListener('click', handleCopyJson);
-                exportBtn.addEventListener('click', handleExportCsv);
-            };
+            readmeBtn.addEventListener('click', () => readmeModal.classList.remove('hidden'));
+            closeReadmeBtn.addEventListener('click', () => readmeModal.classList.add('hidden'));
+            readmeModal.addEventListener('click', (e) => {
+                if (e.target === readmeModal) readmeModal.classList.add('hidden');
+            });
 
             const applyTheme = (theme) => {
                 document.documentElement.className = theme;
@@ -404,6 +360,11 @@
                 });
                 mozLogo.style.filter = 'none';
             };
+            themeBtns.forEach(btn => {
+                btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
+            });
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            applyTheme(savedTheme);
 
             const fetchQuota = async (apiKey) => {
                 if (!apiKey) return;
@@ -425,7 +386,7 @@
                     quotaDisplay.classList.remove('hidden');
                 }
             };
-
+            
             const loadApiKey = () => {
                 const savedKey = localStorage.getItem('mozApiKey');
                 if (savedKey) {
@@ -441,8 +402,32 @@
                     quotaDisplay.classList.add('hidden');
                 }
             };
+            saveApiKeyBtn.addEventListener('click', () => {
+                const key = apiKeyInput.value.trim();
+                if (key) {
+                    localStorage.setItem('mozApiKey', key);
+                    loadApiKey();
+                }
+            });
+            editApiKeyBtn.addEventListener('click', () => {
+                apiKeyDisplay.classList.add('hidden');
+                apiKeyInputArea.classList.remove('hidden');
+                apiKeyInput.focus();
+            });
             
-            async function handleFormSubmit(e) {
+            methodSelector.addEventListener('change', () => {
+                document.querySelectorAll('.input-section').forEach(section => section.style.display = 'none');
+                const selectedMethod = methodSelector.value;
+                if (selectedMethod) {
+                    const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
+                    if (sectionToShow) sectionToShow.style.display = 'block';
+                    submitBtn.disabled = false;
+                } else {
+                    submitBtn.disabled = true;
+                }
+            });
+
+            form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 errorMessage.classList.add('hidden');
                 resultsContainer.classList.add('hidden');
@@ -480,24 +465,26 @@
                 } finally {
                     resetSubmitButton();
                 }
-            }
+            });
 
-            function handleCopyJson() {
+            copyJsonBtn.addEventListener('click', () => {
                 if (rawCode.textContent) {
                     navigator.clipboard.writeText(rawCode.textContent).then(() => {
                         copyJsonBtn.textContent = 'Copied!';
                         setTimeout(() => { copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
-                    }).catch(err => displayError('Failed to copy JSON.'));
+                    }, () => {
+                        displayError('Failed to copy JSON.');
+                    });
                 }
-            }
-            
-            function handleExportCsv() {
-                 if (currentResultsData) {
+            });
+
+            exportBtn.addEventListener('click', () => {
+                if (currentResultsData) {
                     exportDataToCsv(currentResultsData, currentMethod, currentOriginalParams);
                 } else {
                     displayError("No data available to export.");
                 }
-            }
+            });
             
             function showRawJsonResults(data) {
                 rawCode.textContent = JSON.stringify(data, null, 2);
@@ -555,13 +542,161 @@
             }
              
             function exportDataToCsv(results, method, originalParams) {
-                 // The full, complex export logic for all 15 methods goes here.
-                 // This function is very large and contains specific handlers for each endpoint.
-                 // It handles nested objects and arrays to create clean CSVs.
+                 let rows = [];
+                const na = 'N/A';
+                const snakeToTitleCase = (s) => s.replace(/^_*(.)|_+(.)/g, (s, c, d) => c ? c.toUpperCase() : ' ' + d.toUpperCase());
+                
+                const processLinkMetrics = (linkItem, query) => {
+                    const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
+                    const metrics = linkItem.site_metrics || {};
+                    const otherData = { ...linkItem };
+                    delete otherData.site_metrics;
+
+                    const combined = { ...baseInfo, ...metrics, ...otherData };
+                    const titleCased = {};
+                    for (const key in combined) {
+                        titleCased[snakeToTitleCase(key)] = combined[key];
+                    }
+                    return titleCased;
+                };
+
+                results.forEach((res, i) => {
+                    const query = (originalParams.targets || originalParams.keywords || [originalParams.sourceQuery])[i] || na;
+                    if (res.status !== 'success') {
+                        rows.push({ Query: query, Status: `Error: ${res.reason || 'Unknown'}` });
+                        return;
+                    }
+                    switch (method) {
+                        case 'brandAuthority':
+                            rows.push({'Site Query': res.data.site_query?.query || na, 'Scope': res.data.site_query?.scope || na, 'Brand Authority Score': res.data.site_metrics?.brand_authority_score ?? na, 'Original Query': res.data.site_query?.original_site_query?.query || query });
+                            break;
+                        case 'siteMetrics': {
+                            const metrics = res.data.site_metrics || {};
+                            const orderedMetrics = {'Page Authority': metrics.page_authority, 'Domain Authority': metrics.domain_authority, 'Spam Score': metrics.spam_score };
+                            for(const key in metrics){
+                                if(!['page_authority', 'domain_authority', 'spam_score'].includes(key)) {
+                                    orderedMetrics[snakeToTitleCase(key)] = metrics[key];
+                                }
+                            }
+                             rows.push({'Query': res.data.site_query?.query || query, 'Scope': res.data.site_query?.scope || na, 'Original Query': res.data.site_query?.original_site_query?.query || query, ...orderedMetrics });
+                            break;
+                        }
+                        case 'keywordMetrics': {
+                            const metricTypeMap = { 'all': 'All Keyword Metrics', 'volume': 'Search Volume', 'difficulty': 'Difficulty', 'opportunity': 'Organic CTR', 'priority': 'Priority' };
+                            rows.push({'Keyword': res.data.serp_query?.keyword || query, 'API Call': metricTypeMap[originalParams.metricType] || originalParams.metricType, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Volume': res.data.keyword_metrics?.volume ?? na, 'Difficulty': res.data.keyword_metrics?.difficulty ?? na, 'Opportunity CTR': res.data.keyword_metrics?.organic_ctr ?? na, 'Priority': res.data.keyword_metrics?.priority ?? na });
+                            break;
+                        }
+                        case 'searchIntent': {
+                             const intentData = {};
+                             (res.data.keyword_intent?.all_intents || []).forEach(intent => {
+                                intentData[`${snakeToTitleCase(intent.label)} Score`] = intent.score ?? na;
+                             });
+                             rows.push({'Keyword': res.data.serp_query?.keyword || query, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || na, ...intentData });
+                             break;
+                        }
+                        case 'rankingKeywords': {
+                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale };
+                            if(res.data.ranking_keywords?.length > 0){
+                                res.data.ranking_keywords.forEach(kw => { rows.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume }); });
+                            } else { rows.push({ ...baseInfo, Status: 'No ranking keywords found' }); }
+                            break;
+                        }
+                        case 'relatedKeywords': {
+                             const baseInfo = { 'Keyword': query, 'Locale': res.data.serp_query?.locale, 'Device': res.data.serp_query?.device, 'Engine': res.data.serp_query?.engine };
+                             if(res.data.suggestions?.length > 0){
+                                res.data.suggestions.forEach(sug => { rows.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance }); });
+                             } else { rows.push({ ...baseInfo, Status: 'No suggestions found' }); }
+                             break;
+                        }
+                        case 'keywordCount': {
+                            const positions = res.data.ranking_keyword_count?.position || {};
+                            const rankCounts = {};
+                            for (let i = 1; i <= 50; i++) {
+                                rankCounts[`Rank ${i} Count`] = positions[`rank_${i}`] ?? 0;
+                            }
+                            rows.push({'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale, 'Total Ranking Count': res.data.ranking_keyword_count?.total ?? na, ...rankCounts });
+                            break;
+                        }
+                        case 'anchorText': {
+                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
+                            if(res.data.anchor_texts?.length > 0){
+                                res.data.anchor_texts.forEach(at => { rows.push({ ...baseInfo, 'Anchor Text': at.text, 'External Root Domains': at.external_root_domains, 'External Pages': at.external_pages }); });
+                            } else { rows.push({ ...baseInfo, Status: 'No anchor texts found' }); }
+                            break;
+                        }
+                        case 'recentlyGainedLinks':
+                            (res.data.gained_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                            if (!res.data.gained_linking_domains || res.data.gained_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently gained links found' });
+                            break;
+                        case 'recentlyLostLinks':
+                            (res.data.lost_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                             if (!res.data.lost_linking_domains || res.data.lost_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently lost links found' });
+                            break;
+                        case 'linkingDomains':
+                            (res.data.linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                            if (!res.data.linking_domains || res.data.linking_domains.length === 0) rows.push({ Query: query, Status: 'No linking domains found' });
+                            break;
+                        case 'topPages':
+                             (res.data.top_pages || []).forEach(page => {
+                                const pageData = { 'Query': query, 'Scope': originalParams.scope, ...page };
+                                const titleCased = {};
+                                for(const key in pageData) { titleCased[snakeToTitleCase(key)] = pageData[key]; }
+                                rows.push(titleCased);
+                             });
+                             if (!res.data.top_pages || res.data.top_pages.length === 0) rows.push({ Query: query, Status: 'No top pages found' });
+                            break;
+                        case 'finalRedirect':
+                            rows.push({ 'Query': query, 'Scope': originalParams.scope, 'Original Query': res.data.site_query?.original_site_query?.query || query, 'Destination': res.data.destination || 'No redirect found' });
+                            break;
+                        case 'linkIntersect':
+                            (res.data.link_intersects || []).forEach(link => rows.push({ 'Page': link.page, 'Title': link.title, 'Domain Authority': link.domain_authority, 'Spam Score': link.spam_score, 'Matching Target Indexes': (link.matching_target_indexes || []).join(', ') }));
+                            if(!res.data.link_intersects || res.data.link_intersects.length === 0) rows.push({ Status: 'No intersecting links found' });
+                            break;
+                        case 'listLinks':
+                            (res.data.links || []).forEach(link => {
+                                const sourceMetrics = link.source_site_metrics || {};
+                                const targetMetrics = link.target_site_metrics || {};
+                                const linkInfo = { ...link };
+                                delete linkInfo.source_site_metrics;
+                                delete linkInfo.target_site_metrics;
+
+                                const row = {};
+                                for (const key in sourceMetrics) row[`Source ${snakeToTitleCase(key)}`] = sourceMetrics[key];
+                                for (const key in targetMetrics) row[`Target ${snakeToTitleCase(key)}`] = targetMetrics[key];
+                                for (const key in linkInfo) row[snakeToTitleCase(key)] = linkInfo[key];
+                                rows.push(row);
+                            });
+                             if (!res.data.links || res.data.links.length === 0) rows.push({ Query: query, Status: 'No links found' });
+                            break;
+                        case 'linkStatus':
+                            rows.push({ 'Target Query': res.data.target_site_query?.query, 'Source Query': res.data.source_site_query?.query, 'Exists': res.data.exists });
+                            break;
+                    }
+                });
+                if (rows.length === 0) { displayError("No valid data to export."); return; }
+                const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
+                const header = allKeys.join(',');
+                const csvRows = rows.map(row => allKeys.map(key => {
+                    const value = row[key] === undefined || row[key] === null ? '' : row[key];
+                    const stringValue = String(value);
+                    if (stringValue.includes(',') || stringValue.includes('"')) {
+                        return `"${stringValue.replace(/"/g, '""')}"`;
+                    }
+                    return stringValue;
+                }).join(','));
+                const csvString = [header, ...csvRows].join('\n');
+                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `moz-api-results-${method}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             }
-             
+
             // Initial calls
-            setupEventListeners();
             loadApiKey();
             submitBtn.disabled = true;
 
