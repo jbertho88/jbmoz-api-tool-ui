@@ -284,40 +284,37 @@
             let currentOriginalParams = null;
             let currentMethod = null;
 
-            const domElements = {
-                apiKeyDisplay: document.getElementById('apiKeyDisplay'),
-                apiKeyText: document.getElementById('apiKeyText'),
-                editApiKeyBtn: document.getElementById('editApiKeyBtn'),
-                apiKeyInputArea: document.getElementById('apiKeyInputArea'),
-                apiKeyInput: document.getElementById('apiKeyInput'),
-                saveApiKeyBtn: document.getElementById('saveApiKeyBtn'),
-                readmeBtn: document.getElementById('readme-btn'),
-                readmeModal: document.getElementById('readme-modal'),
-                closeReadmeBtn: document.getElementById('close-readme-btn'),
-                themeBtns: document.querySelectorAll('.theme-btn'),
-                methodSelector: document.getElementById('methodSelector'),
-                form: document.getElementById('api-form'),
-                submitBtn: document.getElementById('submit-btn'),
-                errorMessage: document.getElementById('error-message'),
-                resultsContainer: document.getElementById('results-container'),
-                rawCode: document.querySelector('#raw-wrapper code'),
-                exportBtn: document.getElementById('export-btn'),
-                copyJsonBtn: document.getElementById('copy-json-btn'),
-                mozLogo: document.getElementById('moz-logo'),
-                quotaDisplay: document.getElementById('quota-display'),
-                quotaText: document.getElementById('quota-text'),
-            };
+            const apiKeyDisplay = document.getElementById('apiKeyDisplay');
+            const apiKeyText = document.getElementById('apiKeyText');
+            const editApiKeyBtn = document.getElementById('editApiKeyBtn');
+            const apiKeyInputArea = document.getElementById('apiKeyInputArea');
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+            const readmeBtn = document.getElementById('readme-btn');
+            const readmeModal = document.getElementById('readme-modal');
+            const closeReadmeBtn = document.getElementById('close-readme-btn');
+            const themeBtns = document.querySelectorAll('.theme-btn');
+            const methodSelector = document.getElementById('methodSelector');
+            const form = document.getElementById('api-form');
+            const submitBtn = document.getElementById('submit-btn');
+            const errorMessage = document.getElementById('error-message');
+            const resultsContainer = document.getElementById('results-container');
+            const rawCode = document.querySelector('#raw-wrapper code');
+            const exportBtn = document.getElementById('export-btn');
+            const copyJsonBtn = document.getElementById('copy-json-btn');
+            const mozLogo = document.getElementById('moz-logo');
+            const quotaDisplay = document.getElementById('quota-display');
+            const quotaText = document.getElementById('quota-text');
 
             const populateInputs = () => {
                 const createLabel = (text) => `<label class="block text-sm font-medium text-[var(--text-secondary)]">${text}</label>`;
                 const createSelect = (id, options) => `<select id="${id}" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">${options}</select>`;
                 const createTextarea = (id, placeholder) => `<textarea id="${id}" rows="4" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)] placeholder-[var(--text-secondary)]" placeholder="${placeholder}"></textarea>`;
                 const createDescription = text => `<p class="text-sm text-[var(--text-secondary)]">${text}</p>`;
-                const createNumberInput = (id, value, min, max, label) => `<label class="block text-sm font-medium text-[var(--text-secondary)]">${label}</label><input type="number" id="${id}" value="${value}" min="${min}" max="${max}" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">`;
+                const createNumberInput = (id, value, min, max) => `<input type="number" id="${id}" value="${value}" min="${min}" max="${max}" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">`;
                 const createDateInput = (id) => `<input type="date" id="${id}" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">`;
                 const createMultiSelect = (id, options) => `<select id="${id}" multiple class="w-full h-32 bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">${options}</select>`;
-                const limitLabel = 'Number of Results (Default 25; Choose from 1 to 50)';
-
+                
                 const scopeOptions = `<option value="domain" selected>Domain</option><option value="subdomain">Subdomain</option><option value="subfolder">Subfolder</option><option value="url">URL</option>`;
                 const limitedScopeOptions = `<option value="domain" selected>Domain</option><option value="subdomain">Subdomain</option><option value="url">URL</option>`;
                 const localeOptions = `<option value="en-US" selected>en-US</option><option value="en-CA">en-CA</option><option value="en-GB">en-GB</option><option value="en-AU">en-AU</option>`;
@@ -325,67 +322,100 @@
                 const topPagesFilterOptions = `<option value="all" selected>All</option><option value="status_200">Status 200</option><option value="status_301">Status 301</option><option value="status_302">Status 302</option><option value="status_4xx">Status 4xx</option><option value="status_5xx">Status 5xx</option>`;
                 const topPagesSortOptions = `<option value="page_authority" selected>Page Authority</option><option value="root_domains_to_page">Linking Root Domains</option><option value="external_pages_to_page">External Linking Pages</option>`;
                 const listLinksFilterOptions = `<option value="external">external</option><option value="follow">follow</option><option value="nofollow">nofollow</option><option value="deleted">deleted</option><option value="not_deleted">not_deleted</option><option value="redirect">redirect</option><option value="not_redirect">not_redirect</option><option value="rel_canonical">rel_canonical</option><option value="not_rel_canonical">not_rel_canonical</option><option value="via_redirect">via_redirect</option><option value="not_via_redirect">not_via_redirect</option><option value="via_rel_canonical">via_rel_canonical</option><option value="not_via_rel_canonical">not_via_rel_canonical</option>`;
-                const listLinksSortOptions = `<option value="source_page_authority" selected>Source Page Authority</option><option value="source_domain_authority">Source Domain Authority</option><option value="source_link_propensity">Source Link Propensity</option><option value="source_spam_score">Source Spam Score</option>`;
+                const linkIntersectSortOptions = `<option value="matching_target_count" selected>Matching Target Count</option><option value="source_spam_score">Source Spam Score</option><option value="source_domain_authority">Source Domain Authority</option>`;
                 const linkingDomainsSortOptions = `<option value="source_domain_authority" selected>Source Domain Authority</option><option value="source_link_propensity">Source Link Propensity</option><option value="source_spam_score">Source Spam Score</option>`;
                 const linkingDomainsFilterOptions = `<option value="external">external</option><option value="follow">follow</option><option value="nofollow">nofollow</option><option value="deleted">deleted</option><option value="gained_last_60_days">gained_last_60_days</option><option value="lost_last_60_days">lost_last_60_days</option>`;
-                const linkIntersectSortOptions = `<option value="matching_target_count" selected>Matching Target Count</option><option value="source_spam_score">Source Spam Score</option><option value="source_domain_authority">Source Domain Authority</option>`;
-                const linkIntersectScopeOptions = `<option value="page" selected>Page</option><option value="domain">Domain</option>`;
+                const listLinksSortOptions = `<option value="source_page_authority" selected>Source Page Authority</option><option value="source_domain_authority">Source Domain Authority</option><option value="source_link_propensity">Source Link Propensity</option><option value="source_spam_score">Source Spam Score</option>`;
 
                 document.getElementById('siteMetricsInputs').innerHTML = createDescription('Get metrics like DA, PA, Spam Score, and link counts for URLs.') + createLabel('Scope') + createSelect('smScopeSelect', scopeOptions) + createLabel('Domains / URLs') + createTextarea('smUrlsInput', 'One per line or comma-separated (must include http/https)');
                 document.getElementById('keywordMetricsInputs').innerHTML = createDescription('Get volume, difficulty, CTR, and priority for keywords.') + createLabel('Metric Type') + createSelect('kmMetricTypeSelect', keywordMetricOptions) + createLabel('Locale') + createSelect('kmLocaleSelect', localeOptions) + createLabel('Keywords') + createTextarea('kmKeywordsInput', 'One per line or comma-separated');
                 document.getElementById('brandAuthorityInputs').innerHTML = createDescription('Get the Brand Authority™ score for a given site.') + createLabel('Domains / URLs') + createTextarea('baUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('searchIntentInputs').innerHTML = createDescription('Retrieve search intent scores for any keyword.') + createLabel('Locale') + createSelect('siLocaleSelect', localeOptions) + createLabel('Keywords') + createTextarea('siKeywordsInput', 'One per line or comma-separated.');
-                document.getElementById('rankingKeywordsInputs').innerHTML = createDescription('List keywords for which a site ranks.') + createLabel('Scope') + createSelect('rkScopeSelect', scopeOptions) + createLabel('Locale') + createSelect('rkLocaleSelect', localeOptions) + createNumberInput('rkLimit', 25, 1, 500, 'Number of Results (Default 25; Choose from 1 to 500)') + createLabel('Domains / URLs') + createTextarea('rkUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('rankingKeywordsInputs').innerHTML = createDescription('List keywords for which a site ranks.') + createLabel('Scope') + createSelect('rkScopeSelect', scopeOptions) + createLabel('Locale') + createSelect('rkLocaleSelect', localeOptions) + createLabel('Number of Results (Default 25; Choose from 1 to 500)') + createNumberInput('rkLimit', 25, 1, 500) + createLabel('Domains / URLs') + createTextarea('rkUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('relatedKeywordsInputs').innerHTML = createDescription('Get a list of related keyword suggestions.') + createLabel('Locale') + createSelect('rlLocaleSelect', localeOptions) + createLabel('Keywords') + createTextarea('rlKeywordsInput', 'One per line or comma-separated.');
                 document.getElementById('keywordCountInputs').innerHTML = createDescription('Count keywords for which a site ranks in the top 50.') + createLabel('Scope') + createSelect('kcScopeSelect', limitedScopeOptions) + createLabel('Locale') + createSelect('kcLocaleSelect', localeOptions) + createLabel('Domains / URLs') + createTextarea('kcUrlsInput', 'One per line or comma-separated.');
-                document.getElementById('anchorTextInputs').innerHTML = createDescription('Get data about anchor text used to link to a specified site.') + createLabel('Scope') + createSelect('atScopeSelect', scopeOptions) + createNumberInput('atLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('atUrlsInput', 'One per line or comma-separated.');
-                document.getElementById('recentlyGainedLinksInputs').innerHTML = createDescription('Get external root domains that added new links to a target during the past 60 days.') + createLabel('Scope') + createSelect('rglScopeSelect', scopeOptions) + createNumberInput('rglLimit', 25, 1, 50, limitLabel) + createLabel('Begin Date (Optional)') + createDateInput('rglBeginDate') + createLabel('End Date (Optional)') + createDateInput('rglEndDate') + createLabel('Domains / URLs') + createTextarea('rglUrlsInput', 'One per line or comma-separated.');
-                document.getElementById('recentlyLostLinksInputs').innerHTML = createDescription('Get root domains that removed links to a target during the past 60 days.') + createLabel('Scope') + createSelect('rllScopeSelect', scopeOptions) + createNumberInput('rllLimit', 25, 1, 50, limitLabel) + createLabel('Begin Date (Optional)') + createDateInput('rllBeginDate') + createLabel('End Date (Optional)') + createDateInput('rllEndDate') + createLabel('Domains / URLs') + createTextarea('rllUrlsInput', 'One per line or comma-separated.');
-                document.getElementById('linkingDomainsInputs').innerHTML = createDescription('Get a list of linking root domains to a target.') + createLabel('Scope') + createSelect('ldScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('ldSortSelect', linkingDomainsSortOptions) + createLabel('Filters (Ctrl+Click to select multiple)') + createMultiSelect('ldFilterSelect', linkingDomainsFilterOptions) + createNumberInput('ldLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('ldUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('anchorTextInputs').innerHTML = createDescription('Get data about anchor text used to link to a specified site.') + createLabel('Scope') + createSelect('atScopeSelect', scopeOptions) + createLabel('Number of Results (Default 25; Choose from 1 to 50)') + createNumberInput('atLimit', 25, 1, 50) + createLabel('Domains / URLs') + createTextarea('atUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('recentlyGainedLinksInputs').innerHTML = createDescription('Get external root domains that added new links to a target during the past 60 days.') + createLabel('Scope') + createSelect('rglScopeSelect', scopeOptions) + createLabel('Number of Results (Default 25; Choose from 1 to 50)') + createNumberInput('rglLimit', 25, 1, 50) + createLabel('Begin Date (Optional)') + createDateInput('rglBeginDate') + createLabel('End Date (Optional)') + createDateInput('rglEndDate') + createLabel('Domains / URLs') + createTextarea('rglUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('recentlyLostLinksInputs').innerHTML = createDescription('Get root domains that removed links to a target during the past 60 days.') + createLabel('Scope') + createSelect('rllScopeSelect', scopeOptions) + createLabel('Number of Results (Default 25; Choose from 1 to 50)') + createNumberInput('rllLimit', 25, 1, 50) + createLabel('Begin Date (Optional)') + createDateInput('rllBeginDate') + createLabel('End Date (Optional)') + createDateInput('rllEndDate') + createLabel('Domains / URLs') + createTextarea('rllUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('linkingDomainsInputs').innerHTML = createDescription('Get a list of linking root domains to a target.') + createLabel('Scope') + createSelect('ldScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('ldSortSelect', linkingDomainsSortOptions) + createLabel('Filters (Ctrl+Click to select multiple)') + createMultiSelect('ldFilterSelect', linkingDomainsFilterOptions) + createLabel('Number of Results (Default 25; Choose from 1 to 50)') + createNumberInput('ldLimit', 25, 1, 50) + createLabel('Domains / URLs') + createTextarea('ldUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('finalRedirectInputs').innerHTML = createDescription('See the final redirect target of a page.') + createLabel('Scope') + createSelect('frScopeSelect', scopeOptions) + createLabel('Domains / URLs') + createTextarea('frUrlsInput', 'One per line or comma-separated.');
-                document.getElementById('topPagesInputs').innerHTML = createDescription('Return a list of the top pages on a target domain.') + createLabel('Scope') + createSelect('tpScopeSelect', scopeOptions) + createLabel('Filter') + createSelect('tpFilterSelect', topPagesFilterOptions) + createLabel('Sort') + createSelect('tpSortSelect', topPagesSortOptions) + createNumberInput('tpLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('tpUrlsInput', 'One per line or comma-separated.');
-                document.getElementById('linkIntersectInputs').innerHTML = createDescription('Find sites that link to some domains but not others.') + createNumberInput('liMinMatch', 1, 1, 6, 'Minimum Matching Targets (Optional)') + createLabel('Source Scope (Optional)') + createSelect('liScopeSelect', linkIntersectScopeOptions) + createLabel('Sort (Optional)') + createSelect('liSortSelect', linkIntersectSortOptions) + createNumberInput('liLimit', 25, 1, 50, limitLabel) + createLabel('Linking To (one per line, with scope)') + createTextarea('liIsLinkingTo', 'domain moz.com\nsubdomain blog.hubspot.com') + createLabel('NOT Linking To (Optional, one per line, with scope)') + createTextarea('liNotLinkingTo', 'url cnn.com/page');
-                document.getElementById('listLinksInputs').innerHTML = createDescription('Get a list of links to a target.') + createLabel('Scope') + createSelect('llScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('llSortSelect', listLinksSortOptions) + createLabel('Filters (Ctrl+Click to select multiple)') + createMultiSelect('llFilterSelect', listLinksFilterOptions) + createNumberInput('llLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('llUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('topPagesInputs').innerHTML = createDescription('Return a list of the top pages on a target domain.') + createLabel('Scope') + createSelect('tpScopeSelect', scopeOptions) + createLabel('Filter') + createSelect('tpFilterSelect', topPagesFilterOptions) + createLabel('Sort') + createSelect('tpSortSelect', topPagesSortOptions) + createLabel('Number of Results (Default 25; Choose from 1 to 50)') + createNumberInput('tpLimit', 25, 1, 50) + createLabel('Domains / URLs') + createTextarea('tpUrlsInput', 'One per line or comma-separated.');
+                document.getElementById('linkIntersectInputs').innerHTML = createDescription('Find sites that link to some domains but not others.') + createLabel('Scope') + createSelect('liScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('liSortSelect', linkIntersectSortOptions) + createLabel('Minimum Matching Targets') + createNumberInput('liMinMatch', 1, 1, 6) + createLabel('Number of Results (Default 25; Choose from 1 to 50)') + createNumberInput('liLimit', 25, 1, 50) + createLabel('Linking To') + createTextarea('liIsLinkingTo', 'One per line...') + createLabel('NOT Linking To (Optional)') + createTextarea('liNotLinkingTo', 'One per line...');
+                document.getElementById('listLinksInputs').innerHTML = createDescription('Get a list of links to a target.') + createLabel('Scope') + createSelect('llScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('llSortSelect', listLinksSortOptions) + createLabel('Filters (Ctrl+Click to select multiple)') + createMultiSelect('llFilterSelect', listLinksFilterOptions) + createLabel('Number of Results (Default 25; Choose from 1 to 50)') + createNumberInput('llLimit', 25, 1, 50) + createLabel('Domains / URLs') + createTextarea('llUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('linkStatusInputs').innerHTML = createDescription('Get the status of a link from a source to a target.') + createLabel('Target Scope') + createSelect('lsTargetScopeSelect', scopeOptions) + createLabel('Target URL') + createTextarea('lsTargetUrl', 'Target URL') + createLabel('Source Scope') + createSelect('lsSourceScopeSelect', scopeOptions) + createLabel('Source URL') + createTextarea('lsSourceUrl', 'Source URL');
             };
             
-            const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><h2>Setup</h2><ol><li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank">Moz API Dashboard</a>.</li><li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li></ol><h2>Features</h2><p>Select a method from the dropdown to get started:</p><hr class="border-slate-700 my-4"><div class="readme-method"><h3><strong><u>Fetch Site Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get metrics such as Domain Authority, Page Authority, Spam Score, link counts and more for URLs.</li><li><strong>Inputs:</strong> Domains / URLs, Scope.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Brand Authority</u></strong></h3><ul><li><strong>Description:</strong> This endpoint returns a Brand Authority™ score for the provided site.</li><li><strong>Inputs:</strong> Domains / URLs. Scope is automatically 'domain'.</li></ul></div><div class="readme-method"><h3><strong><u>List Top Pages</u></strong></h3><ul><li><strong>Description:</strong> Returns a list of the top pages on a target domain, sorted by page authority, linking root domains, or external linking pages.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Filter, Sort, Limit.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Keyword Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get the most recent difficulty, volume, organic CTR, and priority metrics for any keyword.</li><li><strong>Quota Note:</strong> "All Metrics" uses up to 4 API rows per keyword. Single metric calls use 1 row per keyword.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Search Intent</u></strong></h3><ul><li><strong>Description:</strong> Retrieve the most recent search intent scores for any keyword.</li><li><strong>Inputs:</strong> Keywords, Locale.</li></ul></div><div class="readme-method"><h3><strong><u>List Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a list of keywords for which the provided site ranks.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Locale, Limit (1-500).</li></ul></div><div class="readme-method"><h3><strong><u>List Related Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a list of related keyword suggestions for given input keywords.</li><li><strong>Inputs:</strong> Keywords, Locale.</li></ul></div><div class="readme-method"><h3><strong><u>Count Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Retrieve a summary of the number of keywords for which the provided query ranks in the top 50.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Locale.</li></ul></div><div class="readme-method"><h3><strong><u>Get Anchor Texts Lists</u></strong></h3><ul><li><strong>Description:</strong> Get data about anchor text used to link to a specified site.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Limit (1-50).</li></ul></div><div class="readme-method"><h3><strong><u>List Linking Domains</u></strong></h3><ul><li><strong>Description:</strong> Get a list of linking root domains to a target, with information about each.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Sort, Filters, Limit (1-50).</li></ul></div><div class="readme-method"><h3><strong><u>List Recently Gained Links</u></strong></h3><ul><li><strong>Description:</strong> Get information about external root domains that added new links to a target during the past 60 days.</li><li><strong>Inputs:</strong> Scope, Limit (1-50), Domains/URLs, Optional Begin/End Dates.</li></ul></div><div class="readme-method"><h3><strong><u>List Recently Lost Links</u></strong></h3><ul><li><strong>Description:</strong> Get information about root domains that removed links to a target during the past 60 days.</li><li><strong>Inputs:</strong> Scope, Limit (1-50), Domains/URLs, Optional Begin/End Dates.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Link Intersects</u></strong></h3><ul><li><strong>Description:</strong> Find sites that point to some specified domains but not others.</li><li><strong>Inputs:</strong> Linking To/Not Linking To URLs with scopes, Limit, and other options.</li></ul></div><div class="readme-method"><h3><strong><u>List Links</u></strong></h3><ul><li><strong>Description:</strong> Get a list of links to a target.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Sort, Filters, Limit (1-50).</li></ul></div><div class="readme-method"><h3><strong><u>Get Final Redirect Target</u></strong></h3><ul><li><strong>Description:</strong> See the final redirect target of a page after following known redirects.</li><li><strong>Inputs:</strong> Domains / URLs, Scope.</li></ul></div><div class="readme-method"><h3><strong><u>Get Link Status</u></strong></h3><ul><li><strong>Description:</strong> Get the status of a link from a source to a target.</li><li><strong>Inputs:</strong> Target URL/Scope and Source URL/Scope.</li></ul></div>`;
-            document.getElementById('readme-modal-content').innerHTML = readmeContent;
+            const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><h2>Setup</h2><ol><li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank">Moz API Dashboard</a>.</li><li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li></ol><h2>Features</h2><p>Select a method from the dropdown to get started:</p><hr class="border-slate-700 my-4"><div class="readme-method"><h3><strong><u>Fetch Site Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get metrics like DA, PA, Spam Score, and link counts for URLs.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Brand Authority</u></strong></h3><ul><li><strong>Description:</strong> Get the Brand Authority™ score for a given site.</li></ul></div><div class="readme-method"><h3><strong><u>List Top Pages</u></strong></h3><ul><li><strong>Description:</strong> Return a list of the top pages on a target domain.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Keyword Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get volume, difficulty, CTR, and priority for keywords.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Search Intent</u></strong></h3><ul><li><strong>Description:</strong> Retrieve search intent scores for any keyword.</li></ul></div><div class="readme-method"><h3><strong><u>List Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> List keywords for which a site ranks.</li></ul></div><div class="readme-method"><h3><strong><u>List Related Keywords</u></strong></h3><ul><li><strong>Description:</strong> Get a list of related keyword suggestions.</li></ul></div><div class="readme-method"><h3><strong><u>Count Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Count keywords for which a site ranks in the top 50.</li></ul></div><div class="readme-method"><h3><strong><u>Get Anchor Texts Lists</u></strong></h3><ul><li><strong>Description:</strong> Get data about anchor text used to link to a specified site.</li></ul></div><div class="readme-method"><h3><strong><u>List Linking Domains</u></strong></h3><ul><li><strong>Description:</strong> Get a list of linking root domains to a target.</li></ul></div><div class="readme-method"><h3><strong><u>List Recently Gained Links</u></strong></h3><ul><li><strong>Description:</strong> Get external root domains that added new links to a target during the past 60 days.</li></ul></div><div class="readme-method"><h3><strong><u>List Recently Lost Links</u></strong></h3><ul><li><strong>Description:</strong> Get root domains that removed links to a target during the past 60 days.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Link Intersects</u></strong></h3><ul><li><strong>Description:</strong> Find sites that link to some domains but not others.</li></ul></div><div class="readme-method"><h3><strong><u>List Links</u></strong></h3><ul><li><strong>Description:</strong> Get a list of links to a target.</li></ul></div><div class="readme-method"><h3><strong><u>Get Final Redirect Target</u></strong></h3><ul><li><strong>Description:</strong> See the final redirect target of a page.</li></ul></div><div class="readme-method"><h3><strong><u>Get Link Status</u></strong></h3><ul><li><strong>Description:</strong> Get the status of a link from a source to a target.</li></ul></div><hr class="border-slate-700 my-4"><h2>General Notes</h2><ul><li><strong>API Usage:</strong> Each API call consumes rows from your Moz API subscription quota. Be mindful of limits.</li><li><strong>Errors:</strong> If an API call fails, an error message will be displayed and the JSON response will contain details.</li></ul>`;
             
+            // --- All other script logic follows ---
+            const allDOMElements = {
+                apiKeyDisplay: document.getElementById('apiKeyDisplay'), 
+                apiKeyText: document.getElementById('apiKeyText'), 
+                editApiKeyBtn: document.getElementById('editApiKeyBtn'), 
+                apiKeyInputArea: document.getElementById('apiKeyInputArea'), 
+                apiKeyInput: document.getElementById('apiKeyInput'), 
+                saveApiKeyBtn: document.getElementById('saveApiKeyBtn'),
+                readmeBtn: document.getElementById('readme-btn'), 
+                readmeModal: document.getElementById('readme-modal'), 
+                closeReadmeBtn: document.getElementById('close-readme-btn'), 
+                themeBtns: document.querySelectorAll('.theme-btn'), 
+                methodSelector: document.getElementById('methodSelector'), 
+                form: document.getElementById('api-form'), 
+                submitBtn: document.getElementById('submit-btn'),
+                errorMessage: document.getElementById('error-message'), 
+                resultsContainer: document.getElementById('results-container'), 
+                rawCode: document.querySelector('#raw-wrapper code'), 
+                exportBtn: document.getElementById('export-btn'), 
+                copyJsonBtn: document.getElementById('copy-json-btn'), 
+                mozLogo: document.getElementById('moz-logo'),
+                quotaDisplay: document.getElementById('quota-display'), 
+                quotaText: document.getElementById('quota-text')
+            };
+
             const setupEventListeners = () => {
-                domElements.readmeBtn.addEventListener('click', () => domElements.readmeModal.classList.remove('hidden'));
-                domElements.closeReadmeBtn.addEventListener('click', () => domElements.readmeModal.classList.add('hidden'));
-                domElements.readmeModal.addEventListener('click', (e) => {
-                    if (e.target === domElements.readmeModal) domElements.readmeModal.classList.add('hidden');
+                allDOMElements.readmeBtn.addEventListener('click', () => allDOMElements.readmeModal.classList.remove('hidden'));
+                allDOMElements.closeReadmeBtn.addEventListener('click', () => allDOMElements.readmeModal.classList.add('hidden'));
+                allDOMElements.readmeModal.addEventListener('click', (e) => {
+                    if (e.target === allDOMElements.readmeModal) allDOMElements.readmeModal.classList.add('hidden');
                 });
-                domElements.themeBtns.forEach(btn => {
+                allDOMElements.themeBtns.forEach(btn => {
                     btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
                 });
-                domElements.saveApiKeyBtn.addEventListener('click', () => {
-                    const key = domElements.apiKeyInput.value.trim();
+                allDOMElements.saveApiKeyBtn.addEventListener('click', () => {
+                    const key = allDOMElements.apiKeyInput.value.trim();
                     if (key) {
                         localStorage.setItem('mozApiKey', key);
                         loadApiKey();
                     }
                 });
-                domElements.editApiKeyBtn.addEventListener('click', () => {
-                    domElements.apiKeyDisplay.classList.add('hidden');
-                    domElements.apiKeyInputArea.classList.remove('hidden');
-                    domElements.apiKeyInput.focus();
+                allDOMElements.editApiKeyBtn.addEventListener('click', () => {
+                    allDOMElements.apiKeyDisplay.classList.add('hidden');
+                    allDOMElements.apiKeyInputArea.classList.remove('hidden');
+                    allDOMElements.apiKeyInput.focus();
                 });
-                domElements.methodSelector.addEventListener('change', onMethodChange);
-                domElements.form.addEventListener('submit', handleFormSubmit);
-                domElements.copyJsonBtn.addEventListener('click', handleCopyJson);
-                domElements.exportBtn.addEventListener('click', handleExportCsv);
+                allDOMElements.methodSelector.addEventListener('change', () => {
+                    document.querySelectorAll('.input-section').forEach(section => section.style.display = 'none');
+                    const selectedMethod = allDOMElements.methodSelector.value;
+                    if (selectedMethod) {
+                        const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
+                        if (sectionToShow) sectionToShow.style.display = 'block';
+                        allDOMElements.submitBtn.disabled = false;
+                    } else {
+                        allDOMElements.submitBtn.disabled = true;
+                    }
+                });
+                allDOMElements.form.addEventListener('submit', handleFormSubmit);
+                allDOMElements.copyJsonBtn.addEventListener('click', handleCopyJson);
+                allDOMElements.exportBtn.addEventListener('click', handleExportCsv);
             };
 
             const applyTheme = (theme) => {
                 document.documentElement.className = theme;
                 localStorage.setItem('theme', theme);
-                domElements.themeBtns.forEach(btn => {
+                allDOMElements.themeBtns.forEach(btn => {
                     btn.classList.toggle('font-bold', btn.dataset.theme === theme);
                 });
-                domElements.mozLogo.style.filter = 'none';
+                allDOMElements.mozLogo.style.filter = 'none';
             };
 
             const fetchQuota = async (apiKey) => {
@@ -398,53 +428,41 @@
                     });
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.error || 'Failed to fetch quota');
-                    const { used, allotted } = data.quota;
-                    domElements.quotaText.textContent = `API Usage: ${used.toLocaleString()} / ${allotted.toLocaleString()} Rows Used`;
-                    domElements.quotaText.style.color = used >= allotted ? 'var(--text-error)' : 'var(--text-secondary)';
-                    domElements.quotaDisplay.classList.remove('hidden');
+                    const { used, allotted } = data.quota.quota; // Corrected nesting
+                    allDOMElements.quotaText.textContent = `API Usage: ${used.toLocaleString()} / ${allotted.toLocaleString()} Rows Used`;
+                    allDOMElements.quotaText.style.color = used >= allotted ? 'var(--text-error)' : 'var(--text-secondary)';
+                    allDOMElements.quotaDisplay.classList.remove('hidden');
                 } catch (error) {
                     console.error("Quota fetch error:", error);
-                    domElements.quotaText.textContent = 'Could not retrieve API usage.';
-                    domElements.quotaDisplay.classList.remove('hidden');
+                    allDOMElements.quotaText.textContent = 'Could not retrieve API usage.';
+                    allDOMElements.quotaDisplay.classList.remove('hidden');
                 }
             };
             
             const loadApiKey = () => {
                 const savedKey = localStorage.getItem('mozApiKey');
                 if (savedKey) {
-                    domElements.apiKeyText.textContent = `${savedKey.substring(0, 6)}...${savedKey.substring(savedKey.length - 4)}`;
-                    domElements.apiKeyInput.value = savedKey;
-                    domElements.apiKeyDisplay.classList.remove('hidden');
-                    domElements.apiKeyDisplay.classList.add('flex');
-                    domElements.apiKeyInputArea.classList.add('hidden');
+                    allDOMElements.apiKeyText.textContent = `${savedKey.substring(0, 6)}...${savedKey.substring(savedKey.length - 4)}`;
+                    allDOMElements.apiKeyInput.value = savedKey;
+                    allDOMElements.apiKeyDisplay.classList.remove('hidden');
+                    allDOMElements.apiKeyDisplay.classList.add('flex');
+                    allDOMElements.apiKeyInputArea.classList.add('hidden');
                     fetchQuota(savedKey);
                 } else {
-                    domElements.apiKeyDisplay.classList.add('hidden');
-                    domElements.apiKeyInputArea.classList.remove('hidden');
-                    domElements.quotaDisplay.classList.add('hidden');
+                    allDOMElements.apiKeyDisplay.classList.add('hidden');
+                    allDOMElements.apiKeyInputArea.classList.remove('hidden');
+                    allDOMElements.quotaDisplay.classList.add('hidden');
                 }
             };
             
-            function onMethodChange() {
-                document.querySelectorAll('.input-section').forEach(section => section.style.display = 'none');
-                const selectedMethod = domElements.methodSelector.value;
-                if (selectedMethod) {
-                    const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
-                    if (sectionToShow) sectionToShow.style.display = 'block';
-                    domElements.submitBtn.disabled = false;
-                } else {
-                    domElements.submitBtn.disabled = true;
-                }
-            }
-
             async function handleFormSubmit(e) {
                 e.preventDefault();
-                domElements.errorMessage.classList.add('hidden');
-                domElements.resultsContainer.classList.add('hidden');
-                domElements.submitBtn.disabled = true;
-                domElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Processing...</span>';
-                const apiKey = domElements.apiKeyInput.value.trim();
-                const selectedMethod = domElements.methodSelector.value;
+                allDOMElements.errorMessage.classList.add('hidden');
+                allDOMElements.resultsContainer.classList.add('hidden');
+                allDOMElements.submitBtn.disabled = true;
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Processing...</span>';
+                const apiKey = allDOMElements.apiKeyInput.value.trim();
+                const selectedMethod = allDOMElements.methodSelector.value;
                 if (!apiKey || !selectedMethod) {
                     displayError('Please provide an API Key and select a method.');
                     resetSubmitButton(); return;
@@ -478,10 +496,10 @@
             }
 
             function handleCopyJson() {
-                if (domElements.rawCode.textContent) {
-                    navigator.clipboard.writeText(domElements.rawCode.textContent).then(() => {
-                        domElements.copyJsonBtn.textContent = 'Copied!';
-                        setTimeout(() => { domElements.copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
+                if (allDOMElements.rawCode.textContent) {
+                    navigator.clipboard.writeText(allDOMElements.rawCode.textContent).then(() => {
+                        allDOMElements.copyJsonBtn.textContent = 'Copied!';
+                        setTimeout(() => { allDOMElements.copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
                     }, () => {
                         displayError('Failed to copy JSON.');
                     });
@@ -497,18 +515,18 @@
             }
             
             function showRawJsonResults(data) {
-                domElements.rawCode.textContent = JSON.stringify(data, null, 2);
-                domElements.resultsContainer.classList.remove('hidden');
+                allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                allDOMElements.resultsContainer.classList.remove('hidden');
             }
 
             function displayError(message) {
-                domElements.errorMessage.textContent = message;
-                domElements.errorMessage.classList.remove('hidden');
+                allDOMElements.errorMessage.textContent = message;
+                allDOMElements.errorMessage.classList.remove('hidden');
             }
             
             function resetSubmitButton() {
-                domElements.submitBtn.disabled = domElements.methodSelector.value === "";
-                domElements.submitBtn.innerHTML = 'Run Request';
+                allDOMElements.submitBtn.disabled = allDOMElements.methodSelector.value === "";
+                allDOMElements.submitBtn.innerHTML = 'Run Request';
             }
 
             function buildPayload(apiKey, selectedMethod) {
@@ -516,13 +534,6 @@
                 const getInputValue = (id) => document.getElementById(id)?.value;
                 const getCleanedList = (id) => getInputValue(id)?.split(/[\n,]/).map(item => item.trim()).filter(Boolean);
                 const getSelectedOptions = (id) => Array.from(document.getElementById(id).selectedOptions).map(({ value }) => value);
-                const parseLinkIntersectTargets = (id) => {
-                    return getInputValue(id).split(/[\n,]/).map(line => {
-                        const parts = line.trim().split(/\s+/);
-                        if (parts.length < 2) return null;
-                        return { scope: parts[0], query: parts.slice(1).join(' ') };
-                    }).filter(Boolean);
-                };
 
                 switch (selectedMethod) {
                     case 'siteMetrics': payload.params = { scope: getInputValue('smScopeSelect'), targets: getCleanedList('smUrlsInput') }; break;
@@ -535,15 +546,14 @@
                     case 'anchorText': payload.params = { scope: getInputValue('atScopeSelect'), targets: getCleanedList('atUrlsInput'), limit: parseInt(getInputValue('atLimit'), 10) || 25 }; break;
                     case 'recentlyGainedLinks': payload.params = { scope: getInputValue('rglScopeSelect'), targets: getCleanedList('rglUrlsInput'), limit: parseInt(getInputValue('rglLimit'), 10) || 25, beginDate: getInputValue('rglBeginDate'), endDate: getInputValue('rglEndDate') }; break;
                     case 'recentlyLostLinks': payload.params = { scope: getInputValue('rllScopeSelect'), targets: getCleanedList('rllUrlsInput'), limit: parseInt(getInputValue('rllLimit'), 10) || 25, beginDate: getInputValue('rllBeginDate'), endDate: getInputValue('rllEndDate') }; break;
-                    case 'linkingDomains': payload.params = { scope: getInputValue('ldScopeSelect'), targets: getCleanedList('ldUrlsInput'), limit: parseInt(getInputValue('ldLimit'), 10) || 25, filters: getSelectedOptions('ldFilterSelect'), sort: getInputValue('ldSortSelect') }; break;
+                    case 'linkingDomains': payload.params = { scope: getInputValue('ldScopeSelect'), targets: getCleanedList('ldUrlsInput'), limit: parseInt(getInputValue('ldLimit'), 10) || 25, sort: getInputValue('ldSortSelect'), filters: getSelectedOptions('ldFilterSelect')}; break;
                     case 'finalRedirect': payload.params = { scope: getInputValue('frScopeSelect'), targets: getCleanedList('frUrlsInput') }; break;
                     case 'topPages': payload.params = { scope: getInputValue('tpScopeSelect'), targets: getCleanedList('tpUrlsInput'), limit: parseInt(getInputValue('tpLimit'), 10) || 25, filter: getInputValue('tpFilterSelect'), sort: getInputValue('tpSortSelect') }; break;
-                    case 'linkIntersect': payload.params = { minimum_matching_targets: parseInt(getInputValue('liMinMatch'), 10) || null, scope: getInputValue('liScopeSelect'), sort: getInputValue('liSortSelect'), limit: parseInt(getInputValue('liLimit'), 10) || 25, is_linking_to: parseLinkIntersectTargets('liIsLinkingTo'), not_linking_to: parseLinkIntersectTargets('liNotLinkingTo') }; break;
+                    case 'linkIntersect': payload.params = { scope: getInputValue('liScopeSelect'), limit: parseInt(getInputValue('liLimit'), 10) || 25, is_linking_to: getCleanedList('liIsLinkingTo').map(q => ({query: q})), not_linking_to: getCleanedList('liNotLinkingTo').map(q => ({query: q})), sort: getInputValue('liSortSelect'), minimum_matching_targets: parseInt(getInputValue('liMinMatch'), 10) || 1 }; break;
                     case 'listLinks': payload.params = { scope: getInputValue('llScopeSelect'), targets: getCleanedList('llUrlsInput'), limit: parseInt(getInputValue('llLimit'), 10) || 25, filters: getSelectedOptions('llFilterSelect'), sort: getInputValue('llSortSelect') }; break;
                     case 'linkStatus': payload.params = { targetScope: getInputValue('lsTargetScopeSelect'), targetQuery: getInputValue('lsTargetUrl'), sourceScope: getInputValue('lsSourceScopeSelect'), sourceQuery: getInputValue('lsSourceUrl') }; break;
                     default: throw new Error('Invalid method selected.');
                 }
-                
                 if (['siteMetrics', 'keywordMetrics', 'brandAuthority', 'searchIntent', 'rankingKeywords', 'relatedKeywords', 'keywordCount', 'anchorText', 'recentlyGainedLinks', 'recentlyLostLinks', 'linkingDomains', 'finalRedirect', 'topPages', 'listLinks'].includes(selectedMethod)) {
                     if ((payload.params.targets?.length === 0) && (payload.params.keywords?.length === 0)) {
                         throw new Error('Please enter at least one URL or Keyword.');
@@ -574,8 +584,18 @@
                     }
                     return titleCased;
                 };
+
                 results.forEach((res, i) => {
-                    const query = (originalParams.targets || originalParams.keywords || [originalParams.sourceQuery])[i] || na;
+                    let query;
+                    if (method === 'linkIntersect') {
+                        query = 'N/A';
+                    } else if (method === 'linkStatus') {
+                        query = originalParams.sourceQuery;
+                    }
+                    else {
+                        query = (originalParams.targets || originalParams.keywords)[i] || na;
+                    }
+                    
                     if (res.status !== 'success') {
                         rows.push({ Query: query, Status: `Error: ${res.reason || 'Unknown'}` });
                         return;
@@ -587,8 +607,12 @@
                         case 'siteMetrics': {
                             const metrics = res.data.site_metrics || {};
                             const orderedMetrics = {'Page Authority': metrics.page_authority, 'Domain Authority': metrics.domain_authority, 'Spam Score': metrics.spam_score };
-                            for(const key in metrics){ if(!['page_authority', 'domain_authority', 'spam_score'].includes(key)) { orderedMetrics[snakeToTitleCase(key)] = metrics[key]; } }
-                            rows.push({'Query': res.data.site_query?.query || query, 'Scope': res.data.site_query?.scope || na, 'Original Query': res.data.site_query?.original_site_query?.query || query, ...orderedMetrics });
+                            for(const key in metrics){
+                                if(!['page_authority', 'domain_authority', 'spam_score'].includes(key)) {
+                                    orderedMetrics[snakeToTitleCase(key)] = metrics[key];
+                                }
+                            }
+                             rows.push({'Query': res.data.site_query?.query || query, 'Scope': res.data.site_query?.scope || na, 'Original Query': res.data.site_query?.original_site_query?.query || query, ...orderedMetrics });
                             break;
                         }
                         case 'keywordMetrics': {
@@ -598,30 +622,40 @@
                         }
                         case 'searchIntent': {
                              const intentData = {};
-                             (res.data.keyword_intent?.all_intents || []).forEach(intent => { intentData[`${snakeToTitleCase(intent.label)} Score`] = intent.score ?? na; });
+                             (res.data.keyword_intent?.all_intents || []).forEach(intent => {
+                                intentData[`${snakeToTitleCase(intent.label)} Score`] = intent.score ?? na;
+                             });
                              rows.push({'Keyword': res.data.serp_query?.keyword || query, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || na, ...intentData });
                              break;
                         }
                         case 'rankingKeywords': {
                             const baseInfo = { 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale };
-                            if(res.data.ranking_keywords?.length > 0){ res.data.ranking_keywords.forEach(kw => { rows.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume }); }); } else { rows.push({ ...baseInfo, Status: 'No ranking keywords found' }); }
+                            if(res.data.ranking_keywords?.length > 0){
+                                res.data.ranking_keywords.forEach(kw => { rows.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume }); });
+                            } else { rows.push({ ...baseInfo, Status: 'No ranking keywords found' }); }
                             break;
                         }
                         case 'relatedKeywords': {
                              const baseInfo = { 'Keyword': query, 'Locale': res.data.serp_query?.locale, 'Device': res.data.serp_query?.device, 'Engine': res.data.serp_query?.engine };
-                             if(res.data.suggestions?.length > 0){ res.data.suggestions.forEach(sug => { rows.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance }); }); } else { rows.push({ ...baseInfo, Status: 'No suggestions found' }); }
+                             if(res.data.suggestions?.length > 0){
+                                res.data.suggestions.forEach(sug => { rows.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance }); });
+                             } else { rows.push({ ...baseInfo, Status: 'No suggestions found' }); }
                              break;
                         }
                         case 'keywordCount': {
                             const positions = res.data.ranking_keyword_count?.position || {};
                             const rankCounts = {};
-                            for (let i = 1; i <= 50; i++) { rankCounts[`Rank ${i} Count`] = positions[`rank_${i}`] ?? 0; }
+                            for (let i = 1; i <= 50; i++) {
+                                rankCounts[`Rank ${i} Count`] = positions[`rank_${i}`] ?? 0;
+                            }
                             rows.push({'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale, 'Total Ranking Count': res.data.ranking_keyword_count?.total ?? na, ...rankCounts });
                             break;
                         }
                         case 'anchorText': {
                             const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
-                            if(res.data.anchor_texts?.length > 0){ res.data.anchor_texts.forEach(at => { rows.push({ ...baseInfo, 'Anchor Text': at.text, 'External Root Domains': at.external_root_domains, 'External Pages': at.external_pages }); }); } else { rows.push({ ...baseInfo, Status: 'No anchor texts found' }); }
+                            if(res.data.anchor_texts?.length > 0){
+                                res.data.anchor_texts.forEach(at => { rows.push({ ...baseInfo, 'Anchor Text': at.text, 'External Root Domains': at.external_root_domains, 'External Pages': at.external_pages }); });
+                            } else { rows.push({ ...baseInfo, Status: 'No anchor texts found' }); }
                             break;
                         }
                         case 'recentlyGainedLinks':
@@ -659,6 +693,7 @@
                                 const linkInfo = { ...link };
                                 delete linkInfo.source_site_metrics;
                                 delete linkInfo.target_site_metrics;
+
                                 const row = {};
                                 for (const key in sourceMetrics) row[`Source ${snakeToTitleCase(key)}`] = sourceMetrics[key];
                                 for (const key in targetMetrics) row[`Target ${snakeToTitleCase(key)}`] = targetMetrics[key];
@@ -696,12 +731,12 @@
             }
 
             // Initial calls
-            populateInputs();
-            setupEventListeners();
             loadApiKey();
-            domElements.submitBtn.disabled = true;
+            setupEventListeners();
+            allDOMElements.submitBtn.disabled = true;
 
         });
     </script>
 </body>
 </html
+
