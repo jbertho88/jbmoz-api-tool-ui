@@ -526,7 +526,18 @@
                     case 'linkingDomains': payload.params = { scope: getInputValue('ldScopeSelect'), targets: getCleanedList('ldUrlsInput'), limit: parseInt(getInputValue('ldLimit'), 10) || 25, sort: getInputValue('ldSortSelect'), filters: getSelectedOptions('ldFilterSelect')}; break;
                     case 'finalRedirect': payload.params = { scope: getInputValue('frScopeSelect'), targets: getCleanedList('frUrlsInput') }; break;
                     case 'topPages': payload.params = { scope: getInputValue('tpScopeSelect'), targets: getCleanedList('tpUrlsInput'), limit: parseInt(getInputValue('tpLimit'), 10) || 25, filter: getInputValue('tpFilterSelect'), sort: getInputValue('tpSortSelect') }; break;
-                    case 'linkIntersect': payload.params = { scope: getInputValue('liScopeSelect'), limit: parseInt(getInputValue('liLimit'), 10) || 25, is_linking_to: getCleanedList('liIsLinkingTo').map(q => ({query: q})), not_linking_to: getCleanedList('liNotLinkingTo').map(q => ({query: q})), sort: getInputValue('liSortSelect'), minimum_matching_targets: parseInt(getInputValue('liMinMatch'), 10) || 1 }; break;
+                    case 'linkIntersect': {
+                        const intersectScope = getInputValue('liScopeSelect');
+                        payload.params = { 
+                            scope: intersectScope, 
+                            limit: parseInt(getInputValue('liLimit'), 10) || 25, 
+                            is_linking_to: getCleanedList('liIsLinkingTo').map(q => ({query: q, scope: intersectScope})), 
+                            not_linking_to: getCleanedList('liNotLinkingTo').map(q => ({query: q, scope: intersectScope})), 
+                            sort: getInputValue('liSortSelect'), 
+                            minimum_matching_targets: parseInt(getInputValue('liMinMatch'), 10) || 1 
+                        }; 
+                        break;
+                    }
                     case 'listLinks': payload.params = { scope: getInputValue('llScopeSelect'), targets: getCleanedList('llUrlsInput'), limit: parseInt(getInputValue('llLimit'), 10) || 25, filters: getSelectedOptions('llFilterSelect'), sort: getInputValue('llSortSelect') }; break;
                     case 'linkStatus': payload.params = { targetScope: getInputValue('lsTargetScopeSelect'), targetQuery: getInputValue('lsTargetUrl'), sourceScope: getInputValue('lsSourceScopeSelect'), sourceQuery: getInputValue('lsSourceUrl') }; break;
                     default: throw new Error('Invalid method selected.');
@@ -716,5 +727,5 @@
         });
     </script>
 </body>
-</html
+</html>
 
