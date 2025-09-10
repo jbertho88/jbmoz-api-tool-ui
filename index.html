@@ -284,27 +284,29 @@
             let currentOriginalParams = null;
             let currentMethod = null;
 
-            const apiKeyDisplay = document.getElementById('apiKeyDisplay');
-            const apiKeyText = document.getElementById('apiKeyText');
-            const editApiKeyBtn = document.getElementById('editApiKeyBtn');
-            const apiKeyInputArea = document.getElementById('apiKeyInputArea');
-            const apiKeyInput = document.getElementById('apiKeyInput');
-            const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
-            const readmeBtn = document.getElementById('readme-btn');
-            const readmeModal = document.getElementById('readme-modal');
-            const closeReadmeBtn = document.getElementById('close-readme-btn');
-            const themeBtns = document.querySelectorAll('.theme-btn');
-            const methodSelector = document.getElementById('methodSelector');
-            const form = document.getElementById('api-form');
-            const submitBtn = document.getElementById('submit-btn');
-            const errorMessage = document.getElementById('error-message');
-            const resultsContainer = document.getElementById('results-container');
-            const rawCode = document.querySelector('#raw-wrapper code');
-            const exportBtn = document.getElementById('export-btn');
-            const copyJsonBtn = document.getElementById('copy-json-btn');
-            const mozLogo = document.getElementById('moz-logo');
-            const quotaDisplay = document.getElementById('quota-display');
-            const quotaText = document.getElementById('quota-text');
+            const allDOMElements = {
+                apiKeyDisplay: document.getElementById('apiKeyDisplay'), 
+                apiKeyText: document.getElementById('apiKeyText'), 
+                editApiKeyBtn: document.getElementById('editApiKeyBtn'), 
+                apiKeyInputArea: document.getElementById('apiKeyInputArea'), 
+                apiKeyInput: document.getElementById('apiKeyInput'), 
+                saveApiKeyBtn: document.getElementById('saveApiKeyBtn'),
+                readmeBtn: document.getElementById('readme-btn'), 
+                readmeModal: document.getElementById('readme-modal'), 
+                closeReadmeBtn: document.getElementById('close-readme-btn'), 
+                themeBtns: document.querySelectorAll('.theme-btn'), 
+                methodSelector: document.getElementById('methodSelector'), 
+                form: document.getElementById('api-form'), 
+                submitBtn: document.getElementById('submit-btn'),
+                errorMessage: document.getElementById('error-message'), 
+                resultsContainer: document.getElementById('results-container'), 
+                rawCode: document.querySelector('#raw-wrapper code'), 
+                exportBtn: document.getElementById('export-btn'), 
+                copyJsonBtn: document.getElementById('copy-json-btn'), 
+                mozLogo: document.getElementById('moz-logo'),
+                quotaDisplay: document.getElementById('quota-display'), 
+                quotaText: document.getElementById('quota-text')
+            };
 
             const populateInputs = () => {
                 const createLabel = (text) => `<label class="block text-sm font-medium text-[var(--text-secondary)]">${text}</label>`;
@@ -347,31 +349,6 @@
             
             const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><h2>Setup</h2><ol><li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank">Moz API Dashboard</a>.</li><li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li></ol><h2>Features</h2><p>Select a method from the dropdown to get started:</p><hr class="border-slate-700 my-4"><div class="readme-method"><h3><strong><u>Fetch Site Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get metrics like DA, PA, Spam Score, and link counts for URLs.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Brand Authority</u></strong></h3><ul><li><strong>Description:</strong> Get the Brand Authority™ score for a given site.</li></ul></div><div class="readme-method"><h3><strong><u>List Top Pages</u></strong></h3><ul><li><strong>Description:</strong> Return a list of the top pages on a target domain.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Keyword Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get volume, difficulty, CTR, and priority for keywords.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Search Intent</u></strong></h3><ul><li><strong>Description:</strong> Retrieve search intent scores for any keyword.</li></ul></div><div class="readme-method"><h3><strong><u>List Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> List keywords for which a site ranks.</li></ul></div><div class="readme-method"><h3><strong><u>List Related Keywords</u></strong></h3><ul><li><strong>Description:</strong> Get a list of related keyword suggestions.</li></ul></div><div class="readme-method"><h3><strong><u>Count Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Count keywords for which a site ranks in the top 50.</li></ul></div><div class="readme-method"><h3><strong><u>Get Anchor Texts Lists</u></strong></h3><ul><li><strong>Description:</strong> Get data about anchor text used to link to a specified site.</li></ul></div><div class="readme-method"><h3><strong><u>List Linking Domains</u></strong></h3><ul><li><strong>Description:</strong> Get a list of linking root domains to a target.</li></ul></div><div class="readme-method"><h3><strong><u>List Recently Gained Links</u></strong></h3><ul><li><strong>Description:</strong> Get external root domains that added new links to a target during the past 60 days.</li></ul></div><div class="readme-method"><h3><strong><u>List Recently Lost Links</u></strong></h3><ul><li><strong>Description:</strong> Get root domains that removed links to a target during the past 60 days.</li></ul></div><div class="readme-method"><h3><strong><u>Fetch Link Intersects</u></strong></h3><ul><li><strong>Description:</strong> Find sites that link to some domains but not others.</li></ul></div><div class="readme-method"><h3><strong><u>List Links</u></strong></h3><ul><li><strong>Description:</strong> Get a list of links to a target.</li></ul></div><div class="readme-method"><h3><strong><u>Get Final Redirect Target</u></strong></h3><ul><li><strong>Description:</strong> See the final redirect target of a page.</li></ul></div><div class="readme-method"><h3><strong><u>Get Link Status</u></strong></h3><ul><li><strong>Description:</strong> Get the status of a link from a source to a target.</li></ul></div><hr class="border-slate-700 my-4"><h2>General Notes</h2><ul><li><strong>API Usage:</strong> Each API call consumes rows from your Moz API subscription quota. Be mindful of limits.</li><li><strong>Errors:</strong> If an API call fails, an error message will be displayed and the JSON response will contain details.</li></ul>`;
             
-            // --- All other script logic follows ---
-            const allDOMElements = {
-                apiKeyDisplay: document.getElementById('apiKeyDisplay'), 
-                apiKeyText: document.getElementById('apiKeyText'), 
-                editApiKeyBtn: document.getElementById('editApiKeyBtn'), 
-                apiKeyInputArea: document.getElementById('apiKeyInputArea'), 
-                apiKeyInput: document.getElementById('apiKeyInput'), 
-                saveApiKeyBtn: document.getElementById('saveApiKeyBtn'),
-                readmeBtn: document.getElementById('readme-btn'), 
-                readmeModal: document.getElementById('readme-modal'), 
-                closeReadmeBtn: document.getElementById('close-readme-btn'), 
-                themeBtns: document.querySelectorAll('.theme-btn'), 
-                methodSelector: document.getElementById('methodSelector'), 
-                form: document.getElementById('api-form'), 
-                submitBtn: document.getElementById('submit-btn'),
-                errorMessage: document.getElementById('error-message'), 
-                resultsContainer: document.getElementById('results-container'), 
-                rawCode: document.querySelector('#raw-wrapper code'), 
-                exportBtn: document.getElementById('export-btn'), 
-                copyJsonBtn: document.getElementById('copy-json-btn'), 
-                mozLogo: document.getElementById('moz-logo'),
-                quotaDisplay: document.getElementById('quota-display'), 
-                quotaText: document.getElementById('quota-text')
-            };
-
             const setupEventListeners = () => {
                 allDOMElements.readmeBtn.addEventListener('click', () => allDOMElements.readmeModal.classList.remove('hidden'));
                 allDOMElements.closeReadmeBtn.addEventListener('click', () => allDOMElements.readmeModal.classList.add('hidden'));
@@ -731,8 +708,9 @@
             }
 
             // Initial calls
-            loadApiKey();
+            populateInputs();
             setupEventListeners();
+            loadApiKey();
             allDOMElements.submitBtn.disabled = true;
 
         });
