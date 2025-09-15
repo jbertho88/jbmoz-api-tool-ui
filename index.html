@@ -333,7 +333,7 @@
                 const listLinksFilterOptions = `<option value="external">external</option><option value="follow">follow</option><option value="nofollow">nofollow</option><option value="deleted">deleted</option><option value="not_deleted">not_deleted</option><option value="redirect">redirect</option><option value="not_redirect">not_redirect</option><option value="rel_canonical">rel_canonical</option><option value="not_rel_canonical">not_rel_canonical</option><option value="via_redirect">via_redirect</option><option value="not_via_redirect">not_via_redirect</option><option value="via_rel_canonical">via_rel_canonical</option><option value="not_via_rel_canonical">not_via_rel_canonical</option>`;
                 const linkIntersectSortOptions = `<option value="matching_target_count" selected>Matching Target Count</option><option value="source_spam_score">Source Spam Score</option><option value="source_domain_authority">Source Domain Authority</option>`;
                 const linkingDomainsSortOptions = `<option value="source_domain_authority" selected>Source Domain Authority</option><option value="source_link_propensity">Source Link Propensity</option><option value="source_spam_score">Source Spam Score</option>`;
-                const linkingDomainsFilterOptions = `<option value="external">external</option><option value="follow">follow</option><option value="nofollow">nofollow</option><option value="deleted">deleted</option><option value="gained_last_60_days">gained_last_60_days</option><option value="lost_last_60_days">lost_last_60_days</option>`;
+                const linkingDomainsFilterOptions = `<option value="external">external</option><option value="follow">follow</option><option value="nofollow">nofollow</option><option value="deleted">deleted</option>`;
                 const listLinksSortOptions = `<option value="source_page_authority" selected>Source Page Authority</option><option value="source_domain_authority">Source Domain Authority</option><option value="source_link_propensity">Source Link Propensity</option><option value="source_spam_score">Source Spam Score</option>`;
                 const filterAnchorSortOptions = `<option value="source_page_authority" selected>Source Page Authority</option><option value="source_domain_authority">Source Domain Authority</option><option value="source_link_propensity">Source Link Propensity</option><option value="source_spam_score">Source Spam Score</option>`;
                 const filterAnchorFilterOptions = `<option value="external">external</option><option value="follow">follow</option><option value="nofollow">nofollow</option><option value="deleted">deleted</option><option value="not_deleted">not_deleted</option><option value="redirect">redirect</option><option value="not_redirect">not_redirect</option><option value="rel_canonical">rel_canonical</option><option value="not_rel_canonical">not_rel_canonical</option><option value="via_redirect">via_redirect</option><option value="not_via_redirect">not_via_redirect</option><option value="via_rel_canonical">via_rel_canonical</option><option value="not_via_rel_canonical">not_via_rel_canonical</option>`;
@@ -640,6 +640,7 @@
                                         rows.push({
                                             ...baseInfo,
                                             'Intersecting Domain': intersect.page,
+                                            'Intersecting Title': intersect.title,
                                             'Intersecting DA': intersect.domain_authority,
                                             'Intersecting Spam Score': intersect.spam_score,
                                             'Matching Target Indexes': (intersect.matching_target_indexes || []).join(', '),
@@ -651,10 +652,12 @@
                             }
                             break;
                         }
-                        // Other cases... (Shortened for brevity)
+                        // Other cases...
                         default:
-                            // Fallback for any unhandled cases, to ensure some export is always possible
-                            rows.push({ Query: query, Data: JSON.stringify(res.data) });
+                            const dataToExport = { ...res.data };
+                            if (method === 'brandAuthority') dataToExport = { ...res.data.site_query, ...res.data.site_metrics };
+                            // Add more specific handlers as needed
+                            rows.push({ Query: query, ...dataToExport });
                             break;
                     }
                 });
