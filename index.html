@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Advanced Moz API Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https="fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -623,6 +623,88 @@
                         return;
                     }
                     switch (method) {
+                         case 'siteMetrics': {
+                            const metrics = res.data.site_metrics || {};
+                            const orderedMetrics = {'Page Authority': metrics.page_authority, 'Domain Authority': metrics.domain_authority, 'Spam Score': metrics.spam_score };
+                            for(const key in metrics){
+                                if(!['page_authority', 'domain_authority', 'spam_score'].includes(key)) {
+                                    orderedMetrics[snakeToTitleCase(key)] = metrics[key];
+                                }
+                            }
+                             rows.push({'Query': res.data.site_query?.query || query, 'Scope': res.data.site_query?.scope || na, 'Original Query': res.data.site_query?.original_site_query?.query || query, ...orderedMetrics });
+                            break;
+                        }
+                        case 'brandAuthority':
+                            rows.push({'Site Query': res.data.site_query?.query || na, 'Scope': res.data.site_query?.scope || na, 'Brand Authority Score': res.data.site_metrics?.brand_authority_score ?? na, 'Original Query': res.data.site_query?.original_site_query?.query || query });
+                            break;
+                        case 'topPages':
+                             (res.data.top_pages || []).forEach(page => {
+                                const pageData = { 'Query': query, 'Scope': originalParams.scope, ...page };
+                                const titleCased = {};
+                                for(const key in pageData) { titleCased[snakeToTitleCase(key)] = pageData[key]; }
+                                rows.push(titleCased);
+                             });
+                             if (!res.data.top_pages || res.data.top_pages.length === 0) rows.push({ Query: query, Status: 'No top pages found' });
+                            break;
+                        case 'keywordMetrics': {
+                            const metricTypeMap = { 'all': 'All Keyword Metrics', 'volume': 'Search Volume', 'difficulty': 'Difficulty', 'opportunity': 'Organic CTR', 'priority': 'Priority' };
+                            rows.push({'Keyword': res.data.serp_query?.keyword || query, 'API Call': metricTypeMap[originalParams.metricType] || originalParams.metricType, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Volume': res.data.keyword_metrics?.volume ?? na, 'Difficulty': res.data.keyword_metrics?.difficulty ?? na, 'Opportunity CTR': res.data.keyword_metrics?.organic_ctr ?? na, 'Priority': res.data.keyword_metrics?.priority ?? na });
+                            break;
+                        }
+                        case 'searchIntent': {
+                             const intentData = {};
+                             (res.data.keyword_intent?.all_intents || []).forEach(intent => {
+                                intentData[`${snakeToTitleCase(intent.label)} Score`] = intent.score ?? na;
+                             });
+                             rows.push({'Keyword': res.data.serp_query?.keyword || query, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || na, ...intentData });
+                             break;
+                        }
+                        case 'rankingKeywords': {
+                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale };
+                            if(res.data.ranking_keywords?.length > 0){
+                                res.data.ranking_keywords.forEach(kw => { rows.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume }); });
+                            } else { rows.push({ ...baseInfo, Status: 'No ranking keywords found' }); }
+                            break;
+                        }
+                        case 'relatedKeywords': {
+                             const baseInfo = { 'Keyword': query, 'Locale': res.data.serp_query?.locale, 'Device': res.data.serp_query?.device, 'Engine': res.data.serp_query?.engine };
+                             if(res.data.suggestions?.length > 0){
+                                res.data.suggestions.forEach(sug => { rows.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance }); });
+                             } else { rows.push({ ...baseInfo, Status: 'No suggestions found' }); }
+                             break;
+                        }
+                        case 'keywordCount': {
+                            const positions = res.data.ranking_keyword_count?.position || {};
+                            const rankCounts = {};
+                            for (let i = 1; i <= 50; i++) {
+                                rankCounts[`Rank ${i} Count`] = positions[`rank_${i}`] ?? 0;
+                            }
+                            rows.push({'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale, 'Total Ranking Count': res.data.ranking_keyword_count?.total ?? na, ...rankCounts });
+                            break;
+                        }
+                        case 'anchorText': {
+                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
+                            if(res.data.anchor_texts?.length > 0){
+                                res.data.anchor_texts.forEach(at => { rows.push({ ...baseInfo, 'Anchor Text': at.text, 'External Root Domains': at.external_root_domains, 'External Pages': at.external_pages }); });
+                            } else { rows.push({ ...baseInfo, Status: 'No anchor texts found' }); }
+                            break;
+                        }
+                        case 'recentlyGainedLinks':
+                            (res.data.gained_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                            if (!res.data.gained_linking_domains || res.data.gained_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently gained links found' });
+                            break;
+                        case 'recentlyLostLinks':
+                            (res.data.lost_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                             if (!res.data.lost_linking_domains || res.data.lost_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently lost links found' });
+                            break;
+                        case 'linkingDomains':
+                            (res.data.linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                            if (!res.data.linking_domains || res.data.linking_domains.length === 0) rows.push({ Query: query, Status: 'No linking domains found' });
+                            break;
+                        
+                        case 'finalRedirect':
+                            rows.push({ 'Query': query, 'Scope': originalParams.scope, 'Original Query': res.data.site_query?.original_site_query?.query || query, 'Destination': res.data.destination || 'No redirect found' });
+                            break;
                         case 'linkIntersect': {
                             const intersectData = res.data.link_intersects || [];
                             if (intersectData.length === 0) {
@@ -652,12 +734,26 @@
                             }
                             break;
                         }
-                        // Other cases...
-                        default:
-                            const dataToExport = { ...res.data };
-                            if (method === 'brandAuthority') dataToExport = { ...res.data.site_query, ...res.data.site_metrics };
-                            // Add more specific handlers as needed
-                            rows.push({ Query: query, ...dataToExport });
+                        case 'listLinks':
+                        case 'filterLinksByAnchor':
+                        case 'filterLinksByDomain':
+                            (res.data.links || []).forEach(link => {
+                                const sourceMetrics = link.source_site_metrics || {};
+                                const targetMetrics = link.target_site_metrics || {};
+                                const linkInfo = { ...link };
+                                delete linkInfo.source_site_metrics;
+                                delete linkInfo.target_site_metrics;
+
+                                const row = {};
+                                for (const key in sourceMetrics) row[`Source ${snakeToTitleCase(key)}`] = sourceMetrics[key];
+                                for (const key in targetMetrics) row[`Target ${snakeToTitleCase(key)}`] = targetMetrics[key];
+                                for (const key in linkInfo) row[snakeToTitleCase(key)] = linkInfo[key];
+                                rows.push(row);
+                            });
+                             if (!res.data.links || res.data.links.length === 0) rows.push({ Query: query, Status: 'No links found' });
+                            break;
+                        case 'linkStatus':
+                            rows.push({ 'Target Query': res.data.target_site_query?.query, 'Source Query': res.data.source_site_query?.query, 'Exists': res.data.exists });
                             break;
                     }
                 });
