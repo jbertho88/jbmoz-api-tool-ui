@@ -6,6 +6,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Advanced Moz API Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -146,7 +147,7 @@
         .readme-method { margin-bottom: 1.5rem; }
     </style>
 </head>
-<body class="transition-colors duration-300">
+<body data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData" class="transition-colors duration-300">
 
     <div class="w-full max-w-4xl mx-auto bg-[var(--bg-container-translucent)] backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-[var(--border-primary)] my-8">
         
@@ -206,25 +207,25 @@
         </div>
 
         <form id="api-form">
-            <div id="inputsContainer" class="mt-4">
-                <div id="siteMetricsInputs" class="input-section space-y-4"></div>
-                <div id="keywordMetricsInputs" class="input-section space-y-4"></div>
-                <div id="brandAuthorityInputs" class="input-section space-y-4"></div>
-                <div id="searchIntentInputs" class="input-section space-y-4"></div>
-                <div id="rankingKeywordsInputs" class="input-section space-y-4"></div>
-                <div id="relatedKeywordsInputs" class="input-section space-y-4"></div>
-                <div id="keywordCountInputs" class="input-section space-y-4"></div>
-                <div id="anchorTextInputs" class="input-section space-y-4"></div>
-                <div id="recentlyGainedLinksInputs" class="input-section space-y-4"></div>
-                <div id="recentlyLostLinksInputs" class="input-section space-y-4"></div>
-                <div id="linkingDomainsInputs" class="input-section space-y-4"></div>
-                <div id="finalRedirectInputs" class="input-section space-y-4"></div>
-                <div id="topPagesInputs" class="input-section space-y-4"></div>
-                <div id="linkIntersectInputs" class="input-section space-y-4"></div>
-                <div id="listLinksInputs" class="input-section space-y-4"></div>
-                <div id="linkStatusInputs" class="input-section space-y-4"></div>
-                <div id="filterLinksByAnchorInputs" class="input-section space-y-4"></div>
-                <div id="filterLinksByDomainInputs" class="input-section space-y-4"></div>
+             <div id="inputsContainer" class="mt-4">
+                <fieldset id="siteMetricsInputs" class="input-section space-y-4"><legend class="sr-only">Site Metrics Inputs</legend></fieldset>
+                <fieldset id="keywordMetricsInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Metrics Inputs</legend></fieldset>
+                <fieldset id="brandAuthorityInputs" class="input-section space-y-4"><legend class="sr-only">Brand Authority Inputs</legend></fieldset>
+                <fieldset id="searchIntentInputs" class="input-section space-y-4"><legend class="sr-only">Search Intent Inputs</legend></fieldset>
+                <fieldset id="rankingKeywordsInputs" class="input-section space-y-4"><legend class="sr-only">Ranking Keywords Inputs</legend></fieldset>
+                <fieldset id="relatedKeywordsInputs" class="input-section space-y-4"><legend class="sr-only">Related Keywords Inputs</legend></fieldset>
+                <fieldset id="keywordCountInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Count Inputs</legend></fieldset>
+                <fieldset id="anchorTextInputs" class="input-section space-y-4"><legend class="sr-only">Anchor Text Inputs</legend></fieldset>
+                <fieldset id="recentlyGainedLinksInputs" class="input-section space-y-4"><legend class="sr-only">Recently Gained Links Inputs</legend></fieldset>
+                <fieldset id="recentlyLostLinksInputs" class="input-section space-y-4"><legend class="sr-only">Recently Lost Links Inputs</legend></fieldset>
+                <fieldset id="linkingDomainsInputs" class="input-section space-y-4"><legend class="sr-only">Linking Domains Inputs</legend></fieldset>
+                <fieldset id="finalRedirectInputs" class="input-section space-y-4"><legend class="sr-only">Final Redirect Inputs</legend></fieldset>
+                <fieldset id="topPagesInputs" class="input-section space-y-4"><legend class="sr-only">Top Pages Inputs</legend></fieldset>
+                <fieldset id="linkIntersectInputs" class="input-section space-y-4"><legend class="sr-only">Link Intersect Inputs</legend></fieldset>
+                <fieldset id="listLinksInputs" class="input-section space-y-4"><legend class="sr-only">List Links Inputs</legend></fieldset>
+                <fieldset id="linkStatusInputs" class="input-section space-y-4"><legend class="sr-only">Link Status Inputs</legend></fieldset>
+                <fieldset id="filterLinksByAnchorInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Anchor Inputs</legend></fieldset>
+                <fieldset id="filterLinksByDomainInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Domain Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
                  <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text">
@@ -233,8 +234,8 @@
             </div>
         </form>
 
-        <div id="status-container" class="mt-8">
-            <div id="error-message" class="hidden bg-[var(--error-bg)] border border-[var(--error-border)] text-[var(--text-error)] px-4 py-3 rounded-lg text-center"></div>
+        <div id="status-container" class="mt-8" aria-live="polite">
+            <div id="error-message" role="alert" class="hidden bg-[var(--error-bg)] border border-[var(--error-border)] text-[var(--text-error)] px-4 py-3 rounded-lg text-center"></div>
             <div id="results-container" class="hidden bg-[var(--bg-input)] p-4 md:p-6 rounded-xl border border-[var(--border-primary)]">
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                     <h2 class="text-xl font-bold text-[var(--text-heading)]">API Results</h2>
@@ -258,11 +259,11 @@
             </div>
             <p>&copy; Jonathan Berthold 2025</p>
             <div class="mt-2 space-x-4">
-                <a href="https://moz.com/api/dashboard" target="_blank" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">API Dashboard</a>
+                <a href="https://moz.com/api/dashboard" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">API Dashboard</a>
                 <span class="text-[var(--text-secondary)]">|</span>
-                <a href="https://moz.com/products/api/keys" target="_blank" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">Get Moz API Key</a>
+                <a href="https://moz.com/products/api/keys" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">Get Moz API Key</a>
                 <span class="text-[var(--text-secondary)]">|</span>
-                 <a href="https://moz.com/api/docs/welcome" target="_blank" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">API Docs</a>
+                 <a href="https://moz.com/api/docs/welcome" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">API Docs</a>
                 <span class="text-[var(--text-secondary)]">|</span>
                 <button id="readme-btn" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">Read Me</button>
             </div>
@@ -287,6 +288,7 @@
             let currentResultsData = null;
             let currentOriginalParams = null;
             let currentMethod = null;
+            let inFlightRequest = null;
 
             const allDOMElements = {
                 apiKeyDisplay: document.getElementById('apiKeyDisplay'), 
@@ -362,7 +364,7 @@
                 document.getElementById('filterLinksByDomainInputs').innerHTML = createDescription('Find links pointing to a target only if they originate from a particular root domain.') + createLabel('Target Scope') + createSelect('fldTargetScopeSelect', scopeOptions) + createLabel('Target URLs') + createTextarea('fldTargetUrls', 'One per line...') + createLabel('Source Domain Scope') + createSelect('fldSourceScopeSelect', scopeOptions) + createLabel('Source Domain URLs') + createTextarea('fldSourceUrls', 'One per line...') + createLabel('Filters') + createMultiSelect('fldFilterSelect', filterDomainFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('fldLimit', 25, 1, 50, limitLabel);
             };
             
-            const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><h2>Setup</h2><ol><li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank">Moz API Dashboard</a>.</li><li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li></ol><h2>Features</h2><p>Select a method from the dropdown to get started:</p><hr class="border-slate-700 my-4">
+            const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><h2>Setup</h2><ol><li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank" rel="noopener">Moz API Dashboard</a>.</li><li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li></ol><h2>Features</h2><p>Select a method from the dropdown to get started:</p><hr class="border-slate-700 my-4">
                 <div class="readme-method"><h3><strong><u>Fetch Site Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get metrics like DA, PA, Spam Score, and link counts for URLs.</li><li><strong>Inputs:</strong> Domains / URLs, Scope.</li><li><strong>Output:</strong> A detailed CSV with all available site metrics for the target.</li></ul></div>
                 <div class="readme-method"><h3><strong><u>Fetch Brand Authority</u></strong></h3><ul><li><strong>Description:</strong> Get the Brand Authority™ score for a given site.</li><li><strong>Inputs:</strong> Domains / URLs.</li><li><strong>Output:</strong> A CSV with the Brand Authority Score for the target.</li></ul></div>
                 <div class="readme-method"><h3><strong><u>List Top Pages</u></strong></h3><ul><li><strong>Description:</strong> Return a list of the top pages on a target domain.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Filter, Sort, Number of Results.</li><li><strong>Output:</strong> A detailed CSV of the top pages and their metrics.</li></ul></div>
@@ -421,7 +423,9 @@
             };
 
             const applyTheme = (theme) => {
-                document.documentElement.className = theme;
+                const root = document.documentElement;
+                ["light", "dark", "retro", "high-contrast"].forEach(t => root.classList.remove(t));
+                root.classList.add(theme);
                 localStorage.setItem('theme', theme);
                 allDOMElements.themeBtns.forEach(btn => {
                     btn.classList.toggle('font-bold', btn.dataset.theme === theme);
@@ -468,9 +472,17 @@
             
             async function handleFormSubmit(e) {
                 e.preventDefault();
+
+                if (inFlightRequest) {
+                    inFlightRequest.abort();
+                }
+                inFlightRequest = new AbortController();
+
+
                 allDOMElements.errorMessage.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.add('hidden');
                 allDOMElements.submitBtn.disabled = true;
+                allDOMElements.submitBtn.setAttribute('aria-busy', 'true');
                 allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Processing...</span>';
                 const apiKey = allDOMElements.apiKeyInput.value.trim();
                 const selectedMethod = allDOMElements.methodSelector.value;
@@ -485,12 +497,13 @@
                     displayError(error.message);
                     resetSubmitButton(); return;
                 }
-                const PROXY_URL = 'https://mozapi-proxy-server.vercel.app/api/getMozData';
+                const PROXY_URL = document.body.dataset.proxy;
                 try {
                     const response = await fetch(PROXY_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify(payload),
+                        signal: inFlightRequest.signal
                     });
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.error || `Request failed with status ${response.status}`);
@@ -500,9 +513,12 @@
                     showRawJsonResults(data);
                     fetchQuota(apiKey);
                 } catch (error) {
-                    displayError(error.message);
+                    if (error.name !== 'AbortError') {
+                        displayError(error.message);
+                    }
                 } finally {
                     resetSubmitButton();
+                    inFlightRequest = null;
                 }
             }
 
@@ -531,13 +547,17 @@
             }
 
             function displayError(message) {
-                allDOMElements.errorMessage.textContent = message;
+                 const hints = /quota|limit/i.test(message) ? 'You may be out of rows. Check your API Dashboard.' :
+                              /unauthorized|401|403/i.test(message) ? 'Invalid API key. Recheck or regenerate in your dashboard.' :
+                              /network|abort/i.test(message) ? 'Network hiccup or request was canceled. Try again.' : '';
+                allDOMElements.errorMessage.innerHTML = `${message}${hints ? `<br><span class="text-[var(--text-secondary)]">${hints}</span>` : ''}`;
                 allDOMElements.errorMessage.classList.remove('hidden');
             }
             
             function resetSubmitButton() {
                 allDOMElements.submitBtn.disabled = allDOMElements.methodSelector.value === "";
                 allDOMElements.submitBtn.innerHTML = 'Run Request';
+                allDOMElements.submitBtn.removeAttribute('aria-busy');
             }
 
             function buildPayload(apiKey, selectedMethod) {
@@ -768,7 +788,7 @@
                     }
                     return stringValue;
                 }).join(','));
-                const csvString = [header, ...csvRows].join('\n');
+                const csvString = '\uFEFF' + [header, ...csvRows].join('\n');
                 const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 const url = URL.createObjectURL(blob);
