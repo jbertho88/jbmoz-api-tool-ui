@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en" class="light"> <!-- theme class toggled via JS -->
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Advanced Moz API Tool</title>
+
+  <!-- CSP (loosen 'unsafe-inline' if you externalize JS/CSS files) -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self';
+             img-src 'self' https://upload.wikimedia.org data:;
+             style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com;
+             font-src https://fonts.gstatic.com;
+             script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com;
+             connect-src 'self' https://mozapi-proxy-server.vercel.app">
+
+  <!-- Tailwind (swap to compiled production build for minimal CSS) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonts (perf) -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root, .light {
+      --bg-body:#f9fafb; --bg-container:#ffffff; --bg-container-translucent:rgba(255,255,255,.5);
+      --bg-input:#f3f4f6; --bg-input-secondary:#e5e7eb; --bg-code:#fefce8; --bg-disabled:#d1d5db;
+      --border-primary:#e5e7eb; --border-secondary:#d1d5db;
+      --text-primary:#111827; --text-secondary:#6b7280; --text-accent:#0284c7; --text-accent-hover:#0369a1; --text-heading:#0ea5e9; --text-error:#b91c1c;
+      --btn-primary-bg:#002F50; --btn-primary-hover:#001d30; --btn-copy-bg:#f97316; --btn-copy-hover:#ea580c; --btn-export-bg:#10b981; --btn-export-hover:#059669;
+      --error-bg:#fee2e2; --error-border:#fca5a5;
+    }
+    .dark {
+      --bg-body:#020617; --bg-container:#1e293b; --bg-container-translucent:rgba(30,41,59,.5);
+      --bg-input:#0f172a; --bg-input-secondary:#334155; --bg-code:#000; --bg-disabled:#475569;
+      --border-primary:#334155; --border-secondary:#475569;
+      --text-primary:#e2e8f0; --text-secondary:#94a3b8; --text-accent:#38bdf8; --text-accent-hover:#7dd3fc; --text-heading:#38bdf8; --text-error:#f87171;
+      --btn-primary-bg:#0ea5e9; --btn-primary-hover:#38bdf8; --btn-copy-bg:#f97316; --btn-copy-hover:#fb923c; --btn-export-bg:#10b981; --btn-export-hover:#34d399;
+      --error-bg:rgba(153,27,27,.5); --error-border:#ef4444;
+    }
+    .retro {
+      --bg-body:#000; --bg-container:#1a001a; --bg-container-translucent:rgba(26,0,26,.5);
+      --bg-input:#2a002a; --bg-input-secondary:#3d003d; --bg-code:#000; --bg-disabled:#4a148c;
+      --border-primary:#4a148c; --border-secondary:#6a1b9a;
+      --text-primary:#e0e0e0; --text-secondary:#ad5eda; --text-accent:#2de2e6; --text-accent-hover:#81f7f9; --text-heading:#9700cc; --text-error:#f6019d;
+      --btn-primary-bg:#f6019d; --btn-primary-hover:#d40078; --btn-copy-bg:#9700cc; --btn-copy-hover:#7b00a3; --btn-export-bg:#11d18e; --btn-export-hover:#0da872;
+      --error-bg:rgba(246,1,157,.2); --error-border:#f6019d;
+    }
+    .high-contrast {
+      --bg-body:#000; --bg-container:#000; --bg-container-translucent:rgba(0,0,0,.5);
+      --bg-input:#000; --bg-input-secondary:#000; --bg-code:#000; --bg-disabled:#333;
+      --border-primary:#fff; --border-secondary:#fff;
+      --text-primary:#fff; --text-secondary:#e5e5e5; --text-accent:#fff; --text-accent-hover:#ccc; --text-heading:#fff; --text-error:#fff;
+      --btn-primary-bg:#fff; --btn-primary-hover:#e5e5e5; --btn-copy-bg:#fff; --btn-copy-hover:#e5e5e5; --btn-export-bg:#fff; --btn-export-hover:#e5e5e5;
+      --error-bg:#000; --error-border:#f00;
+    }
+    .high-contrast .btn-inverted-text { color:#000 !important; }
+    body { font-family:'Inter',sans-serif; background:var(--bg-body); color:var(--text-primary); transition:background-color .3s,color .3s; }
+    .spinner { border:4px solid rgba(255,255,255,.2); border-left-color:#fff; width:24px;height:24px;border-radius:50%; animation:spin 1s linear infinite; }
+    @keyframes spin {to { transform:rotate(360deg); } }
+    .input-section { display:none; margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--border-primary); }
+    option[disabled]{ font-weight:700; background:var(--bg-input-secondary);}
+    /* Readme headings */
+    #readme-modal-content h2 { border-bottom:1px solid var(--border-primary); padding-bottom:.5rem; margin:.5rem 0 1rem; color:var(--text-accent);}
+    #readme-modal-content h3 { margin-top:1rem; color:var(--text-primary); }
+    #readme-modal-content p,#readme-modal-content li { color:var(--text-secondary); }
+    #readme-modal-content a { color:var(--text-accent); }
+    #readme-modal-content ul { margin-left:1rem; list-style:disc; }
+    #readme-modal-content code { background:rgba(0,0,0,.5); padding:.125rem .25rem; border-radius:.25rem; color:var(--btn-copy-bg);}
+  </style>
+</head>
+
+<body
+  class="transition-colors duration-300"
+  data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData"
+>
+
+  <main class="w-full max-w-4xl mx-auto bg-[var(--bg-container-translucent)] backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-[var(--border-primary)] my-8">
+    <header class="relative text-center mb-6">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz logo" class="mx-auto h-12 mb-4" id="moz-logo" />
+      <h1 class="text-3xl font-bold text-[var(--text-heading)]">Advanced Moz API Tool</h1>
+      <p class="text-[var(--text-primary)] mt-2">Add your key and select an API method to get started.</p>
+    </header>
+
+    <!-- API key -->
+    <section class="mb-6 bg-[var(--bg-input)] p-4 rounded-lg border border-[var(--border-secondary)]" aria-labelledby="apikey-label">
+      <div class="flex items-start justify-between">
+        <div class="w-full">
+          <label id="apikey-label" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Moz API Key</label>
+
+          <div id="apiKeyDisplay" class="hidden items-center justify-between">
+            <span id="apiKeyText" class="text-[var(--text-secondary)] font-mono"></span>
+            <div class="flex items-center gap-3">
+              <button id="toggleApiKeyMask" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)]">Show</button>
+              <button id="editApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold">Edit</button>
+            </div>
+          </div>
+
+          <div id="apiKeyInputArea" class="flex items-center gap-2">
+            <input type="password" id="apiKeyInput"
+              class="w-full bg-[var(--bg-body)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 ring-[var(--text-accent)]"
+              placeholder="mozscape-1234abcd..." aria-describedby="apikey-help" />
+            <button id="saveApiKeyBtn"
+              class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text">
+              Save
+            </button>
+            <button id="clearApiKeyBtn"
+              class="border border-[var(--border-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-3 py-2 text-sm rounded-md transition">
+              Clear
+            </button>
+          </div>
+          <p id="apikey-help" class="text-xs text-[var(--text-secondary)] mt-1">Stored locally in this browser only.</p>
+
+          <div id="quota-display" class="hidden mt-3 text-sm text-[var(--text-secondary)]">
+            <span id="quota-text"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Method select -->
+    <section class="mb-2">
+      <label for="methodSelector" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">API Method</label>
+      <select id="methodSelector"
+        class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 ring-[var(--text-accent)]"
+        aria-describedby="method-help">
+        <option value="" disabled selected>-- Select a Method --</option>
+        <optgroup label="Site Metrics">
+          <option value="siteMetrics">Fetch Site Metrics</option>
+          <option value="brandAuthority">Fetch Brand Authority</option>
+          <option value="topPages">List Top Pages</option>
+        </optgroup>
+        <optgroup label="Keyword Research">
+          <option value="keywordMetrics">Fetch Keyword Metrics</option>
+          <option value="searchIntent">Fetch Search Intent</option>
+          <option value="rankingKeywords">List Ranking Keywords</option>
+          <option value="relatedKeywords">List Related Keywords</option>
+          <option value="keywordCount">Count Ranking Keywords</option>
+        </optgroup>
+        <optgroup label="Link Building">
+          <option value="anchorText">Get Anchor Texts Lists</option>
+          <option value="linkingDomains">List Linking Domains</option>
+          <option value="recentlyGainedLinks">List Recently Gained Links</option>
+          <option value="recentlyLostLinks">List Recently Lost Links</option>
+          <option value="linkIntersect">Fetch Link Intersects</option>
+          <option value="listLinks">List Links</option>
+          <option value="filterLinksByAnchor">Filter Links by Anchor Text</option>
+          <option value="filterLinksByDomain">Filter Links by Domain</option>
+        </optgroup>
+        <optgroup label="Technical SEO">
+          <option value="finalRedirect">Get Final Redirect Target</option>
+          <option value="linkStatus">Get Link Status</option>
+        </optgroup>
+      </select>
+      <p id="method-help" class="sr-only">Choose a method to reveal the relevant inputs.</p>
+    </section>
+
+    <!-- Dynamic inputs -->
+    <form id="api-form" novalidate>
+      <div id="inputsContainer" class="mt-2"></div>
+
+      <div class="mt-8 text-center">
+        <button
+          type="submit"
+          id="submit-btn"
+          class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text"
+          disabled
+        >
+          Run Request
+        </button>
+      </div>
+    </form>
+
+    <!-- Status / Results (aria-live announces changes) -->
+    <section id="status-container" class="mt-8" aria-live="polite">
+      <div id="error-message"
+           role="alert"
+           class="hidden bg-[var(--error-bg)] border border-[var(--error-border)] text-[var(--text-error)] px-4 py-3 rounded-lg text-center"></div>
+
+      <div id="results-container" class="hidden bg-[var(--bg-input)] rounded-xl border border-[var(--border-primary)]">
+        <div class="sticky top-0 z-10 bg-[var(--bg-input)] p-4 md:p-6 border-b border-[var(--border-primary)] flex flex-col sm:flex-row justify-between items-center gap-4">
+          <h2 class="text-xl font-bold text-[var(--text-heading)]">API Results</h2>
+          <div class="flex items-center gap-2">
+            <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text">Copy JSON</button>
+            <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text">Export Results to CSV</button>
+          </div>
+        </div>
+        <div id="raw-wrapper" class="p-4 md:p-6">
+          <pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg"><code></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-[var(--text-secondary)] text-sm mt-8 border-t border-[var(--border-primary)] pt-6">
+      <div class="mb-4 flex justify-center items-center gap-2">
+        <button data-theme="light" class="theme-btn p-2 rounded-lg">Light</button>
+        <button data-theme="dark" class="theme-btn p-2 rounded-lg">Dark</button>
+        <button data-theme="retro" class="theme-btn p-2 rounded-lg">Retro</button>
+        <button data-theme="high-contrast" class="theme-btn p-2 rounded-lg">High Contrast</button>
+      </div>
+      <p>&copy; Jonathan Berthold 2025</p>
+      <div class="mt-2 space-x-4">
+        <a href="https://moz.com/api/dashboard" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">API Dashboard</a>
+        <span class="text-[var(--text-secondary)]">|</span>
+        <a href="https://moz.com/products/api/keys" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">Get Moz API Key</a>
+        <span class="text-[var(--text-secondary)]">|</span>
+        <a href="https://moz.com/api/docs/welcome" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">API Docs</a>
+        <span class="text-[var(--text-secondary)]">|</span>
+        <button id="readme-btn" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">Read Me</button>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Read Me Modal -->
+  <div id="readme-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col">
+      <div class="flex justify-between items-center p-4 border-b border-[var(--border-primary)]">
+        <h2 class="text-lg font-semibold text-[var(--text-primary)]">Read Me / Help</h2>
+        <button id="close-readme-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label="Close">&times;</button>
+      </div>
+      <div id="readme-modal-content" class="p-6 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // ---------- State ----------
+      let inflight = null;             // AbortController for canceling requests
+      let currentResultsData = null;
+      let currentOriginalParams = null;
+      let currentMethod = null;
+      let lastQuotaAt = 0;
+
+      const PROXY_URL = document.body.dataset.proxy;
+      const THEMES = ['light','dark','retro','high-contrast'];
+
+      // ---------- DOM ----------
+      const $ = (sel) => document.querySelector(sel);
+      const $$ = (sel) => document.querySelectorAll(sel);
+
+      const DOM = {
+        form: $('#api-form'),
+        inputsContainer: $('#inputsContainer'),
+        methodSelector: $('#methodSelector'),
+        submitBtn: $('#submit-btn'),
+        errorMessage: $('#error-message'),
+        resultsContainer: $('#results-container'),
+        rawCode: document.querySelector('#raw-wrapper code'),
+        copyBtn: $('#copy-json-btn'),
+        exportBtn: $('#export-btn'),
+        themeBtns: $$('.theme-btn'),
+        readmeBtn: $('#readme-btn'),
+        readmeModal: $('#readme-modal'),
+        readmeContent: $('#readme-modal-content'),
+        closeReadmeBtn: $('#close-readme-btn'),
+        logo: $('#moz-logo'),
+        apiKeyDisplay: $('#apiKeyDisplay'),
+        apiKeyText: $('#apiKeyText'),
+        toggleMask: $('#toggleApiKeyMask'),
+        editApiKeyBtn: $('#editApiKeyBtn'),
+        apiKeyInputArea: $('#apiKeyInputArea'),
+        apiKeyInput: $('#apiKeyInput'),
+        saveApiKeyBtn: $('#saveApiKeyBtn'),
+        clearApiKeyBtn: $('#clearApiKeyBtn'),
+        quotaDisplay: $('#quota-display'),
+        quotaText: $('#quota-text'),
+      };
+
+      // ---------- Theming ----------
+      function applyTheme(theme) {
+        const root = document.documentElement;
+        THEMES.forEach(t => root.classList.remove(t));
+        root.classList.add(theme);
+        localStorage.setItem('theme', theme);
+        DOM.themeBtns.forEach(btn => btn.classList.toggle('font-bold', btn.dataset.theme === theme));
+        DOM.logo.style.filter = 'none';
+      }
+
+      (function initTheme(){
+        const saved = localStorage.getItem('theme');
+        const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(saved || (systemDark ? 'dark' : 'light'));
+      })();
+
+      DOM.themeBtns.forEach(btn => btn.addEventListener('click', () => applyTheme(btn.dataset.theme)));
+
+      // ---------- API Key ----------
+      function loadApiKey() {
+        const key = localStorage.getItem('mozApiKey');
+        if (key) {
+          DOM.apiKeyText.textContent = `${key.slice(0,6)}...${key.slice(-4)}`;
+          DOM.apiKeyInput.value = key;
+          DOM.apiKeyDisplay.classList.remove('hidden');
+          DOM.apiKeyDisplay.classList.add('flex');
+          DOM.apiKeyInputArea.classList.add('hidden');
+          fetchQuotaThrottled(key);
+        } else {
+          DOM.apiKeyDisplay.classList.add('hidden');
+          DOM.apiKeyInputArea.classList.remove('hidden');
+          DOM.quotaDisplay.classList.add('hidden');
+        }
+      }
+      function saveApiKey() {
+        const key = DOM.apiKeyInput.value.trim();
+        if (!key) return;
+        localStorage.setItem('mozApiKey', key);
+        loadApiKey();
+      }
+      function clearApiKey() {
+        localStorage.removeItem('mozApiKey');
+        DOM.apiKeyInput.value = '';
+        loadApiKey();
+      }
+
+      $('#saveApiKeyBtn').addEventListener('click', saveApiKey);
+      $('#clearApiKeyBtn').addEventListener('click', clearApiKey);
+      $('#editApiKeyBtn').addEventListener('click', () => {
+        DOM.apiKeyDisplay.classList.add('hidden');
+        DOM.apiKeyInputArea.classList.remove('hidden');
+        DOM.apiKeyInput.focus();
+      });
+      let masked = true;
+      DOM.toggleMask.addEventListener('click', () => {
+        masked = !masked;
+        DOM.toggleMask.textContent = masked ? 'Show' : 'Hide';
+        const key = localStorage.getItem('mozApiKey') || '';
+        DOM.apiKeyText.textContent = masked ? `${key.slice(0,6)}...${key.slice(-4)}` : key;
+      });
+
+      async function fetchQuotaThrottled(apiKey){
+        const now = Date.now();
+        if (now - lastQuotaAt < 60000) return;
+        lastQuotaAt = now;
+        await fetchQuota(apiKey);
+      }
+      async function fetchQuota(apiKey){
+        try {
+          const res = await fetch(PROXY_URL, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ apiKey, method:'getQuota' })
+          });
+          const data = await res.json();
+          const { used, allotted } = data?.quota?.quota || {};
+          if (typeof used === 'number' && typeof allotted === 'number') {
+            DOM.quotaText.textContent = `API Usage: ${used.toLocaleString()} / ${allotted.toLocaleString()} Rows Used`;
+            DOM.quotaText.style.color = used >= allotted ? 'var(--text-error)' : 'var(--text-secondary)';
+          } else {
+            DOM.quotaText.textContent = 'Could not retrieve API usage.';
+          }
+          DOM.quotaDisplay.classList.remove('hidden');
+        } catch {
+          DOM.quotaText.textContent = 'Could not retrieve API usage.';
+          DOM.quotaDisplay.classList.remove('hidden');
+        }
+      }
+
+      // ---------- Schema-driven inputs ----------
+      const OPTIONS = {
+        scope: ['domain','subdomain','subfolder','url'],
+        scopeLimited: ['domain','subdomain','url'],
+        device: ['desktop','mobile_android','mobile_ios'],
+        engine: ['google','bing','yahoo'],
+        locale: ['en-US','en-CA','en-GB','en-AU'],
+        kwMetric: [['all','All Metrics'],['volume','Search Volume'],['difficulty','Difficulty'],['opportunity','Organic CTR'],['priority','Priority']],
+        topPagesFilter: ['all','status_200','status_301','status_302','status_4xx','status_5xx'],
+        topPagesSort: ['page_authority','root_domains_to_page','external_pages_to_page'],
+        listLinksFilters: ['external','follow','nofollow','deleted','not_deleted','redirect','not_redirect','rel_canonical','not_rel_canonical','via_redirect','not_via_redirect','via_rel_canonical','not_via_rel_canonical'],
+        linkIntersectSort: ['matching_target_count','source_spam_score','source_domain_authority'],
+        linkingDomainsSort: ['source_domain_authority','source_link_propensity','source_spam_score'],
+        linkingDomainsFilters: ['external','follow','nofollow','deleted'],
+        filterDomainFilters: ['external','follow','nofollow','deleted'],
+        filterAnchorSort: ['source_page_authority','source_domain_authority','source_link_propensity','source_spam_score'],
+        filterAnchorFilters: ['external','follow','nofollow','deleted','not_deleted','redirect','not_redirect','rel_canonical','not_rel_canonical','via_redirect','not_via_redirect','via_rel_canonical','not_via_rel_canonical'],
+      };
+
+      // Each method: inputs (type,id,label,options,attrs), params(mapper)
+      const METHODS = {
+        siteMetrics: {
+          blurb:'Get metrics like DA, PA, Spam Score, and link counts for URLs.',
+          inputs:[
+            {type:'select', id:'smScope', label:'Scope', options:OPTIONS.scope},
+            {type:'textarea', id:'smTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated (must include http/https)', required:true}
+          ],
+          params: v => ({ scope:v.smScope, targets: splitList(v.smTargets) })
+        },
+        brandAuthority: {
+          blurb:'Get the Brand Authority™ score for a given site.',
+          inputs:[
+            {type:'textarea', id:'baTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ targets: splitList(v.baTargets) })
+        },
+        topPages: {
+          blurb:'Return a list of the top pages on a target domain.',
+          inputs:[
+            {type:'select', id:'tpScope', label:'Scope', options:OPTIONS.scope},
+            {type:'select', id:'tpFilter', label:'Filter', options:OPTIONS.topPagesFilter},
+            {type:'select', id:'tpSort', label:'Sort', options:OPTIONS.topPagesSort},
+            {type:'number', id:'tpLimit', label:'Number of Results (1-50)', attrs:{min:1,max:50,value:25}},
+            {type:'textarea', id:'tpTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ scope:v.tpScope, filter:v.tpFilter, sort:v.tpSort, limit:num(v.tpLimit,25), targets: splitList(v.tpTargets) })
+        },
+        keywordMetrics: {
+          blurb:'Get volume, difficulty, CTR, and priority for keywords.',
+          inputs:[
+            {type:'select', id:'kmType', label:'Metric Type', options:OPTIONS.kwMetric},
+            {type:'select', id:'kmDevice', label:'Device', options:OPTIONS.device},
+            {type:'select', id:'kmEngine', label:'Engine', options:OPTIONS.engine},
+            {type:'select', id:'kmLocale', label:'Locale', options:OPTIONS.locale},
+            {type:'textarea', id:'kmKeywords', label:'Keywords', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ metricType:v.kmType, device:v.kmDevice, engine:v.kmEngine, locale:v.kmLocale, keywords: splitList(v.kmKeywords) })
+        },
+        searchIntent: {
+          blurb:'Retrieve search intent scores for any keyword.',
+          inputs:[
+            {type:'select', id:'siLocale', label:'Locale', options:OPTIONS.locale},
+            {type:'textarea', id:'siKeywords', label:'Keywords', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ locale:v.siLocale, keywords: splitList(v.siKeywords) })
+        },
+        rankingKeywords: {
+          blurb:'List keywords for which a site ranks.',
+          inputs:[
+            {type:'select', id:'rkScope', label:'Scope', options:OPTIONS.scope},
+            {type:'select', id:'rkLocale', label:'Locale', options:OPTIONS.locale},
+            {type:'number', id:'rkLimit', label:'Number of Results (1-500)', attrs:{min:1,max:500,value:25}},
+            {type:'textarea', id:'rkTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ scope:v.rkScope, locale:v.rkLocale, limit:num(v.rkLimit,25), targets: splitList(v.rkTargets) })
+        },
+        relatedKeywords: {
+          blurb:'Get a list of related keyword suggestions.',
+          inputs:[
+            {type:'select', id:'rlLocale', label:'Locale', options:OPTIONS.locale},
+            {type:'textarea', id:'rlKeywords', label:'Keywords', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ locale:v.rlLocale, keywords: splitList(v.rlKeywords) })
+        },
+        keywordCount: {
+          blurb:'Count keywords for which a site ranks in the top 50.',
+          inputs:[
+            {type:'select', id:'kcScope', label:'Scope', options:OPTIONS.scopeLimited},
+            {type:'select', id:'kcLocale', label:'Locale', options:OPTIONS.locale},
+            {type:'textarea', id:'kcTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ scope:v.kcScope, locale:v.kcLocale, targets: splitList(v.kcTargets) })
+        },
+        anchorText: {
+          blurb:'Get data about anchor text used to link to a specified site.',
+          inputs:[
+            {type:'select', id:'atScope', label:'Scope', options:OPTIONS.scope},
+            {type:'number', id:'atLimit', label:'Number of Results (1-50)', attrs:{min:1,max:50,value:25}},
+            {type:'textarea', id:'atTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ scope:v.atScope, limit:num(v.atLimit,25), targets: splitList(v.atTargets) })
+        },
+        linkingDomains: {
+          blurb:'Get a list of linking root domains to a target.',
+          inputs:[
+            {type:'select', id:'ldScope', label:'Scope', options:OPTIONS.scope},
+            {type:'select', id:'ldSort', label:'Sort', options:OPTIONS.linkingDomainsSort},
+            {type:'multiselect', id:'ldFilters', label:'Filters', options:OPTIONS.linkingDomainsFilters},
+            {type:'number', id:'ldLimit', label:'Number of Results (1-50)', attrs:{min:1,max:50,value:25}},
+            {type:'textarea', id:'ldTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ scope:v.ldScope, sort:v.ldSort, filters: multi(v.ldFilters), limit:num(v.ldLimit,25), targets: splitList(v.ldTargets) })
+        },
+        recentlyGainedLinks: {
+          blurb:'External root domains that added new links (past 60 days).',
+          inputs:[
+            {type:'select', id:'rglScope', label:'Scope', options:OPTIONS.scope},
+            {type:'number', id:'rglLimit', label:'Number of Results (1-50)', attrs:{min:1,max:50,value:25}},
+            {type:'date', id:'rglBegin', label:'Begin Date (Optional)'},
+            {type:'date', id:'rglEnd', label:'End Date (Optional)'},
+            {type:'textarea', id:'rglTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ scope:v.rglScope, limit:num(v.rglLimit,25), beginDate:v.rglBegin || undefined, endDate:v.rglEnd || undefined, targets: splitList(v.rglTargets) })
+        },
+        recentlyLostLinks: {
+          blurb:'Root domains that removed links (past 60 days).',
+          inputs:[
+            {type:'select', id:'rllScope', label:'Scope', options:OPTIONS.scope},
+            {type:'number', id:'rllLimit', label:'Number of Results (1-50)', attrs:{min:1,max:50,value:25}},
+            {type:'date', id:'rllBegin', label:'Begin Date (Optional)'},
+            {type:'date', id:'rllEnd', label:'End Date (Optional)'},
+            {type:'textarea', id:'rllTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ scope:v.rllScope, limit:num(v.rllLimit,25), beginDate:v.rllBegin || undefined, endDate:v.rllEnd || undefined, targets: splitList(v.rllTargets) })
+        },
+        linkIntersect: {
+          blurb:'Find sites that link to some targets but not others.',
+          inputs:[
+            {type:'select', id:'liScope', label:'Scope', options:OPTIONS.scope},
+            {type:'select', id:'liSort', label:'Sort', options:OPTIONS.linkIntersectSort},
+            {type:'number', id:'liMinMatch', label:'Minimum Matching Targets (1-6)', attrs:{min:1,max:6,value:1}},
+            {type:'number', id:'liLimit', label:'Number of Results (1-50)', attrs:{min:1,max:50,value:25}},
+            {type:'textarea', id:'liIs', label:'Linking To', placeholder:'One per line...', required:true},
+            {type:'textarea', id:'liNot', label:'NOT Linking To (Optional)', placeholder:'One per line...'}
+          ],
+          params: v => {
+            const scope = v.liScope;
+            const make = (arr) => splitList(arr).map(q=>({query:q, scope}));
+            return { scope, sort:v.liSort, minimum_matching_targets:num(v.liMinMatch,1), limit:num(v.liLimit,25), is_linking_to: make(v.liIs), not_linking_to: make(v.liNot) };
+          }
+        },
+        listLinks: {
+          blurb:'Get a list of links to a target.',
+          inputs:[
+            {type:'select', id:'llScope', label:'Scope', options:OPTIONS.scope},
+            {type:'select', id:'llSort', label:'Sort', options:['source_page_authority','source_domain_authority','source_link_propensity','source_spam_score']},
+            {type:'multiselect', id:'llFilters', label:'Filters', options:OPTIONS.listLinksFilters},
+            {type:'number', id:'llLimit', label:'Number of Results (1-50)', attrs:{min:1,max:50,value:25}},
+            {type:'textarea', id:'llTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ scope:v.llScope, sort:v.llSort, filters: multi(v.llFilters), limit:num(v.llLimit,25), targets: splitList(v.llTargets) })
+        },
+        filterLinksByAnchor: {
+          blurb:'Links to a target where anchor text exactly matches a string.',
+          inputs:[
+            {type:'select', id:'flaScope', label:'Scope', options:OPTIONS.scope},
+            {type:'textarea', id:'flaAnchor', label:'Anchor Text', placeholder:'Enter exact anchor text...', required:true},
+            {type:'select', id:'flaSort', label:'Sort', options:OPTIONS.filterAnchorSort},
+            {type:'multiselect', id:'flaFilters', label:'Filters', options:OPTIONS.filterAnchorFilters},
+            {type:'number', id:'flaLimit', label:'Number of Results (1-50)', attrs:{min:1,max:50,value:25}},
+            {type:'textarea', id:'flaTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ scope:v.flaScope, anchorText:v.flaAnchor, sort:v.flaSort, filters: multi(v.flaFilters), limit:num(v.flaLimit,25), targets: splitList(v.flaTargets) })
+        },
+        filterLinksByDomain: {
+          blurb:'Links to a target only if they originate from a specific root domain.',
+          inputs:[
+            {type:'select', id:'fldTargetScope', label:'Target Scope', options:OPTIONS.scope},
+            {type:'textarea', id:'fldTargetUrls', label:'Target URLs', placeholder:'One per line...', required:true},
+            {type:'select', id:'fldSourceScope', label:'Source Domain Scope', options:OPTIONS.scope},
+            {type:'textarea', id:'fldSourceUrls', label:'Source Domain URLs', placeholder:'One per line...', required:true},
+            {type:'multiselect', id:'fldFilters', label:'Filters', options:OPTIONS.filterDomainFilters},
+            {type:'number', id:'fldLimit', label:'Number of Results (1-50)', attrs:{min:1,max:50,value:25}},
+          ],
+          params: v => ({ targetScope:v.fldTargetScope, targetQueries: splitList(v.fldTargetUrls), sourceScope:v.fldSourceScope, sourceQueries: splitList(v.fldSourceUrls), filters: multi(v.fldFilters), limit:num(v.fldLimit,25) })
+        },
+        finalRedirect: {
+          blurb:'See the final redirect target of a page.',
+          inputs:[
+            {type:'select', id:'frScope', label:'Scope', options:OPTIONS.scope},
+            {type:'textarea', id:'frTargets', label:'Domains / URLs', placeholder:'One per line or comma-separated', required:true}
+          ],
+          params: v => ({ scope:v.frScope, targets: splitList(v.frTargets) })
+        },
+        linkStatus: {
+          blurb:'Get the status of a link from a source to a target.',
+          inputs:[
+            {type:'select', id:'lsTargetScope', label:'Target Scope', options:OPTIONS.scope},
+            {type:'textarea', id:'lsTarget', label:'Target URL', placeholder:'Target URL', required:true},
+            {type:'select', id:'lsSourceScope', label:'Source Scope', options:OPTIONS.scope},
+            {type:'textarea', id:'lsSource', label:'Source URL', placeholder:'Source URL', required:true}
+          ],
+          params: v => ({ targetScope:v.lsTargetScope, targetQuery:v.lsTarget.trim(), sourceScope:v.lsSourceScope, sourceQuery:v.lsSource.trim() })
+        }
+      };
+
+      function renderMethod(methodKey){
+        DOM.inputsContainer.innerHTML = '';
+        const def = METHODS[methodKey];
+        if (!def) return;
+
+        const wrapper = document.createElement('section');
+        wrapper.className = 'input-section space-y-4';
+        wrapper.style.display = 'block';
+
+        const p = document.createElement('p');
+        p.className = 'text-sm text-[var(--text-secondary)]';
+        p.textContent = def.blurb;
+        wrapper.appendChild(p);
+
+        def.inputs.forEach(field => {
+          const block = document.createElement('div');
+          block.className = 'space-y-1';
+          const label = document.createElement('label');
+          label.className = 'block text-sm font-medium text-[var(--text-secondary)]';
+          label.setAttribute('for', field.id);
+          label.textContent = field.label;
+          block.appendChild(label);
+
+          let ctrl;
+          if (field.type === 'textarea') {
+            ctrl = document.createElement('textarea');
+            ctrl.rows = 4;
+            ctrl.placeholder = field.placeholder || '';
+            ctrl.className = 'w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)] placeholder-[var(--text-secondary)]';
+          } else if (field.type === 'select') {
+            ctrl = document.createElement('select');
+            ctrl.className = 'w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
+            (field.options || []).forEach(opt=>{
+              const o = document.createElement('option');
+              if (Array.isArray(opt)) { o.value = opt[0]; o.textContent = opt[1]; }
+              else { o.value = opt; o.textContent = opt.replace(/_/g,' '); }
+              ctrl.appendChild(o);
+            });
+          } else if (field.type === 'multiselect') {
+            ctrl = document.createElement('select');
+            ctrl.multiple = true;
+            ctrl.className = 'w-full h-32 bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
+            (field.options || []).forEach(opt=>{
+              const o = document.createElement('option');
+              o.value = opt; o.textContent = opt.replace(/_/g,' ');
+              ctrl.appendChild(o);
+            });
+          } else if (field.type === 'number') {
+            ctrl = document.createElement('input');
+            ctrl.type = 'number';
+            ctrl.inputMode = 'numeric';
+            ctrl.className = 'w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
+            if (field.attrs) Object.entries(field.attrs).forEach(([k,v])=>ctrl.setAttribute(k,v));
+          } else if (field.type === 'date') {
+            ctrl = document.createElement('input');
+            ctrl.type = 'date';
+            ctrl.className = 'w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
+          }
+
+          ctrl.id = field.id;
+          if (field.required) ctrl.required = true;
+
+          block.appendChild(ctrl);
+          wrapper.appendChild(block);
+        });
+
+        DOM.inputsContainer.appendChild(wrapper);
+      }
+
+      // helpers
+      const num = (v, d) => {
+        const n = parseInt(v,10);
+        return Number.isFinite(n) ? n : d;
+      };
+      const splitList = (val) => (val || '').split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
+      const multi = (selectEl) => Array.from(selectEl?.selectedOptions || []).map(o=>o.value);
+
+      // ---------- Readme ----------
+      const readmeContent = `
+        <h2>Moz API Assistant - Help</h2>
+        <h3>Overview</h3>
+        <p>This tool connects to the Moz API (v3) using your key to fetch SEO data.</p>
+        <h3>Setup</h3>
+        <ol>
+          <li><strong>Get API Key:</strong> <a href="https://moz.com/products/api/keys" target="_blank" rel="noopener">Moz API Dashboard</a>.</li>
+          <li><strong>Add Key:</strong> Stored in localStorage in this browser only.</li>
+        </ol>
+        <h3>Usage</h3>
+        <p>Select a method, fill inputs, and hit <code>Run Request</code>. Results can be copied or exported to CSV.</p>
+        <h3>Notes</h3>
+        <ul>
+          <li>Each call consumes rows from your subscription quota.</li>
+          <li>Errors will show with hints (auth, quota, network).</li>
+        </ul>
+      `;
+      DOM.readmeContent.innerHTML = readmeContent;
+      DOM.readmeBtn.addEventListener('click', ()=>DOM.readmeModal.classList.remove('hidden'));
+      DOM.closeReadmeBtn.addEventListener('click', ()=>DOM.readmeModal.classList.add('hidden'));
+      DOM.readmeModal.addEventListener('click', (e)=>{ if (e.target === DOM.readmeModal) DOM.readmeModal.classList.add('hidden'); });
+
+      // ---------- Method select ----------
+      DOM.methodSelector.addEventListener('change', (e)=>{
+        const method = e.target.value;
+        DOM.submitBtn.disabled = !method;
+        if (method) renderMethod(method);
+      });
+
+      // ---------- Submit ----------
+      DOM.form.addEventListener('submit', handleFormSubmit);
+      DOM.copyBtn.addEventListener('click', handleCopyJson);
+      DOM.exportBtn.addEventListener('click', handleExportCsv);
+
+      async function handleFormSubmit(e){
+        e.preventDefault();
+        hideError();
+        DOM.resultsContainer.classList.add('hidden');
+
+        const apiKey = DOM.apiKeyInput.value.trim();
+        const method = DOM.methodSelector.value;
+
+        if (!apiKey || !method) {
+          showError('Please provide an API Key and select a method.');
+          return;
+        }
+
+        // Collect values from rendered inputs
+        const values = {};
+        (METHODS[method].inputs || []).forEach(f => {
+          const el = document.getElementById(f.id);
+          values[f.id] = el?.type === 'select-multiple' ? el : el?.value ?? '';
+        });
+
+        // Front-end required validation
+        const missing = (METHODS[method].inputs || []).filter(f => f.required && !String(values[f.id]).trim());
+        if (missing.length) {
+          showError(`Missing required field: ${missing[0].label}`);
+          return;
+        }
+
+        const params = METHODS[method].params(values);
+        // Additional cross-field checks (mirror your old guardrails)
+        if (method === 'linkIntersect' && (!params.is_linking_to || params.is_linking_to.length === 0)) {
+          showError('Please enter at least one URL for "Linking To".');
+          return;
+        }
+        if (method === 'linkStatus' && (!params.targetQuery || !params.sourceQuery)) {
+          showError('Please enter both a Target and Source URL for Link Status.');
+          return;
+        }
+
+        const payload = { apiKey, method, params };
+
+        setSubmitting(true);
+        try {
+          // cancel in-flight
+          if (inflight) inflight.abort();
+          inflight = new AbortController();
+
+          const res = await fetch(PROXY_URL, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload),
+            signal: inflight.signal
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`);
+
+          currentResultsData = data;
+          currentOriginalParams = params;
+          currentMethod = method;
+
+          DOM.rawCode.textContent = JSON.stringify(data, null, 2);
+          DOM.resultsContainer.classList.remove('hidden');
+
+          // refresh quota (throttled)
+          fetchQuotaThrottled(apiKey);
+        } catch (err) {
+          if (err.name !== 'AbortError') showError(err.message);
+        } finally {
+          setSubmitting(false);
+          inflight = null;
+        }
+      }
+
+      function setSubmitting(is){
+        DOM.submitBtn.disabled = is || !DOM.methodSelector.value;
+        DOM.submitBtn.setAttribute('aria-busy', String(is));
+        DOM.submitBtn.innerHTML = is
+          ? `<div class="spinner" aria-hidden="true"></div><span class="ml-2">Processing...</span>`
+          : 'Run Request';
+      }
+
+      function showError(message){
+        const hint =
+          /quota|limit/i.test(message) ? 'You may be out of rows—check your API Dashboard.' :
+          /unauthorized|401|403|key/i.test(message) ? 'Invalid API key. Recheck or regenerate your key.' :
+          /network|abort/i.test(message) ? 'Network hiccup or request was canceled.' : '';
+        DOM.errorMessage.innerHTML = `${message}${hint ? `<br><span class="text-[var(--text-secondary)]">${hint}</span>` : ''}`;
+        DOM.errorMessage.classList.remove('hidden');
+      }
+      function hideError(){ DOM.errorMessage.classList.add('hidden'); }
+
+      function handleCopyJson(){
+        if (!DOM.rawCode.textContent) return;
+        navigator.clipboard.writeText(DOM.rawCode.textContent).then(()=>{
+          DOM.copyBtn.textContent = 'Copied!';
+          setTimeout(()=>DOM.copyBtn.textContent='Copy JSON', 1500);
+        }, ()=> showError('Failed to copy JSON.'));
+      }
+
+      function handleExportCsv(){
+        if (!currentResultsData) return showError('No data available to export.');
+        exportDataToCsv(currentResultsData, currentMethod, currentOriginalParams);
+      }
+
+      // ---------- CSV Export (kept close to your original, with BOM & small tweaks) ----------
+      function exportDataToCsv(results, method, originalParams){
+        let rows = [];
+        const na = 'N/A';
+
+        const snakeToTitleCase = (s) => s.replace(/^_*(.)|_+(.)/g, (s, c, d) => c ? c.toUpperCase() : ' ' + d.toUpperCase());
+
+        const processLinkMetrics = (linkItem, query) => {
+          const baseInfo = { 'Query': query, 'Scope': originalParams.scope || na };
+          const metrics = linkItem.site_metrics || {};
+          const otherData = { ...linkItem };
+          delete otherData.site_metrics;
+          const combined = { ...baseInfo, ...metrics, ...otherData };
+          const titleCased = {};
+          for (const key in combined) titleCased[snakeToTitleCase(key)] = combined[key];
+          return titleCased;
+        };
+
+        results.forEach((res, i) => {
+          let query = (originalParams.targets || originalParams.keywords || [na])[i] || na;
+
+          if (['linkIntersect','linkStatus','filterLinksByDomain'].includes(method)) query = 'N/A';
+
+          if (res.status !== 'success') {
+            rows.push({ Query: query, Status: `Error: ${res.reason || 'Unknown'}` });
+            return;
+          }
+
+          switch(method){
+            case 'siteMetrics': {
+              const m = res.data.site_metrics || {};
+              const ordered = { 'Page Authority': m.page_authority, 'Domain Authority': m.domain_authority, 'Spam Score': m.spam_score };
+              for (const k in m) if (!['page_authority','domain_authority','spam_score'].includes(k)) ordered[snakeToTitleCase(k)] = m[k];
+              rows.push({
+                'Query': res.data.site_query?.query || query,
+                'Scope': res.data.site_query?.scope || na,
+                'Original Query': res.data.site_query?.original_site_query?.query || query,
+                ...ordered
+              });
+              break;
+            }
+            case 'brandAuthority':
+              rows.push({
+                'Site Query': res.data.site_query?.query || na,
+                'Scope': res.data.site_query?.scope || na,
+                'Brand Authority Score': res.data.site_metrics?.brand_authority_score ?? na,
+                'Original Query': res.data.site_query?.original_site_query?.query || query
+              });
+              break;
+            case 'topPages': {
+              const pages = res.data.top_pages || [];
+              if (!pages.length) rows.push({ Query: query, Status:'No top pages found' });
+              pages.forEach(page => {
+                const obj = { 'Query': query, 'Scope': originalParams.scope, ...page };
+                const out = {};
+                for (const k in obj) out[snakeToTitleCase(k)] = obj[k];
+                rows.push(out);
+              });
+              break;
+            }
+            case 'keywordMetrics':
+              rows.push({
+                'Keyword': res.data.serp_query?.keyword || query,
+                'Locale': res.data.serp_query?.locale || na,
+                'Device': res.data.serp_query?.device || na,
+                'Engine': res.data.serp_query?.engine || na,
+                'Volume': res.data.keyword_metrics?.volume ?? na,
+                'Difficulty': res.data.keyword_metrics?.difficulty ?? na,
+                'Opportunity CTR': res.data.keyword_metrics?.organic_ctr ?? na,
+                'Priority': res.data.keyword_metrics?.priority ?? na
+              });
+              break;
+            case 'searchIntent': {
+              const intents = {};
+              (res.data.keyword_intent?.all_intents || []).forEach(i => intents[`${snakeToTitleCase(i.label)} Score`] = i.score ?? na);
+              rows.push({
+                'Keyword': res.data.serp_query?.keyword || query,
+                'Locale': res.data.serp_query?.locale || na,
+                'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || na,
+                ...intents
+              });
+              break;
+            }
+            case 'rankingKeywords': {
+              const base = { 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale };
+              const kws = res.data.ranking_keywords || [];
+              if (!kws.length) rows.push({ ...base, Status:'No ranking keywords found' });
+              kws.forEach(kw => rows.push({ ...base, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume }));
+              break;
+            }
+            case 'relatedKeywords': {
+              const base = { 'Keyword': query, 'Locale': res.data.serp_query?.locale, 'Device': res.data.serp_query?.device, 'Engine': res.data.serp_query?.engine };
+              const sugg = res.data.suggestions || [];
+              if (!sugg.length) rows.push({ ...base, Status:'No suggestions found' });
+              sugg.forEach(s => rows.push({ ...base, 'Suggested Keyword': s.keyword, 'Relevance': s.relevance }));
+              break;
+            }
+            case 'keywordCount': {
+              const positions = res.data.ranking_keyword_count?.position || {};
+              const rankCounts = {};
+              for (let r=1; r<=50; r++) rankCounts[`Rank ${r} Count`] = positions[`rank_${r}`] ?? 0;
+              rows.push({ 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale, 'Total Ranking Count': res.data.ranking_keyword_count?.total ?? na, ...rankCounts });
+              break;
+            }
+            case 'anchorText': {
+              const base = { 'Query': query, 'Scope': originalParams.scope };
+              const list = res.data.anchor_texts || [];
+              if (!list.length) rows.push({ ...base, Status:'No anchor texts found' });
+              list.forEach(at => rows.push({ ...base, 'Anchor Text': at.text, 'External Root Domains': at.external_root_domains, 'External Pages': at.external_pages }));
+              break;
+            }
+            case 'recentlyGainedLinks': {
+              const list = res.data.gained_linking_domains || [];
+              if (!list.length) rows.push({ Query: query, Status:'No recently gained links found' });
+              list.forEach(item => rows.push(processLinkMetrics(item, query)));
+              break;
+            }
+            case 'recentlyLostLinks': {
+              const list = res.data.lost_linking_domains || [];
+              if (!list.length) rows.push({ Query: query, Status:'No recently lost links found' });
+              list.forEach(item => rows.push(processLinkMetrics(item, query)));
+              break;
+            }
+            case 'linkingDomains': {
+              const list = res.data.linking_domains || [];
+              if (!list.length) rows.push({ Query: query, Status:'No linking domains found' });
+              list.forEach(item => rows.push(processLinkMetrics(item, query)));
+              break;
+            }
+            case 'finalRedirect':
+              rows.push({
+                'Query': query,
+                'Scope': originalParams.scope,
+                'Original Query': res.data.site_query?.original_site_query?.query || query,
+                'Destination': res.data.destination || 'No redirect found'
+              });
+              break;
+            case 'linkIntersect': {
+              const data = res.data.link_intersects || [];
+              if (!data.length) { rows.push({ Status:'No intersecting links found' }); break; }
+              const base = {
+                'Linking To': (res.data.is_linking_to || []).map(t=>t.query).join(', '),
+                'Not Linking To': (res.data.not_linking_to || []).map(t=>t.query).join(', '),
+                'Minimum Matching Targets': res.data.options?.minimum_matching_targets || na,
+                'Scope': res.data.options?.scope || na,
+                'Sort': res.data.options?.sort || na
+              };
+              data.forEach(inter => {
+                (inter.matching_source_pages || [{page:'N/A', page_authority:'N/A'}]).forEach(src => {
+                  rows.push({
+                    ...base,
+                    'Intersecting Domain': inter.page,
+                    'Intersecting Title': inter.title,
+                    'Intersecting DA': inter.domain_authority,
+                    'Intersecting Spam Score': inter.spam_score,
+                    'Matching Target Indexes': (inter.matching_target_indexes || []).join(', '),
+                    'Source Page': src.page,
+                    'Source PA': src.page_authority
+                  });
+                });
+              });
+              break;
+            }
+            case 'listLinks':
+            case 'filterLinksByAnchor':
+            case 'filterLinksByDomain': {
+              const links = res.data.links || [];
+              if (!links.length) { rows.push({ Query: query, Status:'No links found' }); break; }
+              links.forEach(link => {
+                const src = link.source_site_metrics || {};
+                const tgt = link.target_site_metrics || {};
+                const info = { ...link };
+                delete info.source_site_metrics; delete info.target_site_metrics;
+                const row = {};
+                for (const k in src) row[`Source ${snakeToTitleCase(k)}`] = src[k];
+                for (const k in tgt) row[`Target ${snakeToTitleCase(k)}`] = tgt[k];
+                for (const k in info) row[snakeToTitleCase(k)] = info[k];
+                rows.push(row);
+              });
+              break;
+            }
+            case 'linkStatus':
+              rows.push({
+                'Target Query': res.data.target_site_query?.query,
+                'Source Query': res.data.source_site_query?.query,
+                'Exists': res.data.exists
+              });
+              break;
+          }
+        });
+
+        if (!rows.length) return showError('No valid data to export.');
+
+        const headers = Array.from(new Set(rows.flatMap(r => Object.keys(r))));
+        const csv = [
+          headers.join(','),
+          ...rows.map(r => headers.map(h=>{
+            const v = r[h] == null ? '' : String(r[h]);
+            return (v.includes(',') || v.includes('"') || v.includes('\n')) ? `"${v.replace(/"/g,'""')}"` : v;
+          }).join(','))
+        ].join('\n');
+
+        const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `moz-api-results-${method}.csv`;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      // ---------- Init ----------
+      loadApiKey();
+      // keep submit disabled until a method is picked
+      DOM.submitBtn.disabled = true;
+    });
+  </script>
+</body>
+</html>
