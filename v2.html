@@ -8,6 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tabulator CSS -->
+    <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -39,6 +42,8 @@
             --btn-copy-hover: #ea580c;
             --btn-export-bg: #10b981;
             --btn-export-hover: #059669;
+            --btn-view-data-bg: #0ea5e9;
+            --btn-view-data-hover: #0284c7;
             --error-bg: #fee2e2;
             --error-border: #fca5a5;
         }
@@ -65,6 +70,8 @@
             --btn-copy-hover: #fb923c;
             --btn-export-bg: #10b981;
             --btn-export-hover: #34d399;
+            --btn-view-data-bg: #0ea5e9;
+            --btn-view-data-hover: #38bdf8;
             --error-bg: rgba(153, 27, 27, 0.5);
             --error-border: #ef4444;
         }
@@ -91,6 +98,8 @@
             --btn-copy-hover: #7b00a3;
             --btn-export-bg: #11d18e;
             --btn-export-hover: #0da872;
+            --btn-view-data-bg: #2de2e6;
+            --btn-view-data-hover: #81f7f9;
             --error-bg: rgba(246, 1, 157, 0.2);
             --error-border: #f6019d;
         }
@@ -117,6 +126,8 @@
             --btn-copy-hover: #e5e5e5;
             --btn-export-bg: #ffffff;
             --btn-export-hover: #e5e5e5;
+            --btn-view-data-bg: #ffffff;
+            --btn-view-data-hover: #e5e5e5;
             --error-bg: #000000;
             --error-border: #ff0000;
         }
@@ -145,6 +156,26 @@
         #readme-modal-content ol { @apply list-decimal; }
         #readme-modal-content code { @apply bg-black/50 px-1 py-0.5 rounded-md text-sm; color: var(--btn-copy-bg); }
         .readme-method { margin-bottom: 1.5rem; }
+
+        /* Tabulator Styles */
+        #results-table {
+            border: 1px solid var(--border-primary);
+            background-color: var(--bg-container);
+            color: var(--text-primary);
+        }
+        .tabulator-header {
+            background-color: var(--bg-input);
+            border-bottom: 1px solid var(--border-primary);
+        }
+        .tabulator-col {
+            background-color: var(--bg-input);
+        }
+        .tabulator-row {
+            background-color: var(--bg-container);
+        }
+        .tabulator-row.tabulator-row-even {
+            background-color: var(--bg-input);
+        }
     </style>
 </head>
 <body data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData" class="transition-colors duration-300">
@@ -240,12 +271,16 @@
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                     <h2 class="text-xl font-bold text-[var(--text-heading)]">API Results</h2>
                     <div class="flex items-center gap-2">
+                        <button id="view-data-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">View Data</button>
                         <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">Copy JSON</button>
                         <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">Export Results to CSV</button>
                     </div>
                 </div>
                 <div id="raw-wrapper">
                     <pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg"><code></code></pre>
+                </div>
+                <div id="table-wrapper" class="hidden">
+                    <div id="results-table"></div>
                 </div>
             </div>
         </div>
@@ -289,6 +324,7 @@
             let currentOriginalParams = null;
             let currentMethod = null;
             let inFlightRequest = null;
+            let table = null;
 
             const allDOMElements = {
                 apiKeyDisplay: document.getElementById('apiKeyDisplay'), 
@@ -307,9 +343,12 @@
                 submitBtn: document.getElementById('submit-btn'),
                 errorMessage: document.getElementById('error-message'), 
                 resultsContainer: document.getElementById('results-container'), 
+                rawWrapper: document.getElementById('raw-wrapper'),
+                tableWrapper: document.getElementById('table-wrapper'),
                 rawCode: document.querySelector('#raw-wrapper code'), 
                 exportBtn: document.getElementById('export-btn'), 
-                copyJsonBtn: document.getElementById('copy-json-btn'), 
+                copyJsonBtn: document.getElementById('copy-json-btn'),
+                viewDataBtn: document.getElementById('view-data-btn'),
                 mozLogo: document.getElementById('moz-logo'),
                 quotaDisplay: document.getElementById('quota-display'), 
                 quotaText: document.getElementById('quota-text')
@@ -365,24 +404,24 @@
             };
             
             const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><h2>Setup</h2><ol><li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank" rel="noopener">Moz API Dashboard</a>.</li><li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li></ol><h2>Features</h2><p>Select a method from the dropdown to get started:</p><hr class="border-slate-700 my-4">
-                <div class="readme-method"><h3><strong><u>Fetch Site Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get metrics like DA, PA, Spam Score, and link counts for URLs.</li><li><strong>Inputs:</strong> Domains / URLs, Scope.</li><li><strong>Output:</strong> A detailed CSV with all available site metrics for the target.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Fetch Brand Authority</u></strong></h3><ul><li><strong>Description:</strong> Get the Brand Authority™ score for a given site.</li><li><strong>Inputs:</strong> Domains / URLs.</li><li><strong>Output:</strong> A CSV with the Brand Authority Score for the target.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Top Pages</u></strong></h3><ul><li><strong>Description:</strong> Return a list of the top pages on a target domain.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Filter, Sort, Number of Results.</li><li><strong>Output:</strong> A detailed CSV of the top pages and their metrics.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Fetch Keyword Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get volume, difficulty, CTR, and priority for keywords.</li><li><strong>Inputs:</strong> Keywords, Metric Type, Device, Engine, Locale.</li><li><strong>Output:</strong> A CSV with the requested keyword metrics.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Fetch Search Intent</u></strong></h3><ul><li><strong>Description:</strong> Retrieve search intent scores for any keyword.</li><li><strong>Inputs:</strong> Keywords, Locale.</li><li><strong>Output:</strong> A CSV with the primary intent and all intent scores.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> List keywords for which a site ranks.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Locale, Number of Results.</li><li><strong>Output:</strong> A CSV listing each ranking keyword, its position, and metrics.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Related Keywords</u></strong></h3><ul><li><strong>Description:</strong> Get a list of related keyword suggestions.</li><li><strong>Inputs:</strong> Keywords, Locale.</li><li><strong>Output:</strong> A CSV of suggested keywords and their relevance score.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Count Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Count keywords for which a site ranks in the top 50.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Locale.</li><li><strong>Output:</strong> A CSV with the total keyword count and a breakdown per ranking position.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Get Anchor Texts Lists</u></strong></h3><ul><li><strong>Description:</strong> Get data about anchor text used to link to a specified site.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Number of Results.</li><li><strong>Output:</strong> A CSV listing anchor texts and link counts.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Linking Domains</u></strong></h3><ul><li><strong>Description:</strong> Get a list of linking root domains to a target.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Sort, Filters, Number of Results.</li><li><strong>Output:</strong> A CSV with detailed metrics for each linking domain.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Recently Gained Links</u></strong></h3><ul><li><strong>Description:</strong> Get external root domains that added new links to a target.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Number of Results, Optional Begin/End Dates.</li><li><strong>Output:</strong> A CSV with detailed metrics for each recently gained linking domain.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Recently Lost Links</u></strong></h3><ul><li><strong>Description:</strong> Get root domains that removed links to a target.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Number of Results, Optional Begin/End Dates.</li><li><strong>Output:</strong> A CSV with detailed metrics for each recently lost linking domain.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Fetch Link Intersects</u></strong></h3><ul><li><strong>Description:</strong> Find sites that link to some domains but not others.</li><li><strong>Inputs:</strong> Linking To URLs, NOT Linking To URLs, Scope, Sort, Min. Matching Targets, Number of Results.</li><li><strong>Output:</strong> A detailed multi-row CSV of intersecting domains and their source pages.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Links</u></strong></h3><ul><li><strong>Description:</strong> Get a list of links to a target.</li><li><strong>Inputs:</strong> Domains / URLs, Scope, Sort, Filters, Number of Results.</li><li><strong>Output:</strong> A highly detailed CSV with metrics for both the source and target pages of each link.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Filter Links by Anchor Text</u></strong></h3><ul><li><strong>Description:</strong> Get links to a target that use a specific anchor text.</li><li><strong>Inputs:</strong> Domains / URLs, Anchor Text, Scope, Sort, Filters, Number of Results.</li><li><strong>Output:</strong> A detailed CSV of links matching the anchor text.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Filter Links by Domain</u></strong></h3><ul><li><strong>Description:</strong> Find links to a target from a specific source domain.</li><li><strong>Inputs:</strong> Target URLs, Source URLs, Scopes, Filters, Number of Results.</li><li><strong>Output:</strong> A detailed CSV of links from the specified source to the specified target.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Get Final Redirect Target</u></strong></h3><ul><li><strong>Description:</strong> See the final redirect target of a page.</li><li><strong>Inputs:</strong> Domains / URLs, Scope.</li><li><strong>Output:</strong> A CSV showing the original query and its final destination.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Get Link Status</u></strong></h3><ul><li><strong>Description:</strong> Get the status of a link from a source to a target.</li><li><strong>Inputs:</strong> Target URL/Scope, Source URL/Scope.</li><li><strong>Output:</strong> A CSV confirming if a link exists between the source and target.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Fetch Site Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get metrics like DA, PA, Spam Score, and link counts for URLs.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Fetch Brand Authority</u></strong></h3><ul><li><strong>Description:</strong> Get the Brand Authority™ score for a given site.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>List Top Pages</u></strong></h3><ul><li><strong>Description:</strong> Return a list of the top pages on a target domain.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Fetch Keyword Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get volume, difficulty, CTR, and priority for keywords.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Fetch Search Intent</u></strong></h3><ul><li><strong>Description:</strong> Retrieve search intent scores for any keyword.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>List Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> List keywords for which a site ranks.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>List Related Keywords</u></strong></h3><ul><li><strong>Description:</strong> Get a list of related keyword suggestions.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Count Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Count keywords for which a site ranks in the top 50.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Get Anchor Texts Lists</u></strong></h3><ul><li><strong>Description:</strong> Get data about anchor text used to link to a specified site.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>List Linking Domains</u></strong></h3><ul><li><strong>Description:</strong> Get a list of linking root domains to a target.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>List Recently Gained Links</u></strong></h3><ul><li><strong>Description:</strong> Get external root domains that added new links to a target during the past 60 days.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>List Recently Lost Links</u></strong></h3><ul><li><strong>Description:</strong> Get root domains that removed links to a target during the past 60 days.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Fetch Link Intersects</u></strong></h3><ul><li><strong>Description:</strong> Find sites that link to some domains but not others.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>List Links</u></strong></h3><ul><li><strong>Description:</strong> Get a list of links to a target.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Filter Links by Anchor Text</u></strong></h3><ul><li><strong>Description:</strong> Get a list of links to a target where the anchor text exactly matches a string.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Filter Links by Domain</u></strong></h3><ul><li><strong>Description:</strong> Find links pointing to a target only if they originate from a particular root domain.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Get Final Redirect Target</u></strong></h3><ul><li><strong>Description:</strong> See the final redirect target of a page.</li></ul></div>
+                <div class="readme-method"><h3><strong><u>Get Link Status</u></strong></h3><ul><li><strong>Description:</strong> Get the status of a link from a source to a target.</li></ul></div>
                 <hr class="border-slate-700 my-4"><h2>General Notes</h2><ul><li><strong>API Usage:</strong> Each API call consumes rows from your Moz API subscription quota. Be mindful of limits.</li><li><strong>Errors:</strong> If an API call fails, an error message will be displayed and the JSON response will contain details.</li></ul>`;
             
             const setupEventListeners = () => {
@@ -420,6 +459,8 @@
                 allDOMElements.form.addEventListener('submit', handleFormSubmit);
                 allDOMElements.copyJsonBtn.addEventListener('click', handleCopyJson);
                 allDOMElements.exportBtn.addEventListener('click', handleExportCsv);
+                allDOMElements.viewDataBtn.addEventListener('click', toggleDataView);
+
             };
 
             const applyTheme = (theme) => {
@@ -540,10 +581,27 @@
                     displayError("No data available to export.");
                 }
             }
+
+            function toggleDataView() {
+                const isTableVisible = !allDOMElements.tableWrapper.classList.contains('hidden');
+                if (isTableVisible) {
+                    allDOMElements.tableWrapper.classList.add('hidden');
+                    allDOMElements.rawWrapper.classList.remove('hidden');
+                    allDOMElements.viewDataBtn.textContent = 'View Data';
+                } else {
+                    allDOMElements.rawWrapper.classList.add('hidden');
+                    allDOMElements.tableWrapper.classList.remove('hidden');
+                    allDOMElements.viewDataBtn.textContent = 'View JSON';
+                    renderTable(currentResultsData, currentMethod, currentOriginalParams);
+                }
+            }
             
             function showRawJsonResults(data) {
                 allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
                 allDOMElements.resultsContainer.classList.remove('hidden');
+                allDOMElements.tableWrapper.classList.add('hidden');
+                allDOMElements.rawWrapper.classList.remove('hidden');
+                allDOMElements.viewDataBtn.textContent = 'View Data';
             }
 
             function displayError(message) {
@@ -798,6 +856,195 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+            }
+
+            function renderTable(results, method, originalParams) {
+                if (table) {
+                    table.destroy();
+                }
+                const tableData = [];
+                const columns = [];
+
+                let rows = []; // We will reuse the CSV logic to generate rows
+                
+                // --- This section is a simplified version of exportDataToCsv to get rows ---
+                const na = 'N/A';
+                const snakeToTitleCase = (s) => s.replace(/^_*(.)|_+(.)/g, (s, c, d) => c ? c.toUpperCase() : ' ' + d.toUpperCase());
+                const processLinkMetrics = (linkItem, query) => {
+                    const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
+                    const metrics = linkItem.site_metrics || {};
+                    const otherData = { ...linkItem };
+                    delete otherData.site_metrics;
+                    const combined = { ...baseInfo, ...metrics, ...otherData };
+                    const titleCased = {};
+                    for (const key in combined) {
+                        titleCased[snakeToTitleCase(key)] = combined[key];
+                    }
+                    return titleCased;
+                };
+
+                results.forEach((res, i) => {
+                    let query;
+                    if (['linkIntersect', 'linkStatus', 'filterLinksByDomain'].includes(method)) {
+                        query = 'N/A';
+                    } else {
+                        query = (originalParams.targets || originalParams.keywords)[i] || na;
+                    }
+                    if (res.status !== 'success') {
+                        rows.push({ Query: query, Status: `Error: ${res.reason || 'Unknown'}` });
+                        return;
+                    }
+                    switch(method){
+                         case 'siteMetrics': {
+                            const metrics = res.data.site_metrics || {};
+                            const orderedMetrics = {'Page Authority': metrics.page_authority, 'Domain Authority': metrics.domain_authority, 'Spam Score': metrics.spam_score };
+                            for(const key in metrics){
+                                if(!['page_authority', 'domain_authority', 'spam_score'].includes(key)) {
+                                    orderedMetrics[snakeToTitleCase(key)] = metrics[key];
+                                }
+                            }
+                             rows.push({'Query': res.data.site_query?.query || query, 'Scope': res.data.site_query?.scope || na, 'Original Query': res.data.site_query?.original_site_query?.query || query, ...orderedMetrics });
+                            break;
+                        }
+                        case 'brandAuthority':
+                            rows.push({'Site Query': res.data.site_query?.query || na, 'Scope': res.data.site_query?.scope || na, 'Brand Authority Score': res.data.site_metrics?.brand_authority_score ?? na, 'Original Query': res.data.site_query?.original_site_query?.query || query });
+                            break;
+                        case 'topPages':
+                             (res.data.top_pages || []).forEach(page => {
+                                const pageData = { 'Query': query, 'Scope': originalParams.scope, ...page };
+                                const titleCased = {};
+                                for(const key in pageData) { titleCased[snakeToTitleCase(key)] = pageData[key]; }
+                                rows.push(titleCased);
+                             });
+                             if (!res.data.top_pages || res.data.top_pages.length === 0) rows.push({ Query: query, Status: 'No top pages found' });
+                            break;
+                        case 'keywordMetrics': {
+                            const metricTypeMap = { 'all': 'All Keyword Metrics', 'volume': 'Search Volume', 'difficulty': 'Difficulty', 'opportunity': 'Organic CTR', 'priority': 'Priority' };
+                            rows.push({'Keyword': res.data.serp_query?.keyword || query, 'API Call': metricTypeMap[originalParams.metricType] || originalParams.metricType, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Volume': res.data.keyword_metrics?.volume ?? na, 'Difficulty': res.data.keyword_metrics?.difficulty ?? na, 'Opportunity CTR': res.data.keyword_metrics?.organic_ctr ?? na, 'Priority': res.data.keyword_metrics?.priority ?? na });
+                            break;
+                        }
+                        case 'searchIntent': {
+                             const intentData = {};
+                             (res.data.keyword_intent?.all_intents || []).forEach(intent => {
+                                intentData[`${snakeToTitleCase(intent.label)} Score`] = intent.score ?? na;
+                             });
+                             rows.push({'Keyword': res.data.serp_query?.keyword || query, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || na, ...intentData });
+                             break;
+                        }
+                        case 'rankingKeywords': {
+                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale };
+                            if(res.data.ranking_keywords?.length > 0){
+                                res.data.ranking_keywords.forEach(kw => { rows.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume }); });
+                            } else { rows.push({ ...baseInfo, Status: 'No ranking keywords found' }); }
+                            break;
+                        }
+                        case 'relatedKeywords': {
+                             const baseInfo = { 'Keyword': query, 'Locale': res.data.serp_query?.locale, 'Device': res.data.serp_query?.device, 'Engine': res.data.serp_query?.engine };
+                             if(res.data.suggestions?.length > 0){
+                                res.data.suggestions.forEach(sug => { rows.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance }); });
+                             } else { rows.push({ ...baseInfo, Status: 'No suggestions found' }); }
+                             break;
+                        }
+                        case 'keywordCount': {
+                            const positions = res.data.ranking_keyword_count?.position || {};
+                            const rankCounts = {};
+                            for (let i = 1; i <= 50; i++) {
+                                rankCounts[`Rank ${i} Count`] = positions[`rank_${i}`] ?? 0;
+                            }
+                            rows.push({'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale, 'Total Ranking Count': res.data.ranking_keyword_count?.total ?? na, ...rankCounts });
+                            break;
+                        }
+                        case 'anchorText': {
+                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
+                            if(res.data.anchor_texts?.length > 0){
+                                res.data.anchor_texts.forEach(at => { rows.push({ ...baseInfo, 'Anchor Text': at.text, 'External Root Domains': at.external_root_domains, 'External Pages': at.external_pages }); });
+                            } else { rows.push({ ...baseInfo, Status: 'No anchor texts found' }); }
+                            break;
+                        }
+                        case 'recentlyGainedLinks':
+                            (res.data.gained_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                            if (!res.data.gained_linking_domains || res.data.gained_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently gained links found' });
+                            break;
+                        case 'recentlyLostLinks':
+                            (res.data.lost_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                             if (!res.data.lost_linking_domains || res.data.lost_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently lost links found' });
+                            break;
+                        case 'linkingDomains':
+                            (res.data.linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
+                            if (!res.data.linking_domains || res.data.linking_domains.length === 0) rows.push({ Query: query, Status: 'No linking domains found' });
+                            break;
+                        
+                        case 'finalRedirect':
+                            rows.push({ 'Query': query, 'Scope': originalParams.scope, 'Original Query': res.data.site_query?.original_site_query?.query || query, 'Destination': res.data.destination || 'No redirect found' });
+                            break;
+                        case 'linkIntersect': {
+                            const intersectData = res.data.link_intersects || [];
+                            if (intersectData.length === 0) {
+                                rows.push({ Status: 'No intersecting links found' });
+                            } else {
+                                const baseInfo = {
+                                    'Linking To': (res.data.is_linking_to || []).map(t => t.query).join(', '),
+                                    'Not Linking To': (res.data.not_linking_to || []).map(t => t.query).join(', '),
+                                    'Minimum Matching Targets': res.data.options?.minimum_matching_targets || na,
+                                    'Scope': res.data.options?.scope || na,
+                                    'Sort': res.data.options?.sort || na
+                                };
+                                intersectData.forEach(intersect => {
+                                    (intersect.matching_source_pages || [{page: 'N/A', page_authority: 'N/A'}]).forEach(sourcePage => {
+                                        rows.push({
+                                            ...baseInfo,
+                                            'Intersecting Domain': intersect.page,
+                                            'Intersecting Title': intersect.title,
+                                            'Intersecting DA': intersect.domain_authority,
+                                            'Intersecting Spam Score': intersect.spam_score,
+                                            'Matching Target Indexes': (intersect.matching_target_indexes || []).join(', '),
+                                            'Source Page': sourcePage.page,
+                                            'Source PA': sourcePage.page_authority
+                                        });
+                                    });
+                                });
+                            }
+                            break;
+                        }
+                        case 'listLinks':
+                        case 'filterLinksByAnchor':
+                        case 'filterLinksByDomain':
+                            (res.data.links || []).forEach(link => {
+                                const sourceMetrics = link.source_site_metrics || {};
+                                const targetMetrics = link.target_site_metrics || {};
+                                const linkInfo = { ...link };
+                                delete linkInfo.source_site_metrics;
+                                delete linkInfo.target_site_metrics;
+
+                                const row = {};
+                                for (const key in sourceMetrics) row[`Source ${snakeToTitleCase(key)}`] = sourceMetrics[key];
+                                for (const key in targetMetrics) row[`Target ${snakeToTitleCase(key)}`] = targetMetrics[key];
+                                for (const key in linkInfo) row[snakeToTitleCase(key)] = linkInfo[key];
+                                rows.push(row);
+                            });
+                             if (!res.data.links || res.data.links.length === 0) rows.push({ Query: query, Status: 'No links found' });
+                            break;
+                        case 'linkStatus':
+                            rows.push({ 'Target Query': res.data.target_site_query?.query, 'Source Query': res.data.source_site_query?.query, 'Exists': res.data.exists });
+                            break;
+                    }
+                });
+
+                if (rows.length > 0) {
+                    const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
+                    columns.push(...allKeys.map(key => ({ title: key, field: key, headerFilter: "input" })));
+                    tableData.push(...rows);
+                }
+                
+                table = new Tabulator("#results-table", {
+                    data: tableData,
+                    columns: columns,
+                    layout: "fitDataFill",
+                    pagination: "local",
+                    paginationSize: 20,
+                    movableColumns: true,
+                    resizableRows: true,
+                });
             }
 
             // Initial calls
