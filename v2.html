@@ -384,6 +384,7 @@
             let currentMethod = null;
             let inFlightRequest = null;
             let table = null;
+            let currentFilters = [];
 
             const allDOMElements = {
                 apiKeyDisplay: document.getElementById('apiKeyDisplay'), 
@@ -525,7 +526,9 @@
                 allDOMElements.copyJsonBtn.addEventListener('click', handleCopyJson);
                 allDOMElements.exportBtn.addEventListener('click', handleExportCsv);
                 allDOMElements.viewDataBtn.addEventListener('click', toggleDataView);
-
+                allDOMElements.filterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.remove('hidden'));
+                allDOMElements.closeFilterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.add('hidden'));
+                allDOMElements.applyFilterBtn.addEventListener('click', applyTableFilters);
             };
 
             const applyTheme = (theme) => {
@@ -934,7 +937,6 @@
 
                 let rows = []; // We will reuse the CSV logic to generate rows
                 
-                // --- This section is a simplified version of exportDataToCsv to get rows ---
                 const na = 'N/A';
                 const snakeToTitleCase = (s) => s.replace(/^_*(.)|_+(.)/g, (s, c, d) => c ? c.toUpperCase() : ' ' + d.toUpperCase());
                 const processLinkMetrics = (linkItem, query) => {
@@ -1099,7 +1101,7 @@
 
                 if (rows.length > 0) {
                     const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
-                    columns.push(...allKeys.map(key => ({ title: key, field: key, headerFilter: "input" })));
+                    columns.push(...allKeys.map(key => ({ title: key, field: key })));
                     tableData.push(...rows);
                 }
                 
@@ -1112,6 +1114,70 @@
                     movableColumns: true,
                     resizableRows: true,
                 });
+
+                allDOMElements.filterFieldsContainer.innerHTML = '';
+                columns.forEach(col => {
+                    if (col.field) {
+                        const div = document.createElement('div');
+                        const label = document.createElement('label');
+                        label.textContent = col.title;
+                        label.className = 'block text-sm font-medium text-[var(--text-secondary)]';
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.dataset.field = col.field;
+                        input.className = 'w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
+                        div.appendChild(label);
+                        div.appendChild(input);
+                        allDOMElements.filterFieldsContainer.appendChild(div);
+                    }
+                });
+
+            }
+
+            function applyTableFilters() {
+                const filterInputs = allDOMElements.filterFieldsContainer.querySelectorAll('input');
+                currentFilters = [];
+                filterInputs.forEach(input => {
+                    if (input.value) {
+                        currentFilters.push({
+                            field: input.dataset.field,
+                            type: 'like',
+                            value: input.value
+                        });
+                    }
+                });
+                table.setFilter(currentFilters);
+                updateActiveFilterChips();
+                allDOMElements.filterModal.classList.add('hidden');
+            }
+
+            function updateActiveFilterChips() {
+                allDOMElements.activeFiltersContainer.innerHTML = '';
+                if (currentFilters.length > 0) {
+                    const title = document.createElement('span');
+                    title.className = 'text-sm font-bold text-[var(--text-secondary)]';
+                    title.textContent = 'Active Filters:';
+                    allDOMElements.activeFiltersContainer.appendChild(title);
+
+                    currentFilters.forEach((filter, index) => {
+                        const chip = document.createElement('span');
+                        chip.className = 'inline-flex items-center px-2 py-1 bg-[var(--bg-input-secondary)] text-sm rounded-full';
+                        chip.textContent = `${filter.field}: "${filter.value}"`;
+                        const closeBtn = document.createElement('button');
+                        closeBtn.className = 'ml-2 text-[var(--text-accent)]';
+                        closeBtn.innerHTML = '&times;';
+                        closeBtn.onclick = () => {
+                            currentFilters.splice(index, 1);
+                            table.setFilter(currentFilters);
+                            updateActiveFilterChips();
+                        };
+                        chip.appendChild(closeBtn);
+                        allDOMElements.activeFiltersContainer.appendChild(chip);
+                    });
+                    allDOMElements.activeFiltersContainer.classList.remove('hidden');
+                } else {
+                    allDOMElements.activeFiltersContainer.classList.add('hidden');
+                }
             }
 
             // Initial calls
