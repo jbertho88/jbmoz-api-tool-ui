@@ -46,6 +46,14 @@
             --btn-view-data-hover: #0284c7;
             --error-bg: #fee2e2;
             --error-border: #fca5a5;
+            --tabulator-header-bg: var(--bg-input);
+            --tabulator-row-bg: var(--bg-container);
+            --tabulator-row-even-bg: var(--bg-input-secondary);
+            --tabulator-border: var(--border-primary);
+            --tabulator-text: var(--text-primary);
+            --tabulator-footer-bg: var(--bg-input);
+            --tabulator-pag-button-bg: var(--bg-container);
+            --tabulator-pag-button-hover: var(--bg-input-secondary);
         }
 
         .dark {
@@ -74,6 +82,14 @@
             --btn-view-data-hover: #38bdf8;
             --error-bg: rgba(153, 27, 27, 0.5);
             --error-border: #ef4444;
+            --tabulator-header-bg: var(--bg-input);
+            --tabulator-row-bg: #1e293b;
+            --tabulator-row-even-bg: #0f172a;
+            --tabulator-border: var(--border-primary);
+            --tabulator-text: var(--text-primary);
+            --tabulator-footer-bg: var(--bg-input);
+            --tabulator-pag-button-bg: var(--bg-input-secondary);
+            --tabulator-pag-button-hover: #475569;
         }
 
         .retro {
@@ -102,6 +118,14 @@
             --btn-view-data-hover: #81f7f9;
             --error-bg: rgba(246, 1, 157, 0.2);
             --error-border: #f6019d;
+            --tabulator-header-bg: var(--bg-input);
+            --tabulator-row-bg: #1a001a;
+            --tabulator-row-even-bg: #2a002a;
+            --tabulator-border: var(--border-primary);
+            --tabulator-text: var(--text-primary);
+            --tabulator-footer-bg: var(--bg-input);
+            --tabulator-pag-button-bg: var(--bg-input-secondary);
+            --tabulator-pag-button-hover: #6a1b9a;
         }
 
         .high-contrast {
@@ -130,6 +154,14 @@
             --btn-view-data-hover: #e5e5e5;
             --error-bg: #000000;
             --error-border: #ff0000;
+            --tabulator-header-bg: #000;
+            --tabulator-row-bg: #000;
+            --tabulator-row-even-bg: #000;
+            --tabulator-border: #fff;
+            --tabulator-text: #fff;
+            --tabulator-footer-bg: #000;
+            --tabulator-pag-button-bg: #333;
+            --tabulator-pag-button-hover: #555;
         }
         /* Special text colors for high-contrast buttons */
         .high-contrast .btn-inverted-text {
@@ -157,24 +189,37 @@
         #readme-modal-content code { @apply bg-black/50 px-1 py-0.5 rounded-md text-sm; color: var(--btn-copy-bg); }
         .readme-method { margin-bottom: 1.5rem; }
 
-        /* Tabulator Styles */
-        #results-table {
-            border: 1px solid var(--border-primary);
+        /* Tabulator Theme Styles */
+        .tabulator {
+            border-color: var(--border-primary);
             background-color: var(--bg-container);
             color: var(--text-primary);
         }
-        .tabulator-header {
-            background-color: var(--bg-input);
-            border-bottom: 1px solid var(--border-primary);
+        .tabulator .tabulator-header {
+            background-color: var(--tabulator-header-bg);
+            border-bottom-color: var(--border-primary);
         }
-        .tabulator-col {
-            background-color: var(--bg-input);
+        .tabulator .tabulator-header .tabulator-col {
+            background-color: var(--tabulator-header-bg);
+            color: var(--text-primary);
         }
-        .tabulator-row {
-            background-color: var(--bg-container);
+        .tabulator .tabulator-tableHolder .tabulator-table .tabulator-row {
+            background-color: var(--tabulator-row-bg);
+            color: var(--text-primary);
         }
-        .tabulator-row.tabulator-row-even {
-            background-color: var(--bg-input);
+        .tabulator .tabulator-tableHolder .tabulator-table .tabulator-row.tabulator-row-even {
+            background-color: var(--tabulator-row-even-bg);
+        }
+        .tabulator .tabulator-footer {
+            background-color: var(--tabulator-footer-bg);
+            border-top-color: var(--border-primary);
+        }
+        .tabulator .tabulator-footer .tabulator-paginator button {
+            background: var(--tabulator-pag-button-bg);
+            color: var(--text-primary);
+        }
+        .tabulator .tabulator-footer .tabulator-paginator button:hover {
+            background: var(--tabulator-pag-button-hover);
         }
     </style>
 </head>
@@ -268,18 +313,20 @@
         <div id="status-container" class="mt-8" aria-live="polite">
             <div id="error-message" role="alert" class="hidden bg-[var(--error-bg)] border border-[var(--error-border)] text-[var(--text-error)] px-4 py-3 rounded-lg text-center"></div>
             <div id="results-container" class="hidden bg-[var(--bg-input)] p-4 md:p-6 rounded-xl border border-[var(--border-primary)]">
-                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
                     <h2 class="text-xl font-bold text-[var(--text-heading)]">API Results</h2>
-                    <div class="flex items-center gap-2">
-                        <button id="view-data-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">View Data</button>
+                    <div class="flex items-center gap-2 flex-wrap justify-end">
+                        <button id="view-data-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">View Table</button>
+                        <button id="filter-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden">Filter</button>
                         <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">Copy JSON</button>
-                        <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">Export Results to CSV</button>
+                        <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">Export to CSV</button>
                     </div>
                 </div>
+                <div id="active-filters-container" class="hidden mb-4 space-x-2"></div>
                 <div id="raw-wrapper">
                     <pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg"><code></code></pre>
                 </div>
-                <div id="table-wrapper" class="hidden">
+                <div id="table-wrapper" class="hidden overflow-x-auto">
                     <div id="results-table"></div>
                 </div>
             </div>
@@ -306,7 +353,7 @@
 
     </div>
 
-    <!-- Read Me Modal -->
+    <!-- Modals -->
     <div id="readme-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col">
             <div class="flex justify-between items-center p-4 border-b border-[var(--border-primary)]">
@@ -314,6 +361,18 @@
                 <button id="close-readme-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">&times;</button>
             </div>
             <div id="readme-modal-content" class="p-6 overflow-y-auto"></div>
+        </div>
+    </div>
+     <div id="filter-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-md rounded-2xl shadow-2xl flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-[var(--border-primary)]">
+                <h2 class="text-lg font-semibold text-[var(--text-primary)]">Filter Data</h2>
+                <button id="close-filter-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">&times;</button>
+            </div>
+            <div id="filter-fields-container" class="p-6 overflow-y-auto space-y-4"></div>
+            <div class="p-4 border-t border-[var(--border-primary)] flex justify-end gap-2">
+                 <button id="apply-filter-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text">Apply</button>
+            </div>
         </div>
     </div>
 
@@ -349,6 +408,12 @@
                 exportBtn: document.getElementById('export-btn'), 
                 copyJsonBtn: document.getElementById('copy-json-btn'),
                 viewDataBtn: document.getElementById('view-data-btn'),
+                filterBtn: document.getElementById('filter-btn'),
+                filterModal: document.getElementById('filter-modal'),
+                closeFilterBtn: document.getElementById('close-filter-btn'),
+                filterFieldsContainer: document.getElementById('filter-fields-container'),
+                applyFilterBtn: document.getElementById('apply-filter-btn'),
+                activeFiltersContainer: document.getElementById('active-filters-container'),
                 mozLogo: document.getElementById('moz-logo'),
                 quotaDisplay: document.getElementById('quota-display'), 
                 quotaText: document.getElementById('quota-text')
@@ -587,11 +652,13 @@
                 if (isTableVisible) {
                     allDOMElements.tableWrapper.classList.add('hidden');
                     allDOMElements.rawWrapper.classList.remove('hidden');
-                    allDOMElements.viewDataBtn.textContent = 'View Data';
+                    allDOMElements.viewDataBtn.textContent = 'View Table';
+                    allDOMElements.filterBtn.classList.add('hidden');
                 } else {
                     allDOMElements.rawWrapper.classList.add('hidden');
                     allDOMElements.tableWrapper.classList.remove('hidden');
                     allDOMElements.viewDataBtn.textContent = 'View JSON';
+                    allDOMElements.filterBtn.classList.remove('hidden');
                     renderTable(currentResultsData, currentMethod, currentOriginalParams);
                 }
             }
@@ -601,7 +668,7 @@
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.rawWrapper.classList.remove('hidden');
-                allDOMElements.viewDataBtn.textContent = 'View Data';
+                allDOMElements.viewDataBtn.textContent = 'View Table';
             }
 
             function displayError(message) {
@@ -1041,7 +1108,7 @@
                     columns: columns,
                     layout: "fitDataFill",
                     pagination: "local",
-                    paginationSize: 20,
+                    paginationSize: 100,
                     movableColumns: true,
                     resizableRows: true,
                 });
