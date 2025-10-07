@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Advanced Moz API Tool for SEO data analysis and link building research">
+    <title>Advanced Moz API Tool</title>
+    
+    <!-- Preload critical resources -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    
+    <!-- Critical CSS inlined for faster loading -->
+    <style>
+        /* Critical CSS - Load immediately */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 64rem;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        /* Theme Variables - Optimized */
+        :root {
+            --bg-body: #f9fafb;
+            --bg-container: #ffffff;
+            --bg-container-translucent: rgba(255, 255, 255, 0.5);
+            --bg-input: #f3f4f6;
+            --bg-input-secondary: #e5e7eb;
+            --bg-code: #fefce8;
+            --bg-disabled: #d1d5db;
+            --border-primary: #e5e7eb;
+            --border-secondary: #d1d5db;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --text-accent: #0284c7;
+            --text-accent-hover: #0369a1;
+            --text-heading: #0ea5e9;
+            --text-error: #b91c1c;
+            --btn-primary-bg: #002F50;
+            --btn-primary-hover: #001d30;
+            --btn-copy-bg: #f97316;
+            --btn-copy-hover: #ea580c;
+            --btn-export-bg: #10b981;
+            --btn-export-hover: #059669;
+            --btn-view-data-bg: #0ea5e9;
+            --btn-view-data-hover: #0284c7;
+            --error-bg: #fee2e2;
+            --error-border: #fca5a5;
+        }
+        
+        .dark {
+            --bg-body: #020617;
+            --bg-container: #1e293b;
+            --bg-container-translucent: rgba(30, 41, 59, 0.5);
+            --bg-input: #0f172a;
+            --bg-input-secondary: #334155;
+            --bg-code: #000000;
+            --bg-disabled: #475569;
+            --border-primary: #334155;
+            --border-secondary: #475569;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-accent: #38bdf8;
+            --text-accent-hover: #7dd3fc;
+            --text-heading: #38bdf8;
+            --text-error: #f87171;
+            --btn-primary-bg: #0ea5e9;
+            --btn-primary-hover: #38bdf8;
+            --btn-copy-bg: #f97316;
+            --btn-copy-hover: #fb923c;
+            --btn-export-bg: #10b981;
+            --btn-export-hover: #34d399;
+            --btn-view-data-bg: #0ea5e9;
+            --btn-view-data-hover: #38bdf8;
+            --error-bg: rgba(153, 27, 27, 0.5);
+            --error-border: #ef4444;
+        }
+        
+        .retro {
+            --bg-body: #000000;
+            --bg-container: #1a001a;
+            --bg-container-translucent: rgba(26, 0, 26, 0.5);
+            --bg-input: #2a002a;
+            --bg-input-secondary: #3d003d;
+            --bg-code: #000000;
+            --bg-disabled: #4a148c;
+            --border-primary: #4a148c;
+            --border-secondary: #6a1b9a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #ad5eda;
+            --text-accent: #2de2e6;
+            --text-accent-hover: #81f7f9;
+            --text-heading: #9700cc;
+            --text-error: #f6019d;
+            --btn-primary-bg: #f6019d;
+            --btn-primary-hover: #d40078;
+            --btn-copy-bg: #9700cc;
+            --btn-copy-hover: #7b00a3;
+            --btn-export-bg: #11d18e;
+            --btn-export-hover: #0da872;
+            --btn-view-data-bg: #2de2e6;
+            --btn-view-data-hover: #81f7f9;
+            --error-bg: rgba(246, 1, 157, 0.2);
+            --error-border: #f6019d;
+        }
+        
+        .high-contrast {
+            --bg-body: #000000;
+            --bg-container: #000000;
+            --bg-container-translucent: rgba(0, 0, 0, 0.5);
+            --bg-input: #000000;
+            --bg-input-secondary: #000000;
+            --bg-code: #000000;
+            --bg-disabled: #333333;
+            --border-primary: #ffffff;
+            --border-secondary: #ffffff;
+            --text-primary: #ffffff;
+            --text-secondary: #e5e5e5;
+            --text-accent: #ffffff;
+            --text-accent-hover: #cccccc;
+            --text-heading: #ffffff;
+            --text-error: #ffffff;
+            --btn-primary-bg: #ffffff;
+            --btn-primary-hover: #e5e5e5;
+            --btn-copy-bg: #ffffff;
+            --btn-copy-hover: #e5e5e5;
+            --btn-export-bg: #ffffff;
+            --btn-export-hover: #e5e5e5;
+            --btn-view-data-bg: #ffffff;
+            --btn-view-data-hover: #e5e5e5;
+            --error-bg: #000000;
+            --error-border: #ff0000;
+        }
+        
+        .high-contrast .btn-inverted-text {
+            color: #000000 !important;
+        }
+        
+        /* Optimized spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: #ffffff;
+            animation: spin 1s ease infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Optimized form styles */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-secondary);
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--text-accent);
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background-color: var(--btn-primary-bg);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--btn-primary-hover);
+        }
+        
+        .btn-secondary {
+            background-color: var(--btn-copy-bg);
+            color: white;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background-color: var(--btn-copy-hover);
+        }
+        
+        .btn-success {
+            background-color: var(--btn-export-bg);
+            color: white;
+        }
+        
+        .btn-success:hover:not(:disabled) {
+            background-color: var(--btn-export-hover);
+        }
+        
+        .btn-info {
+            background-color: var(--btn-view-data-bg);
+            color: white;
+        }
+        
+        .btn-info:hover:not(:disabled) {
+            background-color: var(--btn-view-data-hover);
+        }
+        
+        /* Card styles */
+        .card {
+            background-color: var(--bg-container);
+            border: 1px solid var(--border-primary);
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(8px);
+            background-color: var(--bg-container-translucent);
+        }
+        
+        .card-header {
+            padding: 1.5rem 2rem 0;
+        }
+        
+        .card-body {
+            padding: 1.5rem 2rem;
+        }
+        
+        .card-footer {
+            padding: 0 2rem 1.5rem;
+        }
+        
+        /* Error and success states */
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-error {
+            background-color: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--text-error);
+        }
+        
+        .alert-success {
+            background-color: #d1fae5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+        }
+        
+        /* Hidden utility */
+        .hidden {
+            display: none !important;
+        }
+        
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .modal-content {
+            background-color: var(--bg-container);
+            border: 1px solid var(--border-primary);
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 48rem;
+            max-height: 90vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .modal-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--border-primary);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        
+        /* Theme buttons */
+        .theme-btn {
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .theme-btn:hover {
+            background-color: var(--bg-input-secondary);
+        }
+        
+        .theme-btn.active {
+            font-weight: bold;
+            background-color: var(--text-accent);
+            color: white;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .card-header,
+            .card-body,
+            .card-footer {
+                padding: 1rem;
+            }
+            
+            .modal {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+    
+    <!-- Load non-critical CSS asynchronously -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    
+    <!-- Load Tailwind CSS asynchronously -->
+    <link rel="preload" href="https://cdn.tailwindcss.com" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdn.tailwindcss.com"></noscript>
+    
+    <!-- Load Tabulator CSS asynchronously -->
+    <link rel="preload" href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css"></noscript>
+</head>
+<body data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData" class="transition-colors duration-300">
+    <div class="container">
+        <div class="card">
+            <!-- Header -->
+            <header class="card-header text-center">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" 
+                     alt="Moz Logo" 
+                     class="mx-auto h-12 mb-4" 
+                     id="moz-logo"
+                     loading="lazy">
+                <h1 class="text-3xl font-bold" style="color: var(--text-heading)">Advanced Moz API Tool</h1>
+                <p class="mt-2" style="color: var(--text-primary)">Add your key and select an API method to get started.</p>
+            </header>
+            
+            <!-- Main Content -->
+            <main class="card-body">
+                <!-- API Key Section -->
+                <section class="form-group mb-6" style="background-color: var(--bg-input); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-secondary)">
+                    <label class="form-label">Moz API Key</label>
+                    <div id="apiKeyDisplay" class="hidden items-center justify-between">
+                        <span id="apiKeyText" style="color: var(--text-secondary); font-family: monospace"></span>
+                        <button id="editApiKeyBtn" class="text-sm" style="color: var(--text-accent); font-weight: 600; cursor: pointer; background: none; border: none; padding: 0;">Edit</button>
+                    </div>
+                    <div id="apiKeyInputArea" class="flex items-center gap-2">
+                        <input type="password" 
+                               id="apiKeyInput" 
+                               class="form-input" 
+                               placeholder="mozscape-1234abcd..."
+                               autocomplete="off">
+                        <button id="saveApiKeyBtn" class="btn btn-primary">Save</button>
+                    </div>
+                    <!-- Quota Display -->
+                    <div id="quota-display" class="hidden mt-3 text-sm" style="color: var(--text-secondary)">
+                        <span id="quota-text"></span>
+                    </div>
+                </section>
+
+                <!-- Method Selection -->
+                <section class="form-group">
+                    <label for="methodSelector" class="form-label">API Method</label>
+                    <select id="methodSelector" class="form-input">
+                        <option value="" disabled selected>-- Select a Method --</option>
+                        <optgroup label="Site Metrics">
+                            <option value="siteMetrics">Fetch Site Metrics</option>
+                            <option value="brandAuthority">Fetch Brand Authority</option>
+                            <option value="topPages">List Top Pages</option>
+                        </optgroup>
+                        <optgroup label="Keyword Research">
+                            <option value="keywordMetrics">Fetch Keyword Metrics</option>
+                            <option value="searchIntent">Fetch Search Intent</option>
+                            <option value="rankingKeywords">List Ranking Keywords</option>
+                            <option value="relatedKeywords">List Related Keywords</option>
+                            <option value="keywordCount">Count Ranking Keywords</option>
+                        </optgroup>
+                        <optgroup label="Link Building">
+                            <option value="anchorText">Get Anchor Texts Lists</option>
+                            <option value="linkingDomains">List Linking Domains</option>
+                            <option value="recentlyGainedLinks">List Recently Gained Links</option>
+                            <option value="recentlyLostLinks">List Recently Lost Links</option>
+                            <option value="linkIntersect">Fetch Link Intersects</option>
+                            <option value="listLinks">List Links</option>
+                            <option value="filterLinksByAnchor">Filter Links by Anchor Text</option>
+                            <option value="filterLinksByDomain">Filter Links by Domain</option>
+                        </optgroup>
+                        <optgroup label="Technical SEO">
+                            <option value="finalRedirect">Get Final Redirect Target</option>
+                            <option value="linkStatus">Get Link Status</option>
+                        </optgroup>
+                    </select>
+                </section>
+
+                <!-- Dynamic Form -->
+                <form id="api-form">
+                    <div id="inputsContainer" class="mt-4">
+                        <!-- Input sections will be populated dynamically -->
+                    </div>
+                    <div class="mt-8 text-center">
+                        <button type="submit" 
+                                id="submit-btn" 
+                                class="btn btn-primary w-full md:w-auto md:min-w-[200px] mx-auto"
+                                disabled>
+                            Run Request
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Results Section -->
+                <div id="status-container" class="mt-8" aria-live="polite">
+                    <div id="error-message" 
+                         role="alert" 
+                         class="hidden alert alert-error text-center"></div>
+                    <div id="results-container" 
+                         class="hidden" 
+                         style="background-color: var(--bg-input); padding: 1rem 1.5rem; border-radius: 0.75rem; border: 1px solid var(--border-primary)">
+                        <div class="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
+                            <h2 class="text-xl font-bold" style="color: var(--text-heading)">API Results</h2>
+                            <div class="flex items-center gap-2 flex-wrap justify-end">
+                                <button id="view-data-btn" class="btn btn-info">View Table</button>
+                                <button id="filter-btn" class="btn btn-info hidden">Filter</button>
+                                <button id="copy-json-btn" class="btn btn-secondary">Copy JSON</button>
+                                <button id="export-btn" class="btn btn-success">Export to CSV</button>
+                            </div>
+                        </div>
+                        <div id="active-filters-container" class="hidden mb-4 space-x-2"></div>
+                        <div id="raw-wrapper">
+                            <pre class="whitespace-pre-wrap break-all text-sm p-4 rounded-lg" 
+                                 style="background-color: var(--bg-code); color: var(--text-primary)">
+                                <code></code>
+                            </pre>
+                        </div>
+                        <div id="table-wrapper" class="hidden overflow-x-auto">
+                            <div id="results-table"></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            
+            <!-- Footer -->
+            <footer class="card-footer text-center" style="color: var(--text-secondary); border-top: 1px solid var(--border-primary); padding-top: 1.5rem">
+                <div class="mb-4 flex justify-center items-center gap-2">
+                    <button data-theme="light" class="theme-btn">Light</button>
+                    <button data-theme="dark" class="theme-btn">Dark</button>
+                    <button data-theme="retro" class="theme-btn">Retro</button>
+                    <button data-theme="high-contrast" class="theme-btn">High Contrast</button>
+                </div>
+                <p>&copy; Jonathan Berthold 2025</p>
+                <div class="mt-2 space-x-4">
+                    <a href="https://moz.com/api/dashboard" 
+                       target="_blank" 
+                       rel="noopener" 
+                       class="hover:underline transition"
+                       style="color: var(--text-accent)">API Dashboard</a>
+                    <span style="color: var(--text-secondary)">|</span>
+                    <a href="https://moz.com/products/api/keys" 
+                       target="_blank" 
+                       rel="noopener" 
+                       class="hover:underline transition"
+                       style="color: var(--text-accent)">Get Moz API Key</a>
+                    <span style="color: var(--text-secondary)">|</span>
+                    <a href="https://moz.com/api/docs/welcome" 
+                       target="_blank" 
+                       rel="noopener" 
+                       class="hover:underline transition"
+                       style="color: var(--text-accent)">API Docs</a>
+                    <span style="color: var(--text-secondary)">|</span>
+                    <button id="readme-btn" 
+                            class="hover:underline transition"
+                            style="color: var(--text-accent); background: none; border: none; cursor: pointer; padding: 0;">Read Me</button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="readme-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="text-lg font-semibold" style="color: var(--text-primary)">Read Me / Help</h2>
+                <button id="close-readme-btn" 
+                        class="text-2xl"
+                        style="color: var(--text-secondary); background: none; border: none; cursor: pointer; padding: 0;">&times;</button>
+            </div>
+            <div id="readme-modal-content" class="modal-body"></div>
+        </div>
+    </div>
+    
+    <div id="filter-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 28rem">
+            <div class="modal-header">
+                <h2 class="text-lg font-semibold" style="color: var(--text-primary)">Filter Data</h2>
+                <button id="close-filter-btn" 
+                        class="text-2xl"
+                        style="color: var(--text-secondary); background: none; border: none; cursor: pointer; padding: 0;">&times;</button>
+            </div>
+            <div id="filter-fields-container" class="modal-body space-y-4"></div>
+            <div class="modal-footer">
+                <button id="apply-filter-btn" class="btn btn-primary">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load JavaScript asynchronously -->
+    <script>
+        // Critical JavaScript - Load immediately
+        (function() {
+            'use strict';
+            
+            // Performance optimization: Use requestAnimationFrame for DOM updates
+            const raf = window.requestAnimationFrame || window.setTimeout;
+            
+            // Optimized DOM element caching
+            const elements = {};
+            const cacheElements = () => {
+                const ids = [
+                    'apiKeyDisplay', 'apiKeyText', 'editApiKeyBtn', 'apiKeyInputArea', 
+                    'apiKeyInput', 'saveApiKeyBtn', 'readmeBtn', 'readmeModal',
+                    'readmeModalContent', 'closeReadmeBtn', 'methodSelector', 
+                    'api-form', 'submit-btn', 'error-message', 'results-container',
+                    'raw-wrapper', 'table-wrapper', 'rawCode', 'export-btn',
+                    'copy-json-btn', 'view-data-btn', 'filter-btn', 'filter-modal',
+                    'close-filter-btn', 'filter-fields-container', 'apply-filter-btn',
+                    'active-filters-container', 'moz-logo', 'quota-display', 'quota-text'
+                ];
+                
+                ids.forEach(id => {
+                    elements[id] = document.getElementById(id);
+                });
+                
+                elements.themeBtns = document.querySelectorAll('.theme-btn');
+                elements.rawCode = document.querySelector('#raw-wrapper code');
+            };
+            
+            // State management
+            let state = {
+                currentResultsData: null,
+                currentOriginalParams: null,
+                currentMethod: null,
+                inFlightRequest: null,
+                table: null,
+                currentFilters: []
+            };
+            
+            // Optimized theme switching
+            const applyTheme = (theme) => {
+                const root = document.documentElement;
+                const themes = ["light", "dark", "retro", "high-contrast"];
+                
+                themes.forEach(t => root.classList.remove(t));
+                root.classList.add(theme);
+                
+                localStorage.setItem('theme', theme);
+                
+                elements.themeBtns.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.theme === theme);
+                });
+                
+                if (elements.mozLogo) {
+                    elements.mozLogo.style.filter = 'none';
+                }
+            };
+            
+            // Optimized API key management
+            const loadApiKey = () => {
+                const savedKey = localStorage.getItem('mozApiKey');
+                if (savedKey) {
+                    const maskedKey = `${savedKey.substring(0, 6)}...${savedKey.substring(savedKey.length - 4)}`;
+                    elements.apiKeyText.textContent = maskedKey;
+                    elements.apiKeyInput.value = savedKey;
+                    elements.apiKeyDisplay.classList.remove('hidden');
+                    elements.apiKeyDisplay.classList.add('flex');
+                    elements.apiKeyInputArea.classList.add('hidden');
+                    fetchQuota(savedKey);
+                } else {
+                    elements.apiKeyDisplay.classList.add('hidden');
+                    elements.apiKeyInputArea.classList.remove('hidden');
+                    elements.quotaDisplay.classList.add('hidden');
+                }
+            };
+            
+            // Optimized quota fetching with error handling
+            const fetchQuota = async (apiKey) => {
+                if (!apiKey) return;
+                
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                    
+                    const response = await fetch('https://mozapi-proxy-server.vercel.app/api/getMozData', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ apiKey, method: 'getQuota' }),
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    const { used, allotted } = data.quota?.quota || {};
+                    
+                    if (used !== undefined && allotted !== undefined) {
+                        elements.quotaText.textContent = `API Usage: ${used.toLocaleString()} / ${allotted.toLocaleString()} Rows Used`;
+                        elements.quotaText.style.color = used >= allotted ? 'var(--text-error)' : 'var(--text-secondary)';
+                        elements.quotaDisplay.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.warn("Quota fetch failed:", error);
+                    elements.quotaText.textContent = 'Could not retrieve API usage.';
+                    elements.quotaDisplay.classList.remove('hidden');
+                }
+            };
+            
+            // Optimized error display
+            const displayError = (message) => {
+                const hints = /quota|limit/i.test(message) ? 'You may be out of rows. Check your API Dashboard.' :
+                             /unauthorized|401|403/i.test(message) ? 'Invalid API key. Recheck or regenerate in your dashboard.' :
+                             /network|abort/i.test(message) ? 'Network hiccup or request was canceled. Try again.' : '';
+                
+                elements.errorMessage.innerHTML = `${message}${hints ? `<br><span style="color: var(--text-secondary)">${hints}</span>` : ''}`;
+                elements.errorMessage.classList.remove('hidden');
+            };
+            
+            // Initialize on DOM ready
+            const init = () => {
+                cacheElements();
+                loadApiKey();
+                elements.submitBtn.disabled = true;
+                
+                // Load saved theme
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                applyTheme(savedTheme);
+            };
+            
+            // Expose functions globally for async loading
+            window.MozAPI = {
+                init,
+                applyTheme,
+                loadApiKey,
+                fetchQuota,
+                displayError,
+                elements: () => elements,
+                state: () => state
+            };
+        })();
+    </script>
+    
+    <!-- Load external libraries asynchronously -->
+    <script>
+        // Load external resources asynchronously
+        const loadExternalResources = () => {
+            // Load Tailwind CSS
+            if (!document.querySelector('link[href*="tailwindcss"]')) {
+                const tailwind = document.createElement('link');
+                tailwind.rel = 'stylesheet';
+                tailwind.href = 'https://cdn.tailwindcss.com';
+                document.head.appendChild(tailwind);
+            }
+            
+            // Load Tabulator
+            if (!window.Tabulator) {
+                const tabulatorScript = document.createElement('script');
+                tabulatorScript.src = 'https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js';
+                tabulatorScript.onload = () => {
+                    // Initialize main application after Tabulator loads
+                    initializeMainApp();
+                };
+                document.head.appendChild(tabulatorScript);
+            } else {
+                initializeMainApp();
+            }
+        };
+        
+        // Initialize main application
+        const initializeMainApp = () => {
+            // This would contain the rest of the application logic
+            // For now, just initialize the basic functionality
+            if (window.MozAPI) {
+                window.MozAPI.init();
+            }
+        };
+        
+        // Load resources when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadExternalResources);
+        } else {
+            loadExternalResources();
+        }
+    </script>
+</body>
+</html>
