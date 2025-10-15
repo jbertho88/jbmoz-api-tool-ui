@@ -928,26 +928,298 @@
                 document.getElementById('filterLinksByDomainInputs').innerHTML = createDescription('Find links pointing to a target only if they originate from a particular root domain.') + createLabel('Target Scope') + createSelect('fldTargetScopeSelect', scopeOptions) + createLabel('Target URLs') + createTextarea('fldTargetUrls', 'One per line...') + createLabel('Source Domain Scope') + createSelect('fldSourceScopeSelect', scopeOptions) + createLabel('Source Domain URLs') + createTextarea('fldSourceUrls', 'One per line...') + createLabel('Filters') + createMultiSelect('fldFilterSelect', filterDomainFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('fldLimit', 25, 1, 50, limitLabel);
             };
             
-            const readmeContent = `<h2>Moz API Assistant - Help</h2><h3>Overview</h3><p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data.</p><h2>Setup</h2><ol><li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank" rel="noopener">Moz API Dashboard</a>.</li><li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li></ol><h2>Features</h2><p>Select a method from the dropdown to get started:</p><hr class="border-slate-700 my-4">
-                <div class="readme-method"><h3><strong><u>Fetch Site Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get metrics like DA, PA, Spam Score, and link counts for URLs.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Fetch Brand Authority</u></strong></h3><ul><li><strong>Description:</strong> Get the Brand Authority™ score for a given site.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Top Pages</u></strong></h3><ul><li><strong>Description:</strong> Return a list of the top pages on a target domain.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Fetch Keyword Metrics</u></strong></h3><ul><li><strong>Description:</strong> Get volume, difficulty, CTR, and priority for keywords.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Fetch Search Intent</u></strong></h3><ul><li><strong>Description:</strong> Retrieve search intent scores for any keyword.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> List keywords for which a site ranks.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Related Keywords</u></strong></h3><ul><li><strong>Description:</strong> Get a list of related keyword suggestions.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Count Ranking Keywords</u></strong></h3><ul><li><strong>Description:</strong> Count keywords for which a site ranks in the top 50.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Get Anchor Texts Lists</u></strong></h3><ul><li><strong>Description:</strong> Get data about anchor text used to link to a specified site.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Linking Domains</u></strong></h3><ul><li><strong>Description:</strong> Get a list of linking root domains to a target.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Recently Gained Links</u></strong></h3><ul><li><strong>Description:</strong> Get external root domains that added new links to a target during the past 60 days.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Recently Lost Links</u></strong></h3><ul><li><strong>Description:</strong> Get root domains that removed links to a target during the past 60 days.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Fetch Link Intersects</u></strong></h3><ul><li><strong>Description:</strong> Find sites that link to some domains but not others.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>List Links</u></strong></h3><ul><li><strong>Description:</strong> Get a list of links to a target.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Filter Links by Anchor Text</u></strong></h3><ul><li><strong>Description:</strong> Get a list of links to a target where the anchor text exactly matches a string.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Filter Links by Domain</u></strong></h3><ul><li><strong>Description:</strong> Find links pointing to a target only if they originate from a particular root domain.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Get Final Redirect Target</u></strong></h3><ul><li><strong>Description:</strong> See the final redirect target of a page.</li></ul></div>
-                <div class="readme-method"><h3><strong><u>Get Link Status</u></strong></h3><ul><li><strong>Description:</strong> Get the status of a link from a source to a target.</li></ul></div>
-                <hr class="border-slate-700 my-4"><h2>General Notes</h2><ul><li><strong>API Usage:</strong> Each API call consumes rows from your Moz API subscription quota. Be mindful of limits.</li><li><strong>Errors:</strong> If an API call fails, an error message will be displayed and the JSON response will contain details.</li></ul>`;
+            const readmeContent = `
+                <h2>Moz API Assistant - Comprehensive Guide</h2>
+                
+                <h3>Overview</h3>
+                <p>This tool allows you to connect directly to the Moz API (v3) using your personal API key to fetch valuable SEO data. The interface provides an intuitive way to access all major Moz API endpoints with detailed parameter configuration and results visualization.</p>
+                
+                <h2>🔐 API Key Security & Setup</h2>
+                <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                    <h4><strong>Security Features:</strong></h4>
+                    <ul class="mt-2">
+                        <li><strong>Local Storage Only:</strong> Your API key is stored securely in your browser's local storage and never transmitted to external servers</li>
+                        <li><strong>No Server Storage:</strong> This tool runs entirely in your browser - no data is sent to third-party servers</li>
+                        <li><strong>Encrypted Transmission:</strong> All API calls are made directly to Moz's secure HTTPS endpoints</li>
+                        <li><strong>Auto-Save:</strong> Your API key is automatically saved and restored between sessions</li>
+                    </ul>
+                </div>
+                
+                <h4>Setup Steps:</h4>
+                <ol>
+                    <li><strong>Get API Key:</strong> You need a valid Moz API Key. You can get one or manage your existing key from the <a href="https://moz.com/products/api/keys" target="_blank" rel="noopener">Moz API Dashboard</a>.</li>
+                    <li><strong>Add Key to Tool:</strong> Use the API Key input at the top of the tool. Your key is stored securely in your browser's local storage.</li>
+                    <li><strong>Verify Connection:</strong> Run a simple API call to verify your key is working correctly.</li>
+                </ol>
+                
+                <h2>📊 Recent API Calls & History</h2>
+                <div class="bg-green-50 p-4 rounded-lg mb-4">
+                    <h4><strong>API History Features:</strong></h4>
+                    <ul class="mt-2">
+                        <li><strong>Automatic Logging:</strong> Every successful API call is automatically saved to your local history</li>
+                        <li><strong>Search & Filter:</strong> Use the search bar to find specific calls by method, parameters, or date</li>
+                        <li><strong>Replay Functionality:</strong> Click any history entry to instantly replay that exact API call with the same parameters</li>
+                        <li><strong>Export History:</strong> Download your complete API call history as a CSV file for record-keeping</li>
+                        <li><strong>Individual Management:</strong> Delete specific entries or clear your entire history as needed</li>
+                    </ul>
+                </div>
+                
+                <p><strong>Accessing Your History:</strong> Click the "Recent API Calls" button in the top navigation to view your complete API call history. Each entry shows the method used, parameters, timestamp, and allows you to replay or delete the call.</p>
+                
+                <h2>🚀 Available API Methods</h2>
+                <p>Select a method from the dropdown to get started. Methods are organized by category:</p>
+                
+                <hr class="border-slate-700 my-4">
+                
+                <h3>📍 Site Metrics</h3>
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Fetch Site Metrics</u></strong></h4>
+                    <p><strong>Description:</strong> Get comprehensive metrics like Domain Authority (DA), Page Authority (PA), Spam Score, and link counts for URLs.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose between page-level or domain-level analysis</li>
+                        <li><strong>Domains/URLs:</strong> Enter one URL per line or comma-separated (must include http/https)</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Fetch Brand Authority</u></strong></h4>
+                    <p><strong>Description:</strong> Get the Brand Authority™ score for a given site, measuring brand strength and recognition.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Domains/URLs:</strong> Enter one URL per line or comma-separated</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>List Top Pages</u></strong></h4>
+                    <p><strong>Description:</strong> Return a list of the top-performing pages on a target domain based on various ranking factors.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Filter:</strong> Filter results by specific criteria</li>
+                        <li><strong>Sort:</strong> Choose how to sort the results</li>
+                        <li><strong>Number of Results:</strong> Limit results (1-50, default 25)</li>
+                        <li><strong>Domains/URLs:</strong> Enter target domains or URLs</li>
+                    </ul>
+                </div>
+                
+                <hr class="border-slate-700 my-4">
+                
+                <h3>🔍 Keyword Research</h3>
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Fetch Keyword Metrics</u></strong></h4>
+                    <p><strong>Description:</strong> Get comprehensive keyword data including search volume, difficulty, CTR estimates, and priority scores.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Metric Type:</strong> Choose the type of keyword metrics to retrieve</li>
+                        <li><strong>Device:</strong> Select device type (desktop, mobile, tablet)</li>
+                        <li><strong>Engine:</strong> Choose search engine (Google, Bing, etc.)</li>
+                        <li><strong>Locale:</strong> Select geographic region/language</li>
+                        <li><strong>Keywords:</strong> Enter keywords one per line or comma-separated</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Fetch Search Intent</u></strong></h4>
+                    <p><strong>Description:</strong> Retrieve search intent scores for any keyword, helping understand user motivation behind searches.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Locale:</strong> Select geographic region/language</li>
+                        <li><strong>Keywords:</strong> Enter keywords one per line or comma-separated</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>List Ranking Keywords</u></strong></h4>
+                    <p><strong>Description:</strong> List keywords for which a specific site currently ranks in search results.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Locale:</strong> Select geographic region/language</li>
+                        <li><strong>Number of Results:</strong> Limit results (1-500, default 25)</li>
+                        <li><strong>Domains/URLs:</strong> Enter target domains or URLs</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>List Related Keywords</u></strong></h4>
+                    <p><strong>Description:</strong> Get a list of related keyword suggestions based on seed keywords.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Locale:</strong> Select geographic region/language</li>
+                        <li><strong>Keywords:</strong> Enter seed keywords one per line or comma-separated</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Count Ranking Keywords</u></strong></h4>
+                    <p><strong>Description:</strong> Count the total number of keywords for which a site ranks in the top 50 search results.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (limited options available)</li>
+                        <li><strong>Locale:</strong> Select geographic region/language</li>
+                        <li><strong>Domains/URLs:</strong> Enter target domains or URLs</li>
+                    </ul>
+                </div>
+                
+                <hr class="border-slate-700 my-4">
+                
+                <h3>🔗 Link Building</h3>
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Get Anchor Texts Lists</u></strong></h4>
+                    <p><strong>Description:</strong> Get comprehensive data about anchor text used to link to a specified site.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Number of Results:</strong> Limit results (1-50, default 25)</li>
+                        <li><strong>Domains/URLs:</strong> Enter target domains or URLs</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>List Linking Domains</u></strong></h4>
+                    <p><strong>Description:</strong> Get a comprehensive list of linking root domains to a target site.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Sort:</strong> Choose how to sort the results</li>
+                        <li><strong>Filters:</strong> Apply filters (if multiple filters, "external" must be one)</li>
+                        <li><strong>Number of Results:</strong> Limit results (1-50, default 25)</li>
+                        <li><strong>Domains/URLs:</strong> Enter target domains or URLs</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>List Recently Gained Links</u></strong></h4>
+                    <p><strong>Description:</strong> Get external root domains that added new links to a target during a specified time period.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Number of Results:</strong> Limit results (1-50, default 25)</li>
+                        <li><strong>Begin Date (Optional):</strong> Start date for the analysis period</li>
+                        <li><strong>End Date (Optional):</strong> End date for the analysis period</li>
+                        <li><strong>Domains/URLs:</strong> Enter target domains or URLs</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>List Recently Lost Links</u></strong></h4>
+                    <p><strong>Description:</strong> Get root domains that removed links to a target during a specified time period.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Number of Results:</strong> Limit results (1-50, default 25)</li>
+                        <li><strong>Begin Date (Optional):</strong> Start date for the analysis period</li>
+                        <li><strong>End Date (Optional):</strong> End date for the analysis period</li>
+                        <li><strong>Domains/URLs:</strong> Enter target domains or URLs</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Fetch Link Intersects</u></strong></h4>
+                    <p><strong>Description:</strong> Find sites that link to some domains but not others, useful for competitive analysis.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Sort:</strong> Choose how to sort the results</li>
+                        <li><strong>Minimum Matching Targets:</strong> Minimum number of targets that must match (1-6)</li>
+                        <li><strong>Number of Results:</strong> Limit results (1-50, default 25)</li>
+                        <li><strong>Linking To:</strong> Domains that should be linked to</li>
+                        <li><strong>NOT Linking To (Optional):</strong> Domains that should NOT be linked to</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>List Links</u></strong></h4>
+                    <p><strong>Description:</strong> Get a comprehensive list of all links pointing to a target site.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Sort:</strong> Choose how to sort the results</li>
+                        <li><strong>Filters:</strong> Apply filters (if multiple filters, "external" must be one)</li>
+                        <li><strong>Number of Results:</strong> Limit results (1-50, default 25)</li>
+                        <li><strong>Domains/URLs:</strong> Enter target domains or URLs</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Filter Links by Anchor Text</u></strong></h4>
+                    <p><strong>Description:</strong> Get a list of links to a target where the anchor text exactly matches a specified string.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Anchor Text:</strong> Enter exact anchor text to search for</li>
+                        <li><strong>Sort:</strong> Choose how to sort the results</li>
+                        <li><strong>Filters:</strong> Apply filters (if multiple filters, "external" must be one)</li>
+                        <li><strong>Number of Results:</strong> Limit results (1-50, default 25)</li>
+                        <li><strong>Domains/URLs:</strong> Enter target domains or URLs</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Filter Links by Domain</u></strong></h4>
+                    <p><strong>Description:</strong> Find links pointing to a target only if they originate from a particular root domain.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Target Scope:</strong> Choose target analysis scope</li>
+                        <li><strong>Target URLs:</strong> Enter target URLs</li>
+                        <li><strong>Source Scope:</strong> Choose source analysis scope</li>
+                        <li><strong>Source URLs:</strong> Enter source domain URLs</li>
+                        <li><strong>Number of Results:</strong> Limit results (1-50, default 25)</li>
+                        <li><strong>Filters:</strong> Apply additional filters</li>
+                    </ul>
+                </div>
+                
+                <hr class="border-slate-700 my-4">
+                
+                <h3>⚙️ Technical SEO</h3>
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Get Final Redirect Target</u></strong></h4>
+                    <p><strong>Description:</strong> See the final redirect target of a page, following the complete redirect chain.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Domains/URLs:</strong> Enter URLs to analyze for redirects</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Get Link Status</u></strong></h4>
+                    <p><strong>Description:</strong> Get the current status of a specific link from a source to a target URL.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Target Scope:</strong> Choose target analysis scope</li>
+                        <li><strong>Target URL:</strong> Enter the target URL</li>
+                        <li><strong>Source Scope:</strong> Choose source analysis scope</li>
+                        <li><strong>Source URL:</strong> Enter the source URL</li>
+                    </ul>
+                </div>
+                
+                <hr class="border-slate-700 my-4">
+                
+                <h2>📋 General Usage Notes</h2>
+                <div class="bg-yellow-50 p-4 rounded-lg">
+                    <h4><strong>Important Information:</strong></h4>
+                    <ul class="mt-2">
+                        <li><strong>API Usage:</strong> Each API call consumes rows from your Moz API subscription quota. Monitor your usage in the Moz API Dashboard.</li>
+                        <li><strong>Rate Limits:</strong> Be mindful of API rate limits to avoid temporary blocks on your requests.</li>
+                        <li><strong>Data Freshness:</strong> Moz data is updated regularly, but some metrics may have different refresh schedules.</li>
+                        <li><strong>Error Handling:</strong> If an API call fails, detailed error messages will be displayed with the JSON response containing specific error details.</li>
+                        <li><strong>Results Export:</strong> All results can be exported as CSV files for further analysis in spreadsheet applications.</li>
+                        <li><strong>URL Format:</strong> Always include the full URL with http:// or https:// when entering URLs for analysis.</li>
+                    </ul>
+                </div>
+                
+                <h2>🛠️ Tips for Best Results</h2>
+                <ul>
+                    <li><strong>Batch Processing:</strong> Use comma-separated or line-separated lists to analyze multiple URLs or keywords in a single call</li>
+                    <li><strong>Scope Selection:</strong> Choose the appropriate scope (page vs domain) based on your analysis needs</li>
+                    <li><strong>Filter Usage:</strong> Use filters to narrow down results and focus on the most relevant data</li>
+                    <li><strong>History Management:</strong> Regularly review your API call history to track usage patterns and identify frequently used queries</li>
+                    <li><strong>Export Regularly:</strong> Export important results as CSV files for backup and further analysis</li>
+                </ul>
+            `;
             
             const setupEventListeners = () => {
                 allDOMElements.readmeBtn.addEventListener('click', () => allDOMElements.readmeModal.classList.remove('hidden'));
