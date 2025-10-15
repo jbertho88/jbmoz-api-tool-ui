@@ -16,12 +16,15 @@
     <link rel="dns-prefetch" href="https://upload.wikimedia.org">
     <link rel="dns-prefetch" href="https://mozapi-proxy-server.vercel.app">
     
-    <!-- Load Tailwind CSS with fallback and caching -->
-    <script src="https://cdn.tailwindcss.com" defer></script>
+    <!-- Load Tailwind CSS synchronously to prevent FOUC -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load fonts with immediate fallback -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
     
-    <!-- Tabulator CSS with preload and caching -->
+    <!-- Tabulator CSS - Load synchronously to prevent FOUC -->
+    <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css">
     <link rel="preload" href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css"></noscript>
     
@@ -40,6 +43,27 @@
         })();
     </script>
     <style>
+        /* Critical CSS - Prevents FOUC */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #f9fafb;
+            color: #111827;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Loading state - hidden until CSS loads */
+        .css-loading {
+            opacity: 0;
+        }
+        
+        .css-loaded {
+            opacity: 1;
+        }
+        
         /* Base styles */
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -343,7 +367,7 @@
         }
     </style>
 </head>
-<body data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData" class="transition-colors duration-300">
+<body data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData" class="transition-colors duration-300 css-loading">
 
     <div class="w-full max-w-4xl mx-auto bg-[var(--bg-container-translucent)] backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-[var(--border-primary)] my-8">
         
@@ -488,14 +512,15 @@
         </div>
     </div>
      <div id="filter-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-labelledby="filter-modal-title" aria-modal="true">
-        <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-md rounded-2xl shadow-2xl flex flex-col">
+        <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center p-4 border-b border-[var(--border-primary)]">
                 <h2 id="filter-modal-title" class="text-lg font-semibold text-[var(--text-primary)]">Filter Data</h2>
                 <button id="close-filter-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label="Close filter dialog">&times;</button>
             </div>
             <div id="filter-fields-container" class="p-6 overflow-y-auto space-y-4"></div>
             <div class="p-4 border-t border-[var(--border-primary)] flex justify-end gap-2">
-                 <button id="apply-filter-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text">Apply</button>
+                <button id="cancel-filter-btn" class="bg-[var(--bg-input-secondary)] hover:bg-[var(--bg-disabled)] text-[var(--text-primary)] font-semibold px-4 py-2 text-sm rounded-md transition">Cancel</button>
+                <button id="apply-filter-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text">Apply</button>
             </div>
         </div>
     </div>
@@ -745,6 +770,28 @@
         
         document.addEventListener('DOMContentLoaded', () => {
             performanceMonitor.mark('dom-ready');
+            
+            // Handle CSS loading state to prevent FOUC
+            const handleCSSLoad = () => {
+                document.body.classList.remove('css-loading');
+                document.body.classList.add('css-loaded');
+            };
+            
+            // Ensure CSS is loaded before showing content
+            if (document.readyState === 'loading') {
+                document.addEventListener('readystatechange', () => {
+                    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+                        handleCSSLoad();
+                    }
+                });
+            } else {
+                // CSS already loaded
+                handleCSSLoad();
+            }
+            
+            // Fallback: Show content after a short delay if CSS hasn't loaded
+            setTimeout(handleCSSLoad, 100);
+            
             let currentResultsData = null;
             let currentOriginalParams = null;
             let currentMethod = null;
@@ -778,6 +825,7 @@
                 filterBtn: document.getElementById('filter-btn'),
                 filterModal: document.getElementById('filter-modal'),
                 closeFilterBtn: document.getElementById('close-filter-btn'),
+                cancelFilterBtn: document.getElementById('cancel-filter-btn'),
                 filterFieldsContainer: document.getElementById('filter-fields-container'),
                 applyFilterBtn: document.getElementById('apply-filter-btn'),
                 activeFiltersContainer: document.getElementById('active-filters-container'),
@@ -899,7 +947,23 @@
                 allDOMElements.viewDataBtn.addEventListener('click', toggleDataView);
                 allDOMElements.filterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.remove('hidden'));
                 allDOMElements.closeFilterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.add('hidden'));
+                allDOMElements.cancelFilterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.add('hidden'));
+                allDOMElements.filterModal.addEventListener('click', (e) => {
+                    if (e.target === allDOMElements.filterModal) allDOMElements.filterModal.classList.add('hidden');
+                });
                 allDOMElements.applyFilterBtn.addEventListener('click', applyTableFilters);
+                
+                // Add escape key functionality for modals
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        if (!allDOMElements.readmeModal.classList.contains('hidden')) {
+                            allDOMElements.readmeModal.classList.add('hidden');
+                        }
+                        if (!allDOMElements.filterModal.classList.contains('hidden')) {
+                            allDOMElements.filterModal.classList.add('hidden');
+                        }
+                    }
+                });
             };
 
             const applyTheme = (theme) => {
