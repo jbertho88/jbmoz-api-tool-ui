@@ -459,9 +459,14 @@
                 <fieldset id="filterLinksByDomainInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Domain Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
-                 <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text" aria-describedby="submit-help">
-                    Run Request
-                </button>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text" aria-describedby="submit-help">
+                        Run Request
+                    </button>
+                    <button id="history-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-6 py-3 text-sm rounded-lg transition duration-300 btn-inverted-text" aria-label="View search history">
+                        📋 History
+                    </button>
+                </div>
                 <div id="submit-help" class="sr-only">Submit your API request with the selected method and parameters</div>
             </div>
         </form>
@@ -476,8 +481,6 @@
                         <button id="filter-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Filter table data">Filter</button>
                         <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Copy JSON data to clipboard">Copy JSON</button>
                         <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Export data as CSV file">Export to CSV</button>
-                        <button id="save-history-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Save current search to history">Save to History</button>
-                        <button id="history-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="View search history">History</button>
                         <button id="clear-data-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Clear results data">Clear Data</button>
                     </div>
                 </div>
@@ -855,7 +858,6 @@
                 exportBtn: document.getElementById('export-btn'), 
                 copyJsonBtn: document.getElementById('copy-json-btn'),
                 viewDataBtn: document.getElementById('view-data-btn'),
-                saveHistoryBtn: document.getElementById('save-history-btn'),
                 historyBtn: document.getElementById('history-btn'),
                 clearDataBtn: document.getElementById('clear-data-btn'),
                 filterBtn: document.getElementById('filter-btn'),
@@ -988,7 +990,6 @@
                 allDOMElements.copyJsonBtn.addEventListener('click', handleCopyJson);
                 allDOMElements.exportBtn.addEventListener('click', handleExportCsv);
                 allDOMElements.viewDataBtn.addEventListener('click', toggleDataView);
-                allDOMElements.saveHistoryBtn.addEventListener('click', saveCurrentSearchToHistory);
                 allDOMElements.historyBtn.addEventListener('click', () => {
                     allDOMElements.historyModal.classList.remove('hidden');
                     renderHistoryList();
@@ -1261,35 +1262,6 @@
             }
 
             // History Management Functions
-            function saveCurrentSearchToHistory() {
-                if (!currentMethod || !currentOriginalParams) {
-                    displayError('No search data to save. Please run a search first.');
-                    return;
-                }
-
-                const historyEntry = {
-                    id: Date.now(),
-                    timestamp: new Date().toISOString(),
-                    method: currentMethod,
-                    params: { ...currentOriginalParams },
-                    resultCount: currentResultsData?.length || 0,
-                    success: true
-                };
-
-                const history = getSearchHistory();
-                history.unshift(historyEntry); // Add to beginning
-                
-                // Keep only last 100 entries
-                if (history.length > 100) {
-                    history.splice(100);
-                }
-
-                saveSearchHistory(history);
-                allDOMElements.saveHistoryBtn.textContent = 'Saved!';
-                setTimeout(() => {
-                    allDOMElements.saveHistoryBtn.textContent = 'Save to History';
-                }, 2000);
-            }
 
             function autoSaveToHistory() {
                 if (currentMethod && currentOriginalParams && currentResultsData) {
