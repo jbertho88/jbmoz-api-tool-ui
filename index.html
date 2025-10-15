@@ -107,6 +107,8 @@
             --btn-export-hover: #059669;
             --btn-view-data-bg: #0ea5e9;
             --btn-view-data-hover: #0284c7;
+            --btn-clear-bg: #ef4444;
+            --btn-clear-hover: #b91c1c;
             
             /* Error Colors */
             --error-bg: #fee2e2;
@@ -148,6 +150,8 @@
             --btn-export-hover: #34d399;
             --btn-view-data-bg: #0ea5e9;
             --btn-view-data-hover: #38bdf8;
+            --btn-clear-bg: #ef4444;
+            --btn-clear-hover: #f87171;
             --error-bg: rgba(153, 27, 27, 0.5);
             --error-border: #ef4444;
             --tabulator-header-bg: var(--bg-input);
@@ -185,6 +189,8 @@
             --btn-export-hover: #0da872;
             --btn-view-data-bg: #2de2e6;
             --btn-view-data-hover: #81f7f9;
+            --btn-clear-bg: #f6019d;
+            --btn-clear-hover: #d40078;
             --error-bg: rgba(246, 1, 157, 0.2);
             --error-border: #f6019d;
             --tabulator-header-bg: var(--bg-input);
@@ -222,6 +228,8 @@
             --btn-export-hover: #e5e5e5;
             --btn-view-data-bg: #ffffff;
             --btn-view-data-hover: #e5e5e5;
+            --btn-clear-bg: #ffffff;
+            --btn-clear-hover: #e5e5e5;
             --error-bg: #000000;
             --error-border: #ff0000;
             --tabulator-header-bg: #000;
@@ -468,6 +476,7 @@
                         <button id="filter-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Filter table data">Filter</button>
                         <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Copy JSON data to clipboard">Copy JSON</button>
                         <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Export data as CSV file">Export to CSV</button>
+                        <button id="clear-data-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Clear results data">Clear Data</button>
                     </div>
                 </div>
                 <div id="active-filters-container" class="hidden mb-4 space-x-2" role="status" aria-live="polite"></div>
@@ -822,6 +831,7 @@
                 exportBtn: document.getElementById('export-btn'), 
                 copyJsonBtn: document.getElementById('copy-json-btn'),
                 viewDataBtn: document.getElementById('view-data-btn'),
+                clearDataBtn: document.getElementById('clear-data-btn'),
                 filterBtn: document.getElementById('filter-btn'),
                 filterModal: document.getElementById('filter-modal'),
                 closeFilterBtn: document.getElementById('close-filter-btn'),
@@ -945,6 +955,7 @@
                 allDOMElements.copyJsonBtn.addEventListener('click', handleCopyJson);
                 allDOMElements.exportBtn.addEventListener('click', handleExportCsv);
                 allDOMElements.viewDataBtn.addEventListener('click', toggleDataView);
+                allDOMElements.clearDataBtn.addEventListener('click', clearResultsData);
                 allDOMElements.filterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.remove('hidden'));
                 allDOMElements.closeFilterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.add('hidden'));
                 allDOMElements.cancelFilterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.add('hidden'));
@@ -1167,6 +1178,24 @@
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View Table';
+            }
+
+            function clearResultsData() {
+                currentResultsData = null;
+                currentOriginalParams = null;
+                currentMethod = null;
+                currentFilters = [];
+                if (table) {
+                    table.destroy();
+                    table = null;
+                }
+                allDOMElements.rawCode.textContent = '';
+                allDOMElements.resultsContainer.classList.add('hidden');
+                allDOMElements.tableWrapper.classList.add('hidden');
+                allDOMElements.rawWrapper.classList.add('hidden');
+                allDOMElements.filterBtn.classList.add('hidden');
+                allDOMElements.activeFiltersContainer.classList.add('hidden');
+                allDOMElements.activeFiltersContainer.innerHTML = '';
             }
 
             function displayError(message) {
