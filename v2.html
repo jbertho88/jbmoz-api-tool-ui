@@ -272,6 +272,11 @@
             border-color: var(--border-primary); 
         }
         
+        /* Show visible sections */
+        .input-section:not(.hidden) {
+            display: block;
+        }
+        
         /* Responsive form layout for desktop */
         @media (min-width: 768px) {
             .input-section:not(.hidden) {
@@ -282,7 +287,7 @@
             }
             
             .input-section:not(.hidden) > * {
-                margin-top: 0;
+                margin-top: 0 !important;
             }
             
             /* Full-width elements on desktop */
@@ -467,24 +472,24 @@
 
         <form id="api-form" aria-label="API request form">
              <div id="inputsContainer" class="mt-4" role="region" aria-live="polite">
-                <fieldset id="siteMetricsInputs" class="input-section space-y-4"><legend class="sr-only">Site Metrics Inputs</legend></fieldset>
-                <fieldset id="keywordMetricsInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Metrics Inputs</legend></fieldset>
-                <fieldset id="brandAuthorityInputs" class="input-section space-y-4"><legend class="sr-only">Brand Authority Inputs</legend></fieldset>
-                <fieldset id="searchIntentInputs" class="input-section space-y-4"><legend class="sr-only">Search Intent Inputs</legend></fieldset>
-                <fieldset id="rankingKeywordsInputs" class="input-section space-y-4"><legend class="sr-only">Ranking Keywords Inputs</legend></fieldset>
-                <fieldset id="relatedKeywordsInputs" class="input-section space-y-4"><legend class="sr-only">Related Keywords Inputs</legend></fieldset>
-                <fieldset id="keywordCountInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Count Inputs</legend></fieldset>
-                <fieldset id="anchorTextInputs" class="input-section space-y-4"><legend class="sr-only">Anchor Text Inputs</legend></fieldset>
-                <fieldset id="recentlyGainedLinksInputs" class="input-section space-y-4"><legend class="sr-only">Recently Gained Links Inputs</legend></fieldset>
-                <fieldset id="recentlyLostLinksInputs" class="input-section space-y-4"><legend class="sr-only">Recently Lost Links Inputs</legend></fieldset>
-                <fieldset id="linkingDomainsInputs" class="input-section space-y-4"><legend class="sr-only">Linking Domains Inputs</legend></fieldset>
-                <fieldset id="finalRedirectInputs" class="input-section space-y-4"><legend class="sr-only">Final Redirect Inputs</legend></fieldset>
-                <fieldset id="topPagesInputs" class="input-section space-y-4"><legend class="sr-only">Top Pages Inputs</legend></fieldset>
-                <fieldset id="linkIntersectInputs" class="input-section space-y-4"><legend class="sr-only">Link Intersect Inputs</legend></fieldset>
-                <fieldset id="listLinksInputs" class="input-section space-y-4"><legend class="sr-only">List Links Inputs</legend></fieldset>
-                <fieldset id="linkStatusInputs" class="input-section space-y-4"><legend class="sr-only">Link Status Inputs</legend></fieldset>
-                <fieldset id="filterLinksByAnchorInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Anchor Inputs</legend></fieldset>
-                <fieldset id="filterLinksByDomainInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Domain Inputs</legend></fieldset>
+                <fieldset id="siteMetricsInputs" class="input-section hidden"><legend class="sr-only">Site Metrics Inputs</legend></fieldset>
+                <fieldset id="keywordMetricsInputs" class="input-section hidden"><legend class="sr-only">Keyword Metrics Inputs</legend></fieldset>
+                <fieldset id="brandAuthorityInputs" class="input-section hidden"><legend class="sr-only">Brand Authority Inputs</legend></fieldset>
+                <fieldset id="searchIntentInputs" class="input-section hidden"><legend class="sr-only">Search Intent Inputs</legend></fieldset>
+                <fieldset id="rankingKeywordsInputs" class="input-section hidden"><legend class="sr-only">Ranking Keywords Inputs</legend></fieldset>
+                <fieldset id="relatedKeywordsInputs" class="input-section hidden"><legend class="sr-only">Related Keywords Inputs</legend></fieldset>
+                <fieldset id="keywordCountInputs" class="input-section hidden"><legend class="sr-only">Keyword Count Inputs</legend></fieldset>
+                <fieldset id="anchorTextInputs" class="input-section hidden"><legend class="sr-only">Anchor Text Inputs</legend></fieldset>
+                <fieldset id="recentlyGainedLinksInputs" class="input-section hidden"><legend class="sr-only">Recently Gained Links Inputs</legend></fieldset>
+                <fieldset id="recentlyLostLinksInputs" class="input-section hidden"><legend class="sr-only">Recently Lost Links Inputs</legend></fieldset>
+                <fieldset id="linkingDomainsInputs" class="input-section hidden"><legend class="sr-only">Linking Domains Inputs</legend></fieldset>
+                <fieldset id="finalRedirectInputs" class="input-section hidden"><legend class="sr-only">Final Redirect Inputs</legend></fieldset>
+                <fieldset id="topPagesInputs" class="input-section hidden"><legend class="sr-only">Top Pages Inputs</legend></fieldset>
+                <fieldset id="linkIntersectInputs" class="input-section hidden"><legend class="sr-only">Link Intersect Inputs</legend></fieldset>
+                <fieldset id="listLinksInputs" class="input-section hidden"><legend class="sr-only">List Links Inputs</legend></fieldset>
+                <fieldset id="linkStatusInputs" class="input-section hidden"><legend class="sr-only">Link Status Inputs</legend></fieldset>
+                <fieldset id="filterLinksByAnchorInputs" class="input-section hidden"><legend class="sr-only">Filter Links by Anchor Inputs</legend></fieldset>
+                <fieldset id="filterLinksByDomainInputs" class="input-section hidden"><legend class="sr-only">Filter Links by Domain Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
                  <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text" aria-describedby="submit-help">
@@ -969,15 +974,15 @@
                     allDOMElements.apiKeyInput.focus();
                 });
                 allDOMElements.methodSelector.addEventListener('change', () => {
+                    // Hide all sections
                     document.querySelectorAll('.input-section').forEach(section => {
-                        section.style.display = 'none';
                         section.classList.add('hidden');
                     });
+                    
                     const selectedMethod = allDOMElements.methodSelector.value;
                     if (selectedMethod) {
                         const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
                         if (sectionToShow) {
-                            sectionToShow.style.display = 'block';
                             sectionToShow.classList.remove('hidden');
                         }
                         allDOMElements.submitBtn.disabled = false;
