@@ -274,27 +274,27 @@
         
         /* Responsive form layout for desktop */
         @media (min-width: 768px) {
-            .input-section {
+            .input-section:not(.hidden) {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 1rem 1.5rem;
                 align-items: start;
             }
             
-            .input-section > * {
+            .input-section:not(.hidden) > * {
                 margin-top: 0;
             }
             
             /* Full-width elements on desktop */
-            .input-section textarea,
-            .input-section .full-width {
+            .input-section:not(.hidden) textarea,
+            .input-section:not(.hidden) .full-width {
                 grid-column: 1 / -1;
             }
         }
         
         /* For larger screens, allow more flexibility */
         @media (min-width: 1200px) {
-            .input-section {
+            .input-section:not(.hidden) {
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
                 max-width: 800px;
             }
@@ -969,11 +969,17 @@
                     allDOMElements.apiKeyInput.focus();
                 });
                 allDOMElements.methodSelector.addEventListener('change', () => {
-                    document.querySelectorAll('.input-section').forEach(section => section.style.display = 'none');
+                    document.querySelectorAll('.input-section').forEach(section => {
+                        section.style.display = 'none';
+                        section.classList.add('hidden');
+                    });
                     const selectedMethod = allDOMElements.methodSelector.value;
                     if (selectedMethod) {
                         const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
-                        if (sectionToShow) sectionToShow.style.display = 'block';
+                        if (sectionToShow) {
+                            sectionToShow.style.display = 'block';
+                            sectionToShow.classList.remove('hidden');
+                        }
                         allDOMElements.submitBtn.disabled = false;
                     } else {
                         allDOMElements.submitBtn.disabled = true;
