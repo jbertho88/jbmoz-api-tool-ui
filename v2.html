@@ -272,39 +272,6 @@
             border-color: var(--border-primary); 
         }
         
-        /* Show visible sections */
-        .input-section:not(.hidden) {
-            display: block;
-        }
-        
-        /* Responsive form layout for desktop */
-        @media (min-width: 768px) {
-            .input-section:not(.hidden) {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 1rem 1.5rem;
-                align-items: start;
-            }
-            
-            .input-section:not(.hidden) > * {
-                margin-top: 0 !important;
-            }
-            
-            /* Full-width elements on desktop */
-            .input-section:not(.hidden) textarea,
-            .input-section:not(.hidden) .full-width {
-                grid-column: 1 / -1;
-            }
-        }
-        
-        /* For larger screens, allow more flexibility */
-        @media (min-width: 1200px) {
-            .input-section:not(.hidden) {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                max-width: 800px;
-            }
-        }
-        
         option[disabled] { 
             font-weight: bold; 
             background-color: var(--bg-input-secondary); 
@@ -472,24 +439,24 @@
 
         <form id="api-form" aria-label="API request form">
              <div id="inputsContainer" class="mt-4" role="region" aria-live="polite">
-                <fieldset id="siteMetricsInputs" class="input-section hidden"><legend class="sr-only">Site Metrics Inputs</legend></fieldset>
-                <fieldset id="keywordMetricsInputs" class="input-section hidden"><legend class="sr-only">Keyword Metrics Inputs</legend></fieldset>
-                <fieldset id="brandAuthorityInputs" class="input-section hidden"><legend class="sr-only">Brand Authority Inputs</legend></fieldset>
-                <fieldset id="searchIntentInputs" class="input-section hidden"><legend class="sr-only">Search Intent Inputs</legend></fieldset>
-                <fieldset id="rankingKeywordsInputs" class="input-section hidden"><legend class="sr-only">Ranking Keywords Inputs</legend></fieldset>
-                <fieldset id="relatedKeywordsInputs" class="input-section hidden"><legend class="sr-only">Related Keywords Inputs</legend></fieldset>
-                <fieldset id="keywordCountInputs" class="input-section hidden"><legend class="sr-only">Keyword Count Inputs</legend></fieldset>
-                <fieldset id="anchorTextInputs" class="input-section hidden"><legend class="sr-only">Anchor Text Inputs</legend></fieldset>
-                <fieldset id="recentlyGainedLinksInputs" class="input-section hidden"><legend class="sr-only">Recently Gained Links Inputs</legend></fieldset>
-                <fieldset id="recentlyLostLinksInputs" class="input-section hidden"><legend class="sr-only">Recently Lost Links Inputs</legend></fieldset>
-                <fieldset id="linkingDomainsInputs" class="input-section hidden"><legend class="sr-only">Linking Domains Inputs</legend></fieldset>
-                <fieldset id="finalRedirectInputs" class="input-section hidden"><legend class="sr-only">Final Redirect Inputs</legend></fieldset>
-                <fieldset id="topPagesInputs" class="input-section hidden"><legend class="sr-only">Top Pages Inputs</legend></fieldset>
-                <fieldset id="linkIntersectInputs" class="input-section hidden"><legend class="sr-only">Link Intersect Inputs</legend></fieldset>
-                <fieldset id="listLinksInputs" class="input-section hidden"><legend class="sr-only">List Links Inputs</legend></fieldset>
-                <fieldset id="linkStatusInputs" class="input-section hidden"><legend class="sr-only">Link Status Inputs</legend></fieldset>
-                <fieldset id="filterLinksByAnchorInputs" class="input-section hidden"><legend class="sr-only">Filter Links by Anchor Inputs</legend></fieldset>
-                <fieldset id="filterLinksByDomainInputs" class="input-section hidden"><legend class="sr-only">Filter Links by Domain Inputs</legend></fieldset>
+                <fieldset id="siteMetricsInputs" class="input-section space-y-4"><legend class="sr-only">Site Metrics Inputs</legend></fieldset>
+                <fieldset id="keywordMetricsInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Metrics Inputs</legend></fieldset>
+                <fieldset id="brandAuthorityInputs" class="input-section space-y-4"><legend class="sr-only">Brand Authority Inputs</legend></fieldset>
+                <fieldset id="searchIntentInputs" class="input-section space-y-4"><legend class="sr-only">Search Intent Inputs</legend></fieldset>
+                <fieldset id="rankingKeywordsInputs" class="input-section space-y-4"><legend class="sr-only">Ranking Keywords Inputs</legend></fieldset>
+                <fieldset id="relatedKeywordsInputs" class="input-section space-y-4"><legend class="sr-only">Related Keywords Inputs</legend></fieldset>
+                <fieldset id="keywordCountInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Count Inputs</legend></fieldset>
+                <fieldset id="anchorTextInputs" class="input-section space-y-4"><legend class="sr-only">Anchor Text Inputs</legend></fieldset>
+                <fieldset id="recentlyGainedLinksInputs" class="input-section space-y-4"><legend class="sr-only">Recently Gained Links Inputs</legend></fieldset>
+                <fieldset id="recentlyLostLinksInputs" class="input-section space-y-4"><legend class="sr-only">Recently Lost Links Inputs</legend></fieldset>
+                <fieldset id="linkingDomainsInputs" class="input-section space-y-4"><legend class="sr-only">Linking Domains Inputs</legend></fieldset>
+                <fieldset id="finalRedirectInputs" class="input-section space-y-4"><legend class="sr-only">Final Redirect Inputs</legend></fieldset>
+                <fieldset id="topPagesInputs" class="input-section space-y-4"><legend class="sr-only">Top Pages Inputs</legend></fieldset>
+                <fieldset id="linkIntersectInputs" class="input-section space-y-4"><legend class="sr-only">Link Intersect Inputs</legend></fieldset>
+                <fieldset id="listLinksInputs" class="input-section space-y-4"><legend class="sr-only">List Links Inputs</legend></fieldset>
+                <fieldset id="linkStatusInputs" class="input-section space-y-4"><legend class="sr-only">Link Status Inputs</legend></fieldset>
+                <fieldset id="filterLinksByAnchorInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Anchor Inputs</legend></fieldset>
+                <fieldset id="filterLinksByDomainInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Domain Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
                  <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text" aria-describedby="submit-help">
@@ -509,6 +476,8 @@
                         <button id="filter-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Filter table data">Filter</button>
                         <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Copy JSON data to clipboard">Copy JSON</button>
                         <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Export data as CSV file">Export to CSV</button>
+                        <button id="save-history-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Save current search to history">Save to History</button>
+                        <button id="history-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="View search history">History</button>
                         <button id="clear-data-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Clear results data">Clear Data</button>
                     </div>
                 </div>
@@ -567,6 +536,28 @@
         </div>
     </div>
 
+    <!-- History Modal -->
+    <div id="history-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-labelledby="history-modal-title" aria-modal="true">
+        <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-[var(--border-primary)]">
+                <h2 id="history-modal-title" class="text-lg font-semibold text-[var(--text-primary)]">Search History</h2>
+                <div class="flex items-center gap-2">
+                    <button id="export-history-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-3 py-1 text-sm rounded-md transition btn-inverted-text" aria-label="Export history">Export</button>
+                    <button id="clear-history-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-3 py-1 text-sm rounded-md transition btn-inverted-text" aria-label="Clear all history">Clear All</button>
+                    <button id="close-history-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label="Close history dialog">&times;</button>
+                </div>
+            </div>
+            <div class="p-4 border-b border-[var(--border-primary)]">
+                <input type="text" id="history-search" placeholder="Search history by method, parameters, or date..." class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)]">
+            </div>
+            <div id="history-list" class="p-4 overflow-y-auto flex-1">
+                <div id="history-empty" class="text-center text-[var(--text-secondary)] py-8">
+                    <p>No search history yet.</p>
+                    <p class="text-sm mt-2">Your searches will be automatically saved here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Performance optimization: Use requestAnimationFrame for DOM updates
@@ -864,6 +855,8 @@
                 exportBtn: document.getElementById('export-btn'), 
                 copyJsonBtn: document.getElementById('copy-json-btn'),
                 viewDataBtn: document.getElementById('view-data-btn'),
+                saveHistoryBtn: document.getElementById('save-history-btn'),
+                historyBtn: document.getElementById('history-btn'),
                 clearDataBtn: document.getElementById('clear-data-btn'),
                 filterBtn: document.getElementById('filter-btn'),
                 filterModal: document.getElementById('filter-modal'),
@@ -874,17 +867,24 @@
                 activeFiltersContainer: document.getElementById('active-filters-container'),
                 mozLogo: document.getElementById('moz-logo'),
                 quotaDisplay: document.getElementById('quota-display'), 
-                quotaText: document.getElementById('quota-text')
+                quotaText: document.getElementById('quota-text'),
+                historyModal: document.getElementById('history-modal'),
+                closeHistoryBtn: document.getElementById('close-history-btn'),
+                historySearch: document.getElementById('history-search'),
+                historyList: document.getElementById('history-list'),
+                historyEmpty: document.getElementById('history-empty'),
+                exportHistoryBtn: document.getElementById('export-history-btn'),
+                clearHistoryBtn: document.getElementById('clear-history-btn')
             };
 
             const populateInputs = () => {
                 const createLabel = (text) => `<label class="block text-sm font-medium text-[var(--text-secondary)]">${text}</label>`;
-                const createSelect = (id, options) => `<select id="${id}" class="w-full md:w-auto md:min-w-[160px] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">${options}</select>`;
-                const createTextarea = (id, placeholder) => `<textarea id="${id}" rows="4" class="w-full full-width bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)] placeholder-[var(--text-secondary)]" placeholder="${placeholder}"></textarea>`;
-                const createDescription = text => `<p class="text-sm text-[var(--text-secondary)] full-width">${text}</p>`;
-                const createNumberInput = (id, value, min, max, label) => createLabel(label) + `<input type="number" id="${id}" value="${value}" min="${min}" max="${max}" class="w-full md:w-auto md:min-w-[100px] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">`;
-                const createDateInput = (id) => `<input type="date" id="${id}" class="w-full md:w-auto md:min-w-[140px] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">`;
-                const createMultiSelect = (id, options) => `<select id="${id}" multiple class="w-full md:w-auto md:min-w-[160px] h-32 bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">${options}</select>`;
+                const createSelect = (id, options) => `<select id="${id}" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">${options}</select>`;
+                const createTextarea = (id, placeholder) => `<textarea id="${id}" rows="4" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)] placeholder-[var(--text-secondary)]" placeholder="${placeholder}"></textarea>`;
+                const createDescription = text => `<p class="text-sm text-[var(--text-secondary)]">${text}</p>`;
+                const createNumberInput = (id, value, min, max, label) => createLabel(label) + `<input type="number" id="${id}" value="${value}" min="${min}" max="${max}" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">`;
+                const createDateInput = (id) => `<input type="date" id="${id}" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">`;
+                const createMultiSelect = (id, options) => `<select id="${id}" multiple class="w-full h-32 bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">${options}</select>`;
                 
                 const scopeOptions = `<option value="domain" selected>Domain</option><option value="subdomain">Subdomain</option><option value="subfolder">Subfolder</option><option value="url">URL</option>`;
                 const limitedScopeOptions = `<option value="domain" selected>Domain</option><option value="subdomain">Subdomain</option><option value="url">URL</option>`;
@@ -974,17 +974,11 @@
                     allDOMElements.apiKeyInput.focus();
                 });
                 allDOMElements.methodSelector.addEventListener('change', () => {
-                    // Hide all sections
-                    document.querySelectorAll('.input-section').forEach(section => {
-                        section.classList.add('hidden');
-                    });
-                    
+                    document.querySelectorAll('.input-section').forEach(section => section.style.display = 'none');
                     const selectedMethod = allDOMElements.methodSelector.value;
                     if (selectedMethod) {
                         const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
-                        if (sectionToShow) {
-                            sectionToShow.classList.remove('hidden');
-                        }
+                        if (sectionToShow) sectionToShow.style.display = 'block';
                         allDOMElements.submitBtn.disabled = false;
                     } else {
                         allDOMElements.submitBtn.disabled = true;
@@ -994,6 +988,11 @@
                 allDOMElements.copyJsonBtn.addEventListener('click', handleCopyJson);
                 allDOMElements.exportBtn.addEventListener('click', handleExportCsv);
                 allDOMElements.viewDataBtn.addEventListener('click', toggleDataView);
+                allDOMElements.saveHistoryBtn.addEventListener('click', saveCurrentSearchToHistory);
+                allDOMElements.historyBtn.addEventListener('click', () => {
+                    allDOMElements.historyModal.classList.remove('hidden');
+                    renderHistoryList();
+                });
                 allDOMElements.clearDataBtn.addEventListener('click', clearResultsData);
                 allDOMElements.filterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.remove('hidden'));
                 allDOMElements.closeFilterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.add('hidden'));
@@ -1003,6 +1002,24 @@
                 });
                 allDOMElements.applyFilterBtn.addEventListener('click', applyTableFilters);
                 
+                // History modal event listeners
+                allDOMElements.closeHistoryBtn.addEventListener('click', () => allDOMElements.historyModal.classList.add('hidden'));
+                allDOMElements.historyModal.addEventListener('click', (e) => {
+                    if (e.target === allDOMElements.historyModal) allDOMElements.historyModal.classList.add('hidden');
+                });
+                allDOMElements.historySearch.addEventListener('input', debounce(filterHistory, 300));
+                allDOMElements.exportHistoryBtn.addEventListener('click', exportHistory);
+                allDOMElements.clearHistoryBtn.addEventListener('click', clearAllHistory);
+                
+                // Event delegation for history list buttons
+                allDOMElements.historyList.addEventListener('click', (e) => {
+                    if (e.target.dataset.replay) {
+                        replaySearch(e.target.dataset.replay);
+                    } else if (e.target.dataset.delete) {
+                        deleteHistoryEntry(e.target.dataset.delete);
+                    }
+                });
+                
                 // Add escape key functionality for modals
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape') {
@@ -1011,6 +1028,9 @@
                         }
                         if (!allDOMElements.filterModal.classList.contains('hidden')) {
                             allDOMElements.filterModal.classList.add('hidden');
+                        }
+                        if (!allDOMElements.historyModal.classList.contains('hidden')) {
+                            allDOMElements.historyModal.classList.add('hidden');
                         }
                     }
                 });
@@ -1150,6 +1170,9 @@
                     currentMethod = selectedMethod;
                     showRawJsonResults(data);
                     fetchQuota(apiKey);
+                    
+                    // Auto-save successful search to history
+                    autoSaveToHistory();
                 } catch (error) {
                     if (error.name !== 'AbortError') {
                         displayError(error.message);
@@ -1235,6 +1258,201 @@
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.activeFiltersContainer.classList.add('hidden');
                 allDOMElements.activeFiltersContainer.innerHTML = '';
+            }
+
+            // History Management Functions
+            function saveCurrentSearchToHistory() {
+                if (!currentMethod || !currentOriginalParams) {
+                    displayError('No search data to save. Please run a search first.');
+                    return;
+                }
+
+                const historyEntry = {
+                    id: Date.now(),
+                    timestamp: new Date().toISOString(),
+                    method: currentMethod,
+                    params: { ...currentOriginalParams },
+                    resultCount: currentResultsData?.length || 0,
+                    success: true
+                };
+
+                const history = getSearchHistory();
+                history.unshift(historyEntry); // Add to beginning
+                
+                // Keep only last 100 entries
+                if (history.length > 100) {
+                    history.splice(100);
+                }
+
+                saveSearchHistory(history);
+                allDOMElements.saveHistoryBtn.textContent = 'Saved!';
+                setTimeout(() => {
+                    allDOMElements.saveHistoryBtn.textContent = 'Save to History';
+                }, 2000);
+            }
+
+            function autoSaveToHistory() {
+                if (currentMethod && currentOriginalParams && currentResultsData) {
+                    const historyEntry = {
+                        id: Date.now(),
+                        timestamp: new Date().toISOString(),
+                        method: currentMethod,
+                        params: { ...currentOriginalParams },
+                        resultCount: currentResultsData.length || 0,
+                        success: true
+                    };
+
+                    const history = getSearchHistory();
+                    history.unshift(historyEntry);
+                    
+                    // Keep only last 50 auto-saved entries
+                    if (history.length > 50) {
+                        history.splice(50);
+                    }
+
+                    saveSearchHistory(history);
+                }
+            }
+
+            function getSearchHistory() {
+                try {
+                    const history = localStorage.getItem('mozSearchHistory');
+                    return history ? JSON.parse(history) : [];
+                } catch (e) {
+                    console.warn('Could not load search history:', e);
+                    return [];
+                }
+            }
+
+            function saveSearchHistory(history) {
+                try {
+                    localStorage.setItem('mozSearchHistory', JSON.stringify(history));
+                } catch (e) {
+                    console.warn('Could not save search history:', e);
+                    displayError('Could not save search history. Storage may be full.');
+                }
+            }
+
+            function renderHistoryList(history = null) {
+                const searchHistory = history || getSearchHistory();
+                const searchTerm = allDOMElements.historySearch.value.toLowerCase();
+                
+                const filteredHistory = searchTerm 
+                    ? searchHistory.filter(entry => 
+                        entry.method.toLowerCase().includes(searchTerm) ||
+                        JSON.stringify(entry.params).toLowerCase().includes(searchTerm) ||
+                        new Date(entry.timestamp).toLocaleDateString().includes(searchTerm)
+                      )
+                    : searchHistory;
+
+                if (filteredHistory.length === 0) {
+                    allDOMElements.historyEmpty.classList.remove('hidden');
+                    allDOMElements.historyList.innerHTML = '';
+                    allDOMElements.historyList.appendChild(allDOMElements.historyEmpty);
+                    return;
+                }
+
+                allDOMElements.historyEmpty.classList.add('hidden');
+                allDOMElements.historyList.innerHTML = '';
+
+                filteredHistory.forEach(entry => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'border border-[var(--border-primary)] rounded-lg p-4 mb-3 hover:bg-[var(--bg-input)] transition-colors';
+                    
+                    const methodName = entry.method.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    const date = new Date(entry.timestamp).toLocaleString();
+                    const paramsSummary = Object.entries(entry.params)
+                        .filter(([key, value]) => value && value.length > 0)
+                        .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+                        .join(' | ');
+
+                    entryDiv.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-semibold text-[var(--text-primary)]">${methodName}</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-[var(--text-secondary)]">${date}</span>
+                                <button class="text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] text-sm" data-replay="${entry.id}">Replay</button>
+                                <button class="text-[var(--text-error)] hover:text-red-600 text-sm" data-delete="${entry.id}">Delete</button>
+                            </div>
+                        </div>
+                        <p class="text-sm text-[var(--text-secondary)] mb-2">${paramsSummary}</p>
+                        <div class="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+                            <span>Results: ${entry.resultCount}</span>
+                            <span>Status: ${entry.success ? 'Success' : 'Failed'}</span>
+                        </div>
+                    `;
+
+                    allDOMElements.historyList.appendChild(entryDiv);
+                });
+            }
+
+            function filterHistory() {
+                renderHistoryList();
+            }
+
+            function replaySearch(entryId) {
+                const history = getSearchHistory();
+                const entry = history.find(h => h.id.toString() === entryId);
+                
+                if (!entry) {
+                    displayError('Search entry not found.');
+                    return;
+                }
+
+                // Set the method
+                allDOMElements.methodSelector.value = entry.method;
+                allDOMElements.methodSelector.dispatchEvent(new Event('change'));
+
+                // Populate form fields
+                setTimeout(() => {
+                    Object.entries(entry.params).forEach(([key, value]) => {
+                        const element = document.getElementById(key);
+                        if (element) {
+                            if (element.type === 'checkbox') {
+                                element.checked = value;
+                            } else if (Array.isArray(value)) {
+                                element.value = value.join('\n');
+                            } else {
+                                element.value = value;
+                            }
+                        }
+                    });
+                }, 100);
+
+                allDOMElements.historyModal.classList.add('hidden');
+            }
+
+            function deleteHistoryEntry(entryId) {
+                if (confirm('Are you sure you want to delete this search from history?')) {
+                    const history = getSearchHistory();
+                    const filteredHistory = history.filter(h => h.id.toString() !== entryId);
+                    saveSearchHistory(filteredHistory);
+                    renderHistoryList();
+                }
+            }
+
+            function exportHistory() {
+                const history = getSearchHistory();
+                if (history.length === 0) {
+                    displayError('No history to export.');
+                    return;
+                }
+
+                const dataStr = JSON.stringify(history, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `moz-search-history-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+            }
+
+            function clearAllHistory() {
+                if (confirm('Are you sure you want to clear all search history? This cannot be undone.')) {
+                    saveSearchHistory([]);
+                    renderHistoryList();
+                }
             }
 
             function displayError(message) {
