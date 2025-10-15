@@ -12,26 +12,35 @@
     <link rel="preconnect" href="https://unpkg.com">
     <link rel="preconnect" href="https://cdn.tailwindcss.com">
     
-    <!-- Load Tailwind CSS with fallback -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- DNS prefetch for additional performance -->
+    <link rel="dns-prefetch" href="https://upload.wikimedia.org">
+    <link rel="dns-prefetch" href="https://mozapi-proxy-server.vercel.app">
+    
+    <!-- Load Tailwind CSS with fallback and caching -->
+    <script src="https://cdn.tailwindcss.com" defer></script>
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
     
-    <!-- Tabulator CSS with preload -->
+    <!-- Tabulator CSS with preload and caching -->
     <link rel="preload" href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css"></noscript>
     
-    <!-- Load Tabulator JS asynchronously -->
+    <!-- Load Tabulator JS asynchronously with error handling -->
     <script>
         // Load Tabulator asynchronously to improve initial page load
         (function() {
             const script = document.createElement('script');
             script.src = 'https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js';
             script.async = true;
+            script.crossOrigin = 'anonymous';
+            script.onerror = function() {
+                console.warn('Failed to load Tabulator library. Table functionality will be limited.');
+            };
             document.head.appendChild(script);
         })();
     </script>
     <style>
+        /* Base styles */
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background-color: var(--bg-body);
@@ -39,12 +48,12 @@
             transition: background-color 0.3s, color 0.3s;
             margin: 0;
             padding: 0;
-            /* Optimize for better performance */
             will-change: background-color, color;
         }
 
-        /* --- Theme Variables --- */
+        /* Theme Variables - Light (Default) */
         :root, .light {
+            /* Backgrounds */
             --bg-body: #f9fafb;
             --bg-container: #ffffff;
             --bg-container-translucent: rgba(255, 255, 255, 0.5);
@@ -52,14 +61,20 @@
             --bg-input-secondary: #e5e7eb;
             --bg-code: #fefce8;
             --bg-disabled: #d1d5db;
+            
+            /* Borders */
             --border-primary: #e5e7eb;
             --border-secondary: #d1d5db;
+            
+            /* Text Colors */
             --text-primary: #111827;
             --text-secondary: #6b7280;
             --text-accent: #0284c7;
             --text-accent-hover: #0369a1;
             --text-heading: #0ea5e9;
             --text-error: #b91c1c;
+            
+            /* Button Colors */
             --btn-primary-bg: #002F50;
             --btn-primary-hover: #001d30;
             --btn-copy-bg: #f97316;
@@ -68,8 +83,12 @@
             --btn-export-hover: #059669;
             --btn-view-data-bg: #0ea5e9;
             --btn-view-data-hover: #0284c7;
+            
+            /* Error Colors */
             --error-bg: #fee2e2;
             --error-border: #fca5a5;
+            
+            /* Tabulator Colors */
             --tabulator-header-bg: var(--bg-input);
             --tabulator-row-bg: var(--bg-container);
             --tabulator-row-even-bg: var(--bg-input-secondary);
@@ -80,6 +99,7 @@
             --tabulator-pag-button-hover: var(--bg-input-secondary);
         }
 
+        /* Dark Theme */
         .dark {
             --bg-body: #020617;
             --bg-container: #1e293b;
@@ -116,6 +136,7 @@
             --tabulator-pag-button-hover: #475569;
         }
 
+        /* Retro Theme */
         .retro {
             --bg-body: #000000;
             --bg-container: #1a001a;
@@ -152,6 +173,7 @@
             --tabulator-pag-button-hover: #6a1b9a;
         }
 
+        /* High Contrast Theme */
         .high-contrast {
             --bg-body: #000000;
             --bg-container: #000000;
@@ -187,66 +209,135 @@
             --tabulator-pag-button-bg: #333;
             --tabulator-pag-button-hover: #555;
         }
-        /* Special text colors for high-contrast buttons */
+        
+        /* High contrast button text override */
         .high-contrast .btn-inverted-text {
             color: #000000 !important;
         }
 
+        /* Loading spinner */
         .spinner {
             border: 4px solid rgba(255, 255, 255, 0.2);
-            width: 24px; height: 24px; border-radius: 50%;
+            width: 24px; 
+            height: 24px; 
+            border-radius: 50%;
             border-left-color: #ffffff;
             animation: spin 1s ease infinite;
-            /* Optimize for better performance */
             will-change: transform;
         }
+        
         @keyframes spin { 
             0% { transform: rotate(0deg); } 
             100% { transform: rotate(360deg); } 
         }
         
-        .input-section { display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top-width: 1px; border-color: var(--border-primary); }
-        option[disabled] { font-weight: bold; background-color: var(--bg-input-secondary); }
+        /* Form elements */
+        .input-section { 
+            display: none; 
+            margin-top: 1.5rem; 
+            padding-top: 1.5rem; 
+            border-top-width: 1px; 
+            border-color: var(--border-primary); 
+        }
+        
+        option[disabled] { 
+            font-weight: bold; 
+            background-color: var(--bg-input-secondary); 
+        }
 
-        /* Read Me Modal Styles */
-        #readme-modal-content h2 { @apply border-b pb-2 mb-4 mt-5 text-xl; border-color: var(--border-primary); color: var(--text-accent); }
-        #readme-modal-content h3 { @apply mt-5 mb-2 text-lg; color: var(--text-primary); }
-        #readme-modal-content p, #readme-modal-content li { color: var(--text-secondary); }
-        #readme-modal-content a { color: var(--text-accent); @apply hover:underline; }
-        #readme-modal-content ul, #readme-modal-content ol { @apply ml-5 list-disc; }
-        #readme-modal-content ol { @apply list-decimal; }
-        #readme-modal-content code { @apply bg-black/50 px-1 py-0.5 rounded-md text-sm; color: var(--btn-copy-bg); }
-        .readme-method { margin-bottom: 1.5rem; }
+        /* Modal content styles */
+        #readme-modal-content h2 { 
+            border-bottom: 1px solid var(--border-primary);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            margin-top: 1.25rem;
+            font-size: 1.25rem;
+            line-height: 1.75rem;
+            border-color: var(--border-primary); 
+            color: var(--text-accent); 
+        }
+        
+        #readme-modal-content h3 { 
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.125rem;
+            line-height: 1.75rem;
+            color: var(--text-primary); 
+        }
+        
+        #readme-modal-content p, 
+        #readme-modal-content li { 
+            color: var(--text-secondary); 
+        }
+        
+        #readme-modal-content a { 
+            color: var(--text-accent); 
+            text-decoration: underline;
+        }
+        
+        #readme-modal-content a:hover { 
+            text-decoration: underline;
+        }
+        
+        #readme-modal-content ul, 
+        #readme-modal-content ol { 
+            margin-left: 1.25rem;
+            list-style-type: disc;
+        }
+        
+        #readme-modal-content ol { 
+            list-style-type: decimal;
+        }
+        
+        #readme-modal-content code { 
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            color: var(--btn-copy-bg); 
+        }
+        
+        .readme-method { 
+            margin-bottom: 1.5rem; 
+        }
 
-        /* Tabulator Theme Styles */
+        /* Tabulator table styles */
         .tabulator {
             border-color: var(--border-primary);
             background-color: var(--bg-container);
             color: var(--text-primary);
         }
+        
         .tabulator .tabulator-header {
             background-color: var(--tabulator-header-bg);
             border-bottom-color: var(--border-primary);
         }
+        
         .tabulator .tabulator-header .tabulator-col {
             background-color: var(--tabulator-header-bg);
             color: var(--text-primary);
         }
+        
         .tabulator .tabulator-tableHolder .tabulator-table .tabulator-row {
             background-color: var(--tabulator-row-bg);
             color: var(--text-primary);
         }
+        
         .tabulator .tabulator-tableHolder .tabulator-table .tabulator-row.tabulator-row-even {
             background-color: var(--tabulator-row-even-bg);
         }
+        
         .tabulator .tabulator-footer {
             background-color: var(--tabulator-footer-bg);
             border-top-color: var(--border-primary);
         }
+        
         .tabulator .tabulator-footer .tabulator-paginator button {
             background: var(--tabulator-pag-button-bg);
             color: var(--text-primary);
         }
+        
         .tabulator .tabulator-footer .tabulator-paginator button:hover {
             background: var(--tabulator-pag-button-hover);
         }
@@ -256,31 +347,33 @@
 
     <div class="w-full max-w-4xl mx-auto bg-[var(--bg-container-translucent)] backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-[var(--border-primary)] my-8">
         
-        <div class="relative text-center mb-6">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz Logo" class="mx-auto h-12 mb-4" id="moz-logo" loading="lazy" decoding="async">
+        <header class="relative text-center mb-6">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz Logo" class="mx-auto h-12 mb-4" id="moz-logo" loading="lazy" decoding="async" width="177" height="48">
             <h1 class="text-3xl font-bold text-[var(--text-heading)]">Advanced Moz API Tool</h1>
             <p class="text-[var(--text-primary)] mt-2">Add your key and select an API method to get started.</p>
-        </div>
+        </header>
         
-        <div class="mb-6 bg-[var(--bg-input)] p-4 rounded-lg border border-[var(--border-secondary)]">
-            <label class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Moz API Key</label>
-            <div id="apiKeyDisplay" class="hidden items-center justify-between">
+        <section class="mb-6 bg-[var(--bg-input)] p-4 rounded-lg border border-[var(--border-secondary)]" aria-labelledby="api-key-heading">
+            <h2 id="api-key-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Moz API Key</h2>
+            <div id="apiKeyDisplay" class="hidden items-center justify-between" role="status" aria-live="polite">
                 <span id="apiKeyText" class="text-[var(--text-secondary)] font-mono"></span>
-                <button id="editApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold">Edit</button>
+                <button id="editApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold" aria-label="Edit API key">Edit</button>
             </div>
             <div id="apiKeyInputArea" class="flex items-center gap-2">
-                <input type="password" id="apiKeyInput" class="w-full bg-[var(--bg-body)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 ring-[var(--text-accent)]" placeholder="mozscape-1234abcd...">
-                <button id="saveApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text">Save</button>
+                <label for="apiKeyInput" class="sr-only">Enter your Moz API key</label>
+                <input type="password" id="apiKeyInput" class="w-full bg-[var(--bg-body)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 ring-[var(--text-accent)]" placeholder="mozscape-1234abcd..." autocomplete="off" aria-describedby="api-key-help">
+                <button id="saveApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text" aria-label="Save API key">Save</button>
             </div>
+            <div id="api-key-help" class="sr-only">Enter your Moz API key to access the API services</div>
             <!-- Quota Display Area -->
-            <div id="quota-display" class="hidden mt-3 text-sm text-[var(--text-secondary)]">
+            <div id="quota-display" class="hidden mt-3 text-sm text-[var(--text-secondary)]" role="status" aria-live="polite">
                 <span id="quota-text"></span>
             </div>
-        </div>
+        </section>
 
-        <div>
-            <label for="methodSelector" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">API Method</label>
-            <select id="methodSelector" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 ring-[var(--text-accent)]">
+        <section aria-labelledby="method-heading">
+            <label for="methodSelector" id="method-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">API Method</label>
+            <select id="methodSelector" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 ring-[var(--text-accent)]" aria-describedby="method-help">
                 <option value="" disabled selected>-- Select a Method --</option>
                 <optgroup label="Site Metrics">
                     <option value="siteMetrics">Fetch Site Metrics</option>
@@ -309,10 +402,11 @@
                      <option value="linkStatus">Get Link Status</option>
                 </optgroup>
             </select>
-        </div>
+            <div id="method-help" class="sr-only">Choose the Moz API method you want to use</div>
+        </section>
 
-        <form id="api-form">
-             <div id="inputsContainer" class="mt-4">
+        <form id="api-form" aria-label="API request form">
+             <div id="inputsContainer" class="mt-4" role="region" aria-live="polite">
                 <fieldset id="siteMetricsInputs" class="input-section space-y-4"><legend class="sr-only">Site Metrics Inputs</legend></fieldset>
                 <fieldset id="keywordMetricsInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Metrics Inputs</legend></fieldset>
                 <fieldset id="brandAuthorityInputs" class="input-section space-y-4"><legend class="sr-only">Brand Authority Inputs</legend></fieldset>
@@ -333,70 +427,71 @@
                 <fieldset id="filterLinksByDomainInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Domain Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
-                 <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text">
+                 <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] mx-auto disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text" aria-describedby="submit-help">
                     Run Request
                 </button>
+                <div id="submit-help" class="sr-only">Submit your API request with the selected method and parameters</div>
             </div>
         </form>
 
-        <div id="status-container" class="mt-8" aria-live="polite">
+        <section id="status-container" class="mt-8" aria-live="polite">
             <div id="error-message" role="alert" class="hidden bg-[var(--error-bg)] border border-[var(--error-border)] text-[var(--text-error)] px-4 py-3 rounded-lg text-center"></div>
-            <div id="results-container" class="hidden bg-[var(--bg-input)] p-4 md:p-6 rounded-xl border border-[var(--border-primary)]">
+            <div id="results-container" class="hidden bg-[var(--bg-input)] p-4 md:p-6 rounded-xl border border-[var(--border-primary)]" role="region" aria-labelledby="results-heading">
                 <div class="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
-                    <h2 class="text-xl font-bold text-[var(--text-heading)]">API Results</h2>
-                    <div class="flex items-center gap-2 flex-wrap justify-end">
-                        <button id="view-data-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">View Table</button>
-                        <button id="filter-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden">Filter</button>
-                        <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">Copy JSON</button>
-                        <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text">Export to CSV</button>
+                    <h2 id="results-heading" class="text-xl font-bold text-[var(--text-heading)]">API Results</h2>
+                    <div class="flex items-center gap-2 flex-wrap justify-end" role="toolbar" aria-label="Results actions">
+                        <button id="view-data-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Toggle between table and JSON view">View Table</button>
+                        <button id="filter-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Filter table data">Filter</button>
+                        <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Copy JSON data to clipboard">Copy JSON</button>
+                        <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Export data as CSV file">Export to CSV</button>
                     </div>
                 </div>
-                <div id="active-filters-container" class="hidden mb-4 space-x-2"></div>
+                <div id="active-filters-container" class="hidden mb-4 space-x-2" role="status" aria-live="polite"></div>
                 <div id="raw-wrapper">
-                    <pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg"><code></code></pre>
+                    <pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>
                 </div>
-                <div id="table-wrapper" class="hidden overflow-x-auto">
+                <div id="table-wrapper" class="hidden overflow-x-auto" role="region" aria-label="Data table">
                     <div id="results-table"></div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <footer class="text-center text-[var(--text-secondary)] text-sm mt-8 border-t border-[var(--border-primary)] pt-6">
-            <div class="mb-4 flex justify-center items-center gap-2">
-                <button data-theme="light" class="theme-btn p-2 rounded-lg">Light</button>
-                <button data-theme="dark" class="theme-btn p-2 rounded-lg">Dark</button>
-                <button data-theme="retro" class="theme-btn p-2 rounded-lg">Retro</button>
-                <button data-theme="high-contrast" class="theme-btn p-2 rounded-lg">High Contrast</button>
+            <div class="mb-4 flex justify-center items-center gap-2" role="toolbar" aria-label="Theme selection">
+                <button data-theme="light" class="theme-btn p-2 rounded-lg" aria-label="Switch to light theme">Light</button>
+                <button data-theme="dark" class="theme-btn p-2 rounded-lg" aria-label="Switch to dark theme">Dark</button>
+                <button data-theme="retro" class="theme-btn p-2 rounded-lg" aria-label="Switch to retro theme">Retro</button>
+                <button data-theme="high-contrast" class="theme-btn p-2 rounded-lg" aria-label="Switch to high contrast theme">High Contrast</button>
             </div>
             <p>&copy; Jonathan Berthold 2025</p>
-            <div class="mt-2 space-x-4">
+            <nav class="mt-2 space-x-4" aria-label="External links">
                 <a href="https://moz.com/api/dashboard" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">API Dashboard</a>
-                <span class="text-[var(--text-secondary)]">|</span>
+                <span class="text-[var(--text-secondary)]" aria-hidden="true">|</span>
                 <a href="https://moz.com/products/api/keys" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">Get Moz API Key</a>
-                <span class="text-[var(--text-secondary)]">|</span>
+                <span class="text-[var(--text-secondary)]" aria-hidden="true">|</span>
                  <a href="https://moz.com/api/docs/welcome" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">API Docs</a>
-                <span class="text-[var(--text-secondary)]">|</span>
-                <button id="readme-btn" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">Read Me</button>
-            </div>
+                <span class="text-[var(--text-secondary)]" aria-hidden="true">|</span>
+                <button id="readme-btn" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]" aria-label="Open help documentation">Read Me</button>
+            </nav>
         </footer>
 
     </div>
 
     <!-- Modals -->
-    <div id="readme-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div id="readme-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-labelledby="readme-modal-title" aria-modal="true">
         <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col">
             <div class="flex justify-between items-center p-4 border-b border-[var(--border-primary)]">
-                <h2 class="text-lg font-semibold text-[var(--text-primary)]">Read Me / Help</h2>
-                <button id="close-readme-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">&times;</button>
+                <h2 id="readme-modal-title" class="text-lg font-semibold text-[var(--text-primary)]">Read Me / Help</h2>
+                <button id="close-readme-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label="Close help dialog">&times;</button>
             </div>
             <div id="readme-modal-content" class="p-6 overflow-y-auto"></div>
         </div>
     </div>
-     <div id="filter-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+     <div id="filter-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-labelledby="filter-modal-title" aria-modal="true">
         <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-md rounded-2xl shadow-2xl flex flex-col">
             <div class="flex justify-between items-center p-4 border-b border-[var(--border-primary)]">
-                <h2 class="text-lg font-semibold text-[var(--text-primary)]">Filter Data</h2>
-                <button id="close-filter-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">&times;</button>
+                <h2 id="filter-modal-title" class="text-lg font-semibold text-[var(--text-primary)]">Filter Data</h2>
+                <button id="close-filter-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label="Close filter dialog">&times;</button>
             </div>
             <div id="filter-fields-container" class="p-6 overflow-y-auto space-y-4"></div>
             <div class="p-4 border-t border-[var(--border-primary)] flex justify-end gap-2">
@@ -423,7 +518,233 @@
             };
         };
         
+        // Data processing utilities - centralized to eliminate duplication
+        const DataProcessor = {
+            na: 'N/A',
+            
+            snakeToTitleCase: (s) => s.replace(/^_*(.)|_+(.)/g, (s, c, d) => c ? c.toUpperCase() : ' ' + d.toUpperCase()),
+            
+            processLinkMetrics: (linkItem, query, originalParams) => {
+                const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
+                const metrics = linkItem.site_metrics || {};
+                const otherData = { ...linkItem };
+                delete otherData.site_metrics;
+                const combined = { ...baseInfo, ...metrics, ...otherData };
+                const titleCased = {};
+                for (const key in combined) {
+                    titleCased[DataProcessor.snakeToTitleCase(key)] = combined[key];
+                }
+                return titleCased;
+            },
+            
+            processResults: (results, method, originalParams) => {
+                const rows = [];
+                
+                results.forEach((res, i) => {
+                    let query;
+                    if (['linkIntersect', 'linkStatus', 'filterLinksByDomain'].includes(method)) {
+                        query = 'N/A';
+                    } else {
+                        query = (originalParams.targets || originalParams.keywords)[i] || DataProcessor.na;
+                    }
+                    
+                    if (res.status !== 'success') {
+                        rows.push({ Query: query, Status: `Error: ${res.reason || 'Unknown'}` });
+                        return;
+                    }
+                    
+                    // Process each method type
+                    const methodProcessors = {
+                        siteMetrics: () => {
+                            const metrics = res.data.site_metrics || {};
+                            const orderedMetrics = {'Page Authority': metrics.page_authority, 'Domain Authority': metrics.domain_authority, 'Spam Score': metrics.spam_score };
+                            for(const key in metrics){
+                                if(!['page_authority', 'domain_authority', 'spam_score'].includes(key)) {
+                                    orderedMetrics[DataProcessor.snakeToTitleCase(key)] = metrics[key];
+                                }
+                            }
+                            return {'Query': res.data.site_query?.query || query, 'Scope': res.data.site_query?.scope || DataProcessor.na, 'Original Query': res.data.site_query?.original_site_query?.query || query, ...orderedMetrics };
+                        },
+                        
+                        brandAuthority: () => ({'Site Query': res.data.site_query?.query || DataProcessor.na, 'Scope': res.data.site_query?.scope || DataProcessor.na, 'Brand Authority Score': res.data.site_metrics?.brand_authority_score ?? DataProcessor.na, 'Original Query': res.data.site_query?.original_site_query?.query || query }),
+                        
+                        topPages: () => {
+                            const pages = [];
+                            (res.data.top_pages || []).forEach(page => {
+                                const pageData = { 'Query': query, 'Scope': originalParams.scope, ...page };
+                                const titleCased = {};
+                                for(const key in pageData) { titleCased[DataProcessor.snakeToTitleCase(key)] = pageData[key]; }
+                                pages.push(titleCased);
+                            });
+                            if (!res.data.top_pages || res.data.top_pages.length === 0) pages.push({ Query: query, Status: 'No top pages found' });
+                            return pages;
+                        },
+                        
+                        keywordMetrics: () => {
+                            const metricTypeMap = { 'all': 'All Keyword Metrics', 'volume': 'Search Volume', 'difficulty': 'Difficulty', 'opportunity': 'Organic CTR', 'priority': 'Priority' };
+                            return {'Keyword': res.data.serp_query?.keyword || query, 'API Call': metricTypeMap[originalParams.metricType] || originalParams.metricType, 'Locale': res.data.serp_query?.locale || DataProcessor.na, 'Device': res.data.serp_query?.device || DataProcessor.na, 'Engine': res.data.serp_query?.engine || DataProcessor.na, 'Volume': res.data.keyword_metrics?.volume ?? DataProcessor.na, 'Difficulty': res.data.keyword_metrics?.difficulty ?? DataProcessor.na, 'Opportunity CTR': res.data.keyword_metrics?.organic_ctr ?? DataProcessor.na, 'Priority': res.data.keyword_metrics?.priority ?? DataProcessor.na };
+                        },
+                        
+                        searchIntent: () => {
+                            const intentData = {};
+                            (res.data.keyword_intent?.all_intents || []).forEach(intent => {
+                                intentData[`${DataProcessor.snakeToTitleCase(intent.label)} Score`] = intent.score ?? DataProcessor.na;
+                            });
+                            return {'Keyword': res.data.serp_query?.keyword || query, 'Locale': res.data.serp_query?.locale || DataProcessor.na, 'Device': res.data.serp_query?.device || DataProcessor.na, 'Engine': res.data.serp_query?.engine || DataProcessor.na, 'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || DataProcessor.na, ...intentData };
+                        },
+                        
+                        rankingKeywords: () => {
+                            const keywords = [];
+                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale };
+                            if(res.data.ranking_keywords?.length > 0){
+                                res.data.ranking_keywords.forEach(kw => { keywords.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume }); });
+                            } else { keywords.push({ ...baseInfo, Status: 'No ranking keywords found' }); }
+                            return keywords;
+                        },
+                        
+                        relatedKeywords: () => {
+                            const suggestions = [];
+                            const baseInfo = { 'Keyword': query, 'Locale': res.data.serp_query?.locale, 'Device': res.data.serp_query?.device, 'Engine': res.data.serp_query?.engine };
+                            if(res.data.suggestions?.length > 0){
+                                res.data.suggestions.forEach(sug => { suggestions.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance }); });
+                            } else { suggestions.push({ ...baseInfo, Status: 'No suggestions found' }); }
+                            return suggestions;
+                        },
+                        
+                        keywordCount: () => {
+                            const positions = res.data.ranking_keyword_count?.position || {};
+                            const rankCounts = {};
+                            for (let i = 1; i <= 50; i++) {
+                                rankCounts[`Rank ${i} Count`] = positions[`rank_${i}`] ?? 0;
+                            }
+                            return {'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale, 'Total Ranking Count': res.data.ranking_keyword_count?.total ?? DataProcessor.na, ...rankCounts };
+                        },
+                        
+                        anchorText: () => {
+                            const anchorTexts = [];
+                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
+                            if(res.data.anchor_texts?.length > 0){
+                                res.data.anchor_texts.forEach(at => { anchorTexts.push({ ...baseInfo, 'Anchor Text': at.text, 'External Root Domains': at.external_root_domains, 'External Pages': at.external_pages }); });
+                            } else { anchorTexts.push({ ...baseInfo, Status: 'No anchor texts found' }); }
+                            return anchorTexts;
+                        },
+                        
+                        recentlyGainedLinks: () => {
+                            const links = [];
+                            (res.data.gained_linking_domains || []).forEach(link => links.push(DataProcessor.processLinkMetrics(link, query, originalParams)));
+                            if (!res.data.gained_linking_domains || res.data.gained_linking_domains.length === 0) links.push({ Query: query, Status: 'No recently gained links found' });
+                            return links;
+                        },
+                        
+                        recentlyLostLinks: () => {
+                            const links = [];
+                            (res.data.lost_linking_domains || []).forEach(link => links.push(DataProcessor.processLinkMetrics(link, query, originalParams)));
+                            if (!res.data.lost_linking_domains || res.data.lost_linking_domains.length === 0) links.push({ Query: query, Status: 'No recently lost links found' });
+                            return links;
+                        },
+                        
+                        linkingDomains: () => {
+                            const links = [];
+                            (res.data.linking_domains || []).forEach(link => links.push(DataProcessor.processLinkMetrics(link, query, originalParams)));
+                            if (!res.data.linking_domains || res.data.linking_domains.length === 0) links.push({ Query: query, Status: 'No linking domains found' });
+                            return links;
+                        },
+                        
+                        finalRedirect: () => ({ 'Query': query, 'Scope': originalParams.scope, 'Original Query': res.data.site_query?.original_site_query?.query || query, 'Destination': res.data.destination || 'No redirect found' }),
+                        
+                        linkIntersect: () => {
+                            const intersectData = res.data.link_intersects || [];
+                            if (intersectData.length === 0) {
+                                return [{ Status: 'No intersecting links found' }];
+                            } else {
+                                const intersects = [];
+                                const baseInfo = {
+                                    'Linking To': (res.data.is_linking_to || []).map(t => t.query).join(', '),
+                                    'Not Linking To': (res.data.not_linking_to || []).map(t => t.query).join(', '),
+                                    'Minimum Matching Targets': res.data.options?.minimum_matching_targets || DataProcessor.na,
+                                    'Scope': res.data.options?.scope || DataProcessor.na,
+                                    'Sort': res.data.options?.sort || DataProcessor.na
+                                };
+                                intersectData.forEach(intersect => {
+                                    (intersect.matching_source_pages || [{page: 'N/A', page_authority: 'N/A'}]).forEach(sourcePage => {
+                                        intersects.push({
+                                            ...baseInfo,
+                                            'Intersecting Domain': intersect.page,
+                                            'Intersecting Title': intersect.title,
+                                            'Intersecting DA': intersect.domain_authority,
+                                            'Intersecting Spam Score': intersect.spam_score,
+                                            'Matching Target Indexes': (intersect.matching_target_indexes || []).join(', '),
+                                            'Source Page': sourcePage.page,
+                                            'Source PA': sourcePage.page_authority
+                                        });
+                                    });
+                                });
+                                return intersects;
+                            }
+                        },
+                        
+                        listLinks: () => {
+                            const links = [];
+                            (res.data.links || []).forEach(link => {
+                                const sourceMetrics = link.source_site_metrics || {};
+                                const targetMetrics = link.target_site_metrics || {};
+                                const linkInfo = { ...link };
+                                delete linkInfo.source_site_metrics;
+                                delete linkInfo.target_site_metrics;
+
+                                const row = {};
+                                for (const key in sourceMetrics) row[`Source ${DataProcessor.snakeToTitleCase(key)}`] = sourceMetrics[key];
+                                for (const key in targetMetrics) row[`Target ${DataProcessor.snakeToTitleCase(key)}`] = targetMetrics[key];
+                                for (const key in linkInfo) row[DataProcessor.snakeToTitleCase(key)] = linkInfo[key];
+                                links.push(row);
+                            });
+                            if (!res.data.links || res.data.links.length === 0) links.push({ Query: query, Status: 'No links found' });
+                            return links;
+                        },
+                        
+                        filterLinksByAnchor: () => DataProcessor.methodProcessors.listLinks(),
+                        filterLinksByDomain: () => DataProcessor.methodProcessors.listLinks(),
+                        
+                        linkStatus: () => ({ 'Target Query': res.data.target_site_query?.query, 'Source Query': res.data.source_site_query?.query, 'Exists': res.data.exists })
+                    };
+                    
+                    const processor = methodProcessors[method];
+                    if (processor) {
+                        const result = processor();
+                        if (Array.isArray(result)) {
+                            rows.push(...result);
+                        } else {
+                            rows.push(result);
+                        }
+                    }
+                });
+                
+                return rows;
+            }
+        };
+        
+        // Performance monitoring
+        const performanceMonitor = {
+            startTime: performance.now(),
+            mark: (name) => performance.mark(name),
+            measure: (name, start, end) => performance.measure(name, start, end),
+            logMetrics: () => {
+                const loadTime = performance.now() - performanceMonitor.startTime;
+                console.log(`Page load time: ${loadTime.toFixed(2)}ms`);
+            }
+        };
+        
+        // Service Worker registration for caching
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {
+                    // Service worker registration failed, continue without caching
+                });
+            });
+        }
+        
         document.addEventListener('DOMContentLoaded', () => {
+            performanceMonitor.mark('dom-ready');
             let currentResultsData = null;
             let currentOriginalParams = null;
             let currentMethod = null;
@@ -547,8 +868,13 @@
                 allDOMElements.saveApiKeyBtn.addEventListener('click', () => {
                     const key = allDOMElements.apiKeyInput.value.trim();
                     if (key) {
-                        localStorage.setItem('mozApiKey', key);
-                        loadApiKey();
+                        try {
+                            localStorage.setItem('mozApiKey', key);
+                            loadApiKey();
+                        } catch (e) {
+                            console.warn('Could not save API key to localStorage:', e);
+                            displayError('Could not save API key. Please try again.');
+                        }
                     }
                 });
                 allDOMElements.editApiKeyBtn.addEventListener('click', () => {
@@ -579,12 +905,27 @@
             const applyTheme = (theme) => {
                 raf(() => {
                     const root = document.documentElement;
-                    ["light", "dark", "retro", "high-contrast"].forEach(t => root.classList.remove(t));
+                    const themes = ["light", "dark", "retro", "high-contrast"];
+                    
+                    // Remove all theme classes
+                    themes.forEach(t => root.classList.remove(t));
+                    
+                    // Add new theme
                     root.classList.add(theme);
-                    localStorage.setItem('theme', theme);
+                    
+                    // Save to localStorage
+                    try {
+                        localStorage.setItem('theme', theme);
+                    } catch (e) {
+                        console.warn('Could not save theme to localStorage:', e);
+                    }
+                    
+                    // Update theme button states
                     allDOMElements.themeBtns.forEach(btn => {
                         btn.classList.toggle('font-bold', btn.dataset.theme === theme);
                     });
+                    
+                    // Reset logo filter
                     if (allDOMElements.mozLogo) {
                         allDOMElements.mozLogo.style.filter = 'none';
                     }
@@ -621,22 +962,31 @@
                     allDOMElements.quotaText.style.color = used >= allotted ? 'var(--text-error)' : 'var(--text-secondary)';
                     allDOMElements.quotaDisplay.classList.remove('hidden');
                 } catch (error) {
-                    console.warn("Quota fetch error:", error);
+                    if (error.name !== 'AbortError') {
+                        console.warn("Quota fetch error:", error);
+                    }
                     allDOMElements.quotaText.textContent = 'Could not retrieve API usage.';
                     allDOMElements.quotaDisplay.classList.remove('hidden');
                 }
             };
             
             const loadApiKey = () => {
-                const savedKey = localStorage.getItem('mozApiKey');
-                if (savedKey) {
-                    allDOMElements.apiKeyText.textContent = `${savedKey.substring(0, 6)}...${savedKey.substring(savedKey.length - 4)}`;
-                    allDOMElements.apiKeyInput.value = savedKey;
-                    allDOMElements.apiKeyDisplay.classList.remove('hidden');
-                    allDOMElements.apiKeyDisplay.classList.add('flex');
-                    allDOMElements.apiKeyInputArea.classList.add('hidden');
-                    fetchQuota(savedKey);
-                } else {
+                try {
+                    const savedKey = localStorage.getItem('mozApiKey');
+                    if (savedKey) {
+                        allDOMElements.apiKeyText.textContent = `${savedKey.substring(0, 6)}...${savedKey.substring(savedKey.length - 4)}`;
+                        allDOMElements.apiKeyInput.value = savedKey;
+                        allDOMElements.apiKeyDisplay.classList.remove('hidden');
+                        allDOMElements.apiKeyDisplay.classList.add('flex');
+                        allDOMElements.apiKeyInputArea.classList.add('hidden');
+                        fetchQuota(savedKey);
+                    } else {
+                        allDOMElements.apiKeyDisplay.classList.add('hidden');
+                        allDOMElements.apiKeyInputArea.classList.remove('hidden');
+                        allDOMElements.quotaDisplay.classList.add('hidden');
+                    }
+                } catch (e) {
+                    console.warn('Could not load API key from localStorage:', e);
                     allDOMElements.apiKeyDisplay.classList.add('hidden');
                     allDOMElements.apiKeyInputArea.classList.remove('hidden');
                     allDOMElements.quotaDisplay.classList.add('hidden');
@@ -698,12 +1048,28 @@
 
             function handleCopyJson() {
                 if (allDOMElements.rawCode.textContent) {
-                    navigator.clipboard.writeText(allDOMElements.rawCode.textContent).then(() => {
-                        allDOMElements.copyJsonBtn.textContent = 'Copied!';
-                        setTimeout(() => { allDOMElements.copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
-                    }, () => {
-                        displayError('Failed to copy JSON.');
-                    });
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(allDOMElements.rawCode.textContent).then(() => {
+                            allDOMElements.copyJsonBtn.textContent = 'Copied!';
+                            setTimeout(() => { allDOMElements.copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
+                        }, () => {
+                            displayError('Failed to copy JSON.');
+                        });
+                    } else {
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = allDOMElements.rawCode.textContent;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            allDOMElements.copyJsonBtn.textContent = 'Copied!';
+                            setTimeout(() => { allDOMElements.copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
+                        } catch (e) {
+                            displayError('Failed to copy JSON.');
+                        }
+                        document.body.removeChild(textArea);
+                    }
                 }
             }
             
@@ -807,170 +1173,9 @@
             }
              
             function exportDataToCsv(results, method, originalParams) {
-                let rows = [];
-                const na = 'N/A';
-                const snakeToTitleCase = (s) => s.replace(/^_*(.)|_+(.)/g, (s, c, d) => c ? c.toUpperCase() : ' ' + d.toUpperCase());
-                const processLinkMetrics = (linkItem, query) => {
-                    const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
-                    const metrics = linkItem.site_metrics || {};
-                    const otherData = { ...linkItem };
-                    delete otherData.site_metrics;
-                    const combined = { ...baseInfo, ...metrics, ...otherData };
-                    const titleCased = {};
-                    for (const key in combined) {
-                        titleCased[snakeToTitleCase(key)] = combined[key];
-                    }
-                    return titleCased;
-                };
-
-                results.forEach((res, i) => {
-                    let query;
-                    if (['linkIntersect', 'linkStatus', 'filterLinksByDomain'].includes(method)) {
-                        query = 'N/A';
-                    } else {
-                        query = (originalParams.targets || originalParams.keywords)[i] || na;
-                    }
-                    
-                    if (res.status !== 'success') {
-                        rows.push({ Query: query, Status: `Error: ${res.reason || 'Unknown'}` });
-                        return;
-                    }
-                    switch (method) {
-                        case 'siteMetrics': {
-                            const metrics = res.data.site_metrics || {};
-                            const orderedMetrics = {'Page Authority': metrics.page_authority, 'Domain Authority': metrics.domain_authority, 'Spam Score': metrics.spam_score };
-                            for(const key in metrics){
-                                if(!['page_authority', 'domain_authority', 'spam_score'].includes(key)) {
-                                    orderedMetrics[snakeToTitleCase(key)] = metrics[key];
-                                }
-                            }
-                             rows.push({'Query': res.data.site_query?.query || query, 'Scope': res.data.site_query?.scope || na, 'Original Query': res.data.site_query?.original_site_query?.query || query, ...orderedMetrics });
-                            break;
-                        }
-                        case 'brandAuthority':
-                            rows.push({'Site Query': res.data.site_query?.query || na, 'Scope': res.data.site_query?.scope || na, 'Brand Authority Score': res.data.site_metrics?.brand_authority_score ?? na, 'Original Query': res.data.site_query?.original_site_query?.query || query });
-                            break;
-                        case 'topPages':
-                             (res.data.top_pages || []).forEach(page => {
-                                const pageData = { 'Query': query, 'Scope': originalParams.scope, ...page };
-                                const titleCased = {};
-                                for(const key in pageData) { titleCased[snakeToTitleCase(key)] = pageData[key]; }
-                                rows.push(titleCased);
-                             });
-                             if (!res.data.top_pages || res.data.top_pages.length === 0) rows.push({ Query: query, Status: 'No top pages found' });
-                            break;
-                        case 'keywordMetrics': {
-                            const metricTypeMap = { 'all': 'All Keyword Metrics', 'volume': 'Search Volume', 'difficulty': 'Difficulty', 'opportunity': 'Organic CTR', 'priority': 'Priority' };
-                            rows.push({'Keyword': res.data.serp_query?.keyword || query, 'API Call': metricTypeMap[originalParams.metricType] || originalParams.metricType, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Volume': res.data.keyword_metrics?.volume ?? na, 'Difficulty': res.data.keyword_metrics?.difficulty ?? na, 'Opportunity CTR': res.data.keyword_metrics?.organic_ctr ?? na, 'Priority': res.data.keyword_metrics?.priority ?? na });
-                            break;
-                        }
-                        case 'searchIntent': {
-                             const intentData = {};
-                             (res.data.keyword_intent?.all_intents || []).forEach(intent => {
-                                intentData[`${snakeToTitleCase(intent.label)} Score`] = intent.score ?? na;
-                             });
-                             rows.push({'Keyword': res.data.serp_query?.keyword || query, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || na, ...intentData });
-                             break;
-                        }
-                        case 'rankingKeywords': {
-                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale };
-                            if(res.data.ranking_keywords?.length > 0){
-                                res.data.ranking_keywords.forEach(kw => { rows.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume }); });
-                            } else { rows.push({ ...baseInfo, Status: 'No ranking keywords found' }); }
-                            break;
-                        }
-                        case 'relatedKeywords': {
-                             const baseInfo = { 'Keyword': query, 'Locale': res.data.serp_query?.locale, 'Device': res.data.serp_query?.device, 'Engine': res.data.serp_query?.engine };
-                             if(res.data.suggestions?.length > 0){
-                                res.data.suggestions.forEach(sug => { rows.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance }); });
-                             } else { rows.push({ ...baseInfo, Status: 'No suggestions found' }); }
-                             break;
-                        }
-                        case 'keywordCount': {
-                            const positions = res.data.ranking_keyword_count?.position || {};
-                            const rankCounts = {};
-                            for (let i = 1; i <= 50; i++) {
-                                rankCounts[`Rank ${i} Count`] = positions[`rank_${i}`] ?? 0;
-                            }
-                            rows.push({'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale, 'Total Ranking Count': res.data.ranking_keyword_count?.total ?? na, ...rankCounts });
-                            break;
-                        }
-                        case 'anchorText': {
-                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
-                            if(res.data.anchor_texts?.length > 0){
-                                res.data.anchor_texts.forEach(at => { rows.push({ ...baseInfo, 'Anchor Text': at.text, 'External Root Domains': at.external_root_domains, 'External Pages': at.external_pages }); });
-                            } else { rows.push({ ...baseInfo, Status: 'No anchor texts found' }); }
-                            break;
-                        }
-                        case 'recentlyGainedLinks':
-                            (res.data.gained_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
-                            if (!res.data.gained_linking_domains || res.data.gained_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently gained links found' });
-                            break;
-                        case 'recentlyLostLinks':
-                            (res.data.lost_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
-                             if (!res.data.lost_linking_domains || res.data.lost_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently lost links found' });
-                            break;
-                        case 'linkingDomains':
-                            (res.data.linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
-                            if (!res.data.linking_domains || res.data.linking_domains.length === 0) rows.push({ Query: query, Status: 'No linking domains found' });
-                            break;
-                        
-                        case 'finalRedirect':
-                            rows.push({ 'Query': query, 'Scope': originalParams.scope, 'Original Query': res.data.site_query?.original_site_query?.query || query, 'Destination': res.data.destination || 'No redirect found' });
-                            break;
-                        case 'linkIntersect': {
-                            const intersectData = res.data.link_intersects || [];
-                            if (intersectData.length === 0) {
-                                rows.push({ Status: 'No intersecting links found' });
-                            } else {
-                                const baseInfo = {
-                                    'Linking To': (res.data.is_linking_to || []).map(t => t.query).join(', '),
-                                    'Not Linking To': (res.data.not_linking_to || []).map(t => t.query).join(', '),
-                                    'Minimum Matching Targets': res.data.options?.minimum_matching_targets || na,
-                                    'Scope': res.data.options?.scope || na,
-                                    'Sort': res.data.options?.sort || na
-                                };
-                                intersectData.forEach(intersect => {
-                                    (intersect.matching_source_pages || [{page: 'N/A', page_authority: 'N/A'}]).forEach(sourcePage => {
-                                        rows.push({
-                                            ...baseInfo,
-                                            'Intersecting Domain': intersect.page,
-                                            'Intersecting Title': intersect.title,
-                                            'Intersecting DA': intersect.domain_authority,
-                                            'Intersecting Spam Score': intersect.spam_score,
-                                            'Matching Target Indexes': (intersect.matching_target_indexes || []).join(', '),
-                                            'Source Page': sourcePage.page,
-                                            'Source PA': sourcePage.page_authority
-                                        });
-                                    });
-                                });
-                            }
-                            break;
-                        }
-                        case 'listLinks':
-                        case 'filterLinksByAnchor':
-                        case 'filterLinksByDomain':
-                            (res.data.links || []).forEach(link => {
-                                const sourceMetrics = link.source_site_metrics || {};
-                                const targetMetrics = link.target_site_metrics || {};
-                                const linkInfo = { ...link };
-                                delete linkInfo.source_site_metrics;
-                                delete linkInfo.target_site_metrics;
-
-                                const row = {};
-                                for (const key in sourceMetrics) row[`Source ${snakeToTitleCase(key)}`] = sourceMetrics[key];
-                                for (const key in targetMetrics) row[`Target ${snakeToTitleCase(key)}`] = targetMetrics[key];
-                                for (const key in linkInfo) row[snakeToTitleCase(key)] = linkInfo[key];
-                                rows.push(row);
-                            });
-                             if (!res.data.links || res.data.links.length === 0) rows.push({ Query: query, Status: 'No links found' });
-                            break;
-                        case 'linkStatus':
-                            rows.push({ 'Target Query': res.data.target_site_query?.query, 'Source Query': res.data.source_site_query?.query, 'Exists': res.data.exists });
-                            break;
-                    }
-                });
+                const rows = DataProcessor.processResults(results, method, originalParams);
                 if (rows.length === 0) { displayError("No valid data to export."); return; }
+                
                 const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
                 const header = allKeys.join(',');
                 const csvRows = rows.map(row => allKeys.map(key => {
@@ -997,206 +1202,40 @@
                 if (table) {
                     table.destroy();
                 }
-                const tableData = [];
-                const columns = [];
-
-                let rows = []; // We will reuse the CSV logic to generate rows
                 
-                const na = 'N/A';
-                const snakeToTitleCase = (s) => s.replace(/^_*(.)|_+(.)/g, (s, c, d) => c ? c.toUpperCase() : ' ' + d.toUpperCase());
-                const processLinkMetrics = (linkItem, query) => {
-                    const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
-                    const metrics = linkItem.site_metrics || {};
-                    const otherData = { ...linkItem };
-                    delete otherData.site_metrics;
-                    const combined = { ...baseInfo, ...metrics, ...otherData };
-                    const titleCased = {};
-                    for (const key in combined) {
-                        titleCased[snakeToTitleCase(key)] = combined[key];
-                    }
-                    return titleCased;
-                };
-
-                results.forEach((res, i) => {
-                    let query;
-                    if (['linkIntersect', 'linkStatus', 'filterLinksByDomain'].includes(method)) {
-                        query = 'N/A';
-                    } else {
-                        query = (originalParams.targets || originalParams.keywords)[i] || na;
-                    }
-                    if (res.status !== 'success') {
-                        rows.push({ Query: query, Status: `Error: ${res.reason || 'Unknown'}` });
-                        return;
-                    }
-                    switch(method){
-                         case 'siteMetrics': {
-                            const metrics = res.data.site_metrics || {};
-                            const orderedMetrics = {'Page Authority': metrics.page_authority, 'Domain Authority': metrics.domain_authority, 'Spam Score': metrics.spam_score };
-                            for(const key in metrics){
-                                if(!['page_authority', 'domain_authority', 'spam_score'].includes(key)) {
-                                    orderedMetrics[snakeToTitleCase(key)] = metrics[key];
-                                }
-                            }
-                             rows.push({'Query': res.data.site_query?.query || query, 'Scope': res.data.site_query?.scope || na, 'Original Query': res.data.site_query?.original_site_query?.query || query, ...orderedMetrics });
-                            break;
-                        }
-                        case 'brandAuthority':
-                            rows.push({'Site Query': res.data.site_query?.query || na, 'Scope': res.data.site_query?.scope || na, 'Brand Authority Score': res.data.site_metrics?.brand_authority_score ?? na, 'Original Query': res.data.site_query?.original_site_query?.query || query });
-                            break;
-                        case 'topPages':
-                             (res.data.top_pages || []).forEach(page => {
-                                const pageData = { 'Query': query, 'Scope': originalParams.scope, ...page };
-                                const titleCased = {};
-                                for(const key in pageData) { titleCased[snakeToTitleCase(key)] = pageData[key]; }
-                                rows.push(titleCased);
-                             });
-                             if (!res.data.top_pages || res.data.top_pages.length === 0) rows.push({ Query: query, Status: 'No top pages found' });
-                            break;
-                        case 'keywordMetrics': {
-                            const metricTypeMap = { 'all': 'All Keyword Metrics', 'volume': 'Search Volume', 'difficulty': 'Difficulty', 'opportunity': 'Organic CTR', 'priority': 'Priority' };
-                            rows.push({'Keyword': res.data.serp_query?.keyword || query, 'API Call': metricTypeMap[originalParams.metricType] || originalParams.metricType, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Volume': res.data.keyword_metrics?.volume ?? na, 'Difficulty': res.data.keyword_metrics?.difficulty ?? na, 'Opportunity CTR': res.data.keyword_metrics?.organic_ctr ?? na, 'Priority': res.data.keyword_metrics?.priority ?? na });
-                            break;
-                        }
-                        case 'searchIntent': {
-                             const intentData = {};
-                             (res.data.keyword_intent?.all_intents || []).forEach(intent => {
-                                intentData[`${snakeToTitleCase(intent.label)} Score`] = intent.score ?? na;
-                             });
-                             rows.push({'Keyword': res.data.serp_query?.keyword || query, 'Locale': res.data.serp_query?.locale || na, 'Device': res.data.serp_query?.device || na, 'Engine': res.data.serp_query?.engine || na, 'Primary Intent': (res.data.keyword_intent?.primary_intents || []).join(', ') || na, ...intentData });
-                             break;
-                        }
-                        case 'rankingKeywords': {
-                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale };
-                            if(res.data.ranking_keywords?.length > 0){
-                                res.data.ranking_keywords.forEach(kw => { rows.push({ ...baseInfo, 'Keyword': kw.keyword, 'Ranking Page': kw.ranking_page, 'Rank Position': kw.rank_position, 'Difficulty': kw.difficulty, 'Volume': kw.volume }); });
-                            } else { rows.push({ ...baseInfo, Status: 'No ranking keywords found' }); }
-                            break;
-                        }
-                        case 'relatedKeywords': {
-                             const baseInfo = { 'Keyword': query, 'Locale': res.data.serp_query?.locale, 'Device': res.data.serp_query?.device, 'Engine': res.data.serp_query?.engine };
-                             if(res.data.suggestions?.length > 0){
-                                res.data.suggestions.forEach(sug => { rows.push({ ...baseInfo, 'Suggested Keyword': sug.keyword, 'Relevance': sug.relevance }); });
-                             } else { rows.push({ ...baseInfo, Status: 'No suggestions found' }); }
-                             break;
-                        }
-                        case 'keywordCount': {
-                            const positions = res.data.ranking_keyword_count?.position || {};
-                            const rankCounts = {};
-                            for (let i = 1; i <= 50; i++) {
-                                rankCounts[`Rank ${i} Count`] = positions[`rank_${i}`] ?? 0;
-                            }
-                            rows.push({'Query': query, 'Scope': originalParams.scope, 'Locale': originalParams.locale, 'Total Ranking Count': res.data.ranking_keyword_count?.total ?? na, ...rankCounts });
-                            break;
-                        }
-                        case 'anchorText': {
-                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
-                            if(res.data.anchor_texts?.length > 0){
-                                res.data.anchor_texts.forEach(at => { rows.push({ ...baseInfo, 'Anchor Text': at.text, 'External Root Domains': at.external_root_domains, 'External Pages': at.external_pages }); });
-                            } else { rows.push({ ...baseInfo, Status: 'No anchor texts found' }); }
-                            break;
-                        }
-                        case 'recentlyGainedLinks':
-                            (res.data.gained_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
-                            if (!res.data.gained_linking_domains || res.data.gained_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently gained links found' });
-                            break;
-                        case 'recentlyLostLinks':
-                            (res.data.lost_linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
-                             if (!res.data.lost_linking_domains || res.data.lost_linking_domains.length === 0) rows.push({ Query: query, Status: 'No recently lost links found' });
-                            break;
-                        case 'linkingDomains':
-                            (res.data.linking_domains || []).forEach(link => rows.push(processLinkMetrics(link, query)));
-                            if (!res.data.linking_domains || res.data.linking_domains.length === 0) rows.push({ Query: query, Status: 'No linking domains found' });
-                            break;
-                        
-                        case 'finalRedirect':
-                            rows.push({ 'Query': query, 'Scope': originalParams.scope, 'Original Query': res.data.site_query?.original_site_query?.query || query, 'Destination': res.data.destination || 'No redirect found' });
-                            break;
-                        case 'linkIntersect': {
-                            const intersectData = res.data.link_intersects || [];
-                            if (intersectData.length === 0) {
-                                rows.push({ Status: 'No intersecting links found' });
-                            } else {
-                                const baseInfo = {
-                                    'Linking To': (res.data.is_linking_to || []).map(t => t.query).join(', '),
-                                    'Not Linking To': (res.data.not_linking_to || []).map(t => t.query).join(', '),
-                                    'Minimum Matching Targets': res.data.options?.minimum_matching_targets || na,
-                                    'Scope': res.data.options?.scope || na,
-                                    'Sort': res.data.options?.sort || na
-                                };
-                                intersectData.forEach(intersect => {
-                                    (intersect.matching_source_pages || [{page: 'N/A', page_authority: 'N/A'}]).forEach(sourcePage => {
-                                        rows.push({
-                                            ...baseInfo,
-                                            'Intersecting Domain': intersect.page,
-                                            'Intersecting Title': intersect.title,
-                                            'Intersecting DA': intersect.domain_authority,
-                                            'Intersecting Spam Score': intersect.spam_score,
-                                            'Matching Target Indexes': (intersect.matching_target_indexes || []).join(', '),
-                                            'Source Page': sourcePage.page,
-                                            'Source PA': sourcePage.page_authority
-                                        });
-                                    });
-                                });
-                            }
-                            break;
-                        }
-                        case 'listLinks':
-                        case 'filterLinksByAnchor':
-                        case 'filterLinksByDomain':
-                            (res.data.links || []).forEach(link => {
-                                const sourceMetrics = link.source_site_metrics || {};
-                                const targetMetrics = link.target_site_metrics || {};
-                                const linkInfo = { ...link };
-                                delete linkInfo.source_site_metrics;
-                                delete linkInfo.target_site_metrics;
-
-                                const row = {};
-                                for (const key in sourceMetrics) row[`Source ${snakeToTitleCase(key)}`] = sourceMetrics[key];
-                                for (const key in targetMetrics) row[`Target ${snakeToTitleCase(key)}`] = targetMetrics[key];
-                                for (const key in linkInfo) row[snakeToTitleCase(key)] = linkInfo[key];
-                                rows.push(row);
-                            });
-                             if (!res.data.links || res.data.links.length === 0) rows.push({ Query: query, Status: 'No links found' });
-                            break;
-                        case 'linkStatus':
-                            rows.push({ 'Target Query': res.data.target_site_query?.query, 'Source Query': res.data.source_site_query?.query, 'Exists': res.data.exists });
-                            break;
-                    }
-                });
-
+                const rows = DataProcessor.processResults(results, method, originalParams);
+                
                 if (rows.length > 0) {
                     const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
-                    columns.push(...allKeys.map(key => ({ title: key, field: key })));
-                    tableData.push(...rows);
+                    const columns = allKeys.map(key => ({ title: key, field: key }));
+                    
+                    table = new Tabulator("#results-table", {
+                        data: rows,
+                        columns: columns,
+                        layout: "fitDataFill",
+                        pagination: "local",
+                        paginationSize: 100,
+                        movableColumns: true,
+                        resizableRows: false,
+                    });
+
+                    allDOMElements.filterFieldsContainer.innerHTML = '';
+                    columns.forEach(col => {
+                        if (col.field) {
+                            const div = document.createElement('div');
+                            const label = document.createElement('label');
+                            label.textContent = col.title;
+                            label.className = 'block text-sm font-medium text-[var(--text-secondary)]';
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.dataset.field = col.field;
+                            input.className = 'w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
+                            div.appendChild(label);
+                            div.appendChild(input);
+                            allDOMElements.filterFieldsContainer.appendChild(div);
+                        }
+                    });
                 }
-                
-                table = new Tabulator("#results-table", {
-                    data: tableData,
-                    columns: columns,
-                    layout: "fitDataFill",
-                    pagination: "local",
-                    paginationSize: 100,
-                    movableColumns: true,
-                    resizableRows: false,
-                });
-
-                allDOMElements.filterFieldsContainer.innerHTML = '';
-                columns.forEach(col => {
-                    if (col.field) {
-                        const div = document.createElement('div');
-                        const label = document.createElement('label');
-                        label.textContent = col.title;
-                        label.className = 'block text-sm font-medium text-[var(--text-secondary)]';
-                        const input = document.createElement('input');
-                        input.type = 'text';
-                        input.dataset.field = col.field;
-                        input.className = 'w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
-                        div.appendChild(label);
-                        div.appendChild(input);
-                        allDOMElements.filterFieldsContainer.appendChild(div);
-                    }
-                });
-
             }
 
             function applyTableFilters() {
@@ -1251,6 +1290,15 @@
             setupEventListeners();
             loadApiKey();
             allDOMElements.submitBtn.disabled = true;
+            
+            // Performance monitoring
+            performanceMonitor.mark('init-complete');
+            performanceMonitor.measure('initialization', 'dom-ready', 'init-complete');
+            
+            // Log performance metrics after a short delay
+            setTimeout(() => {
+                performanceMonitor.logMetrics();
+            }, 100);
 
         });
     </script>
