@@ -407,19 +407,21 @@
             <label for="methodSelector" id="method-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">API Method</label>
             <select id="methodSelector" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 ring-[var(--text-accent)]" aria-describedby="method-help">
                 <option value="" disabled selected>-- Select a Method --</option>
-                <optgroup label="Site Metrics">
-                    <option value="siteMetrics">Fetch Site Metrics</option>
-                    <option value="brandAuthority">Fetch Brand Authority</option>
+                <optgroup label="Keyword Research">
+                    <option value="searchIntent">Fetch Search Intent</option>
+                    <option value="keywordMetrics">Fetch Keyword Metrics</option>
+                    <option value="relatedKeywords">List Related Keywords</option>
+                </optgroup>
+                <optgroup label="Competitive Research">
+                    <option value="rankingKeywords">List Ranking Keywords</option>
+                    <option value="keywordCount">Count Ranking Keywords</option>
                     <option value="topPages">List Top Pages</option>
                 </optgroup>
-                 <optgroup label="Keyword Research">
-                    <option value="keywordMetrics">Fetch Keyword Metrics</option>
-                    <option value="searchIntent">Fetch Search Intent</option>
-                    <option value="rankingKeywords">List Ranking Keywords</option>
-                    <option value="relatedKeywords">List Related Keywords</option>
-                    <option value="keywordCount">Count Ranking Keywords</option>
+                <optgroup label="Website Research">
+                    <option value="siteMetrics">Fetch Site Metrics</option>
+                    <option value="brandAuthority">Fetch Brand Authority</option>
                 </optgroup>
-                <optgroup label="Link Building">
+                <optgroup label="Link Building Research">
                     <option value="anchorText">Get Anchor Texts Lists</option>
                     <option value="linkingDomains">List Linking Domains</option>
                     <option value="recentlyGainedLinks">List Recently Gained Links</option>
@@ -429,9 +431,9 @@
                     <option value="filterLinksByAnchor">Filter Links by Anchor Text</option>
                     <option value="filterLinksByDomain">Filter Links by Domain</option>
                 </optgroup>
-                <optgroup label="Technical SEO">
-                     <option value="finalRedirect">Get Final Redirect Target</option>
-                     <option value="linkStatus">Get Link Status</option>
+                <optgroup label="Link Checks">
+                    <option value="finalRedirect">Get Final Redirect Target</option>
+                    <option value="linkStatus">Get Link Status</option>
                 </optgroup>
             </select>
             <div id="method-help" class="sr-only">Choose the Moz API method you want to use</div>
