@@ -765,8 +765,42 @@
                             return links;
                         },
                         
-                        filterLinksByAnchor: () => DataProcessor.methodProcessors.listLinks(),
-                        filterLinksByDomain: () => DataProcessor.methodProcessors.listLinks(),
+                        filterLinksByAnchor: () => {
+                            const links = [];
+                            (res.data.links || []).forEach(link => {
+                                const sourceMetrics = link.source_site_metrics || {};
+                                const targetMetrics = link.target_site_metrics || {};
+                                const linkInfo = { ...link };
+                                delete linkInfo.source_site_metrics;
+                                delete linkInfo.target_site_metrics;
+
+                                const row = {};
+                                for (const key in sourceMetrics) row[`Source ${DataProcessor.snakeToTitleCase(key)}`] = sourceMetrics[key];
+                                for (const key in targetMetrics) row[`Target ${DataProcessor.snakeToTitleCase(key)}`] = targetMetrics[key];
+                                for (const key in linkInfo) row[DataProcessor.snakeToTitleCase(key)] = linkInfo[key];
+                                links.push(row);
+                            });
+                            if (!res.data.links || res.data.links.length === 0) links.push({ Query: query, Status: 'No links found' });
+                            return links;
+                        },
+                        filterLinksByDomain: () => {
+                            const links = [];
+                            (res.data.links || []).forEach(link => {
+                                const sourceMetrics = link.source_site_metrics || {};
+                                const targetMetrics = link.target_site_metrics || {};
+                                const linkInfo = { ...link };
+                                delete linkInfo.source_site_metrics;
+                                delete linkInfo.target_site_metrics;
+
+                                const row = {};
+                                for (const key in sourceMetrics) row[`Source ${DataProcessor.snakeToTitleCase(key)}`] = sourceMetrics[key];
+                                for (const key in targetMetrics) row[`Target ${DataProcessor.snakeToTitleCase(key)}`] = targetMetrics[key];
+                                for (const key in linkInfo) row[DataProcessor.snakeToTitleCase(key)] = linkInfo[key];
+                                links.push(row);
+                            });
+                            if (!res.data.links || res.data.links.length === 0) links.push({ Query: query, Status: 'No links found' });
+                            return links;
+                        },
                         
                         linkStatus: () => ({ 'Target Query': res.data.target_site_query?.query, 'Source Query': res.data.source_site_query?.query, 'Exists': res.data.exists })
                     };
