@@ -2012,6 +2012,8 @@
                     const linkingDomains = sm.root_domains_to_page ?? 'N/A';
                     const inboundLinks = sm.external_pages_to_page ?? 'N/A';
                     const pageAuthority = sm.page_authority ?? 'N/A';
+                    const idist = resultsByUrl[u].intentDistribution || {};
+                    const anchorsInline = (resultsByUrl[u].topAnchors || []).slice(0, 5);
                     let cardClasses = '';
                     let gradientBar = '';
                     if (idx === 0) {
@@ -2037,57 +2039,49 @@
                     html += `<div><div class="text-[var(--text-secondary)] text-xs">Inbound Links</div><div class="font-bold">${typeof inboundLinks === 'number' ? formatNumber(inboundLinks) : inboundLinks}</div></div>`;
                     html += `<div><div class="text-[var(--text-secondary)] text-xs">Page Authority</div><div class="font-bold">${pageAuthority}</div></div>`;
                     html += '</div>';
+                    // Inline Search Intent Distribution (compact)
+                    html += '<div class="mt-3">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-1 uppercase tracking-wide">Search Intent</div>';
+                    html += '<div class="grid grid-cols-2 md:grid-cols-5 gap-2">';
+                    ['Informational','Transactional','Commercial','Navigational','Unknown'].forEach(k => {
+                        html += `<div><div class=\"text-[var(--text-secondary)] text-[11px]\">${k}</div><div class=\"font-bold text-sm text-[var(--text-primary)]\">${idist[k] ?? 0}%</div></div>`;
+                    });
+                    html += '</div>';
+                    html += '</div>';
+
+                    // Inline Top Inbound Anchors
+                    html += '<div class="mt-3">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-1 uppercase tracking-wide">Top Inbound Anchor Texts</div>';
+                    if (anchorsInline.length === 0) {
+                        html += '<div class="text-[var(--text-secondary)] text-xs">No anchor texts found.</div>';
+                    } else {
+                        html += '<ul class="text-sm space-y-1">';
+                        anchorsInline.forEach(a => {
+                            html += `<li class=\"flex justify-between gap-3\"><span class=\"truncate max-w-[70%] text-[var(--text-primary)]\">${a.text || 'N/A'}</span><span class=\"text-[var(--text-secondary)] text-xs\">${a.external_root_domains ?? 'N/A'} domains</span></li>`;
+                        });
+                        html += '</ul>';
+                    }
+                    html += '</div>';
                     html += '</div>';
                 });
                 html += '</div>';
-
-                // Selector to choose details per URL
-                html += '<div class="flex items-center justify-between mb-2">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Details</h4>';
+                // Unified Ranking Keywords section with selector
+                html += '<div id="kta-keywords-section" class="mt-6">';
+                html += '<div class="flex items-center justify-between mb-4">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Ranking Keywords</h4>';
                 html += '<div><label for="kta-url-selector" class="inline-block text-sm font-medium text-[var(--text-secondary)] mr-2">View Details For:</label>';
                 html += '<select id="kta-url-selector" class="inline-block bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)]">';
-                urls.forEach((u, idx) => { html += `<option value="${idx}">URL ${idx + 1}</option>`; });
+                urls.forEach((u, idx) => { html += `<option value=\"${idx}\">URL ${idx + 1}: ${u}</option>`; });
                 html += '</select></div></div>';
-
-                // Quick keyword count summary per URL (debug visibility aid)
-                html += '<div class="text-xs text-[var(--text-secondary)] mb-2">';
-                html += urls.map((u, idx) => {
-                    const arr = Array.isArray(resultsByUrl[u].rankingKeywords)
-                        ? resultsByUrl[u].rankingKeywords
-                        : (resultsByUrl[u].rankingKeywords && resultsByUrl[u].rankingKeywords.data && Array.isArray(resultsByUrl[u].rankingKeywords.data.ranking_keywords)
-                            ? resultsByUrl[u].rankingKeywords.data.ranking_keywords
-                            : []);
-                    return `URL ${idx + 1} keywords: <span class=\"text-[var(--text-primary)]\">${arr.length}</span>`;
-                }).join(' • ');
-                html += '</div>';
-
-                // Per-URL panels: intent distribution + keywords + anchors
                 urls.forEach((u, idx) => {
-                    const res = resultsByUrl[u];
-                    const idist = res.intentDistribution || {};
-                    // TEMP: show all panels to guarantee visibility while debugging
-                    html += `<div id="kta-panel-${idx}" class="space-y-4">`;
-                    // Panel header with URL label for clarity
-                    html += `<div class="mb-1"><span class="text-sm font-semibold text-[var(--text-secondary)]">URL ${idx + 1}</span> <span class="text-xs text-[var(--text-secondary)] break-all">— ${u}</span></div>`;
-                    html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
-                    html += '<div class="text-sm font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Search Intent Distribution</div>';
-                    html += '<div class="grid grid-cols-2 md:grid-cols-5 gap-3">';
-                    ['Informational','Transactional','Commercial','Navigational','Unknown'].forEach(k => {
-                        html += `<div><div class="text-xs text-[var(--text-secondary)]">${k}</div><div class="text-lg font-bold text-[var(--text-primary)]">${idist[k] ?? 0}%</div></div>`;
-                    });
-                    html += '</div></div>';
-
-                    // Ranking keywords (collapsible)
-                    html += `<div class=\"mt-2\"><div class=\"flex items-center justify-between mb-2\"><h5 class=\"font-semibold text-[var(--text-primary)]\">Ranking Keywords</h5><button id=\"toggle-kta-kw-${idx}\" class=\"text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold\">Collapse</button></div>`;
-                    html += `<div id=\"kta-kw-content-${idx}\" class=\"\">`;
-                    // Panel-level debug badge to confirm render counts (outside of table for valid markup)
+                    const res = resultsByUrl[u] || {};
                     const rkArray = Array.isArray(res.rankingKeywords)
                         ? res.rankingKeywords
                         : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
                             ? res.rankingKeywords.data.ranking_keywords
                             : []);
                     const visibleKeywords = rkArray.slice(0, limit);
-                    html += `<div class=\"text-xs text-[var(--text-secondary)] mb-2\">Keywords rendered in this panel: <span class=\"text-[var(--text-primary)]\">${visibleKeywords.length}</span></div>`;
+                    html += `<div id=\"kta-keywords-panel-${idx}\" class=\"${idx === 0 ? '' : 'hidden'}\">`;
                     html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Intent</th>';
@@ -2096,50 +2090,24 @@
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Difficulty</th>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Volume</th>';
                     html += '</tr></thead><tbody>';
-                    // Note: visibleKeywords computed above
                     if (visibleKeywords.length === 0) {
                         html += '<tr><td colspan="6" class="px-4 py-2 text-[var(--text-secondary)]">No ranking keywords found.</td></tr>';
                     }
                     visibleKeywords.forEach(kw => {
-                        const intent = res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()] || 'Unknown';
+                        const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || 'Unknown';
                         html += '<tr class="border-b border-[var(--border-primary)]">';
-                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.keyword || 'N/A'}</td>`;
-                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${intent}</td>`;
-                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.rank_position ?? 'N/A'}</td>`;
-                        html += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm break-all max-w-xs">${kw.ranking_page || 'N/A'}</td>`;
-                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.difficulty ?? 'N/A'}</td>`;
-                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.volume ?? 'N/A'}</td>`;
+                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${kw.keyword || 'N/A'}</td>`;
+                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${intent}</td>`;
+                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${kw.rank_position ?? 'N/A'}</td>`;
+                        html += `<td class=\"px-4 py-2 text-[var(--text-secondary)] text-sm break-all max-w-xs\">${kw.ranking_page || 'N/A'}</td>`;
+                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${kw.difficulty ?? 'N/A'}</td>`;
+                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${kw.volume ?? 'N/A'}</td>`;
                         html += '</tr>';
                     });
                     html += '</tbody></table></div>';
-                    // Simple debug list fallback to ensure rows render in some form
-                    const debugList = visibleKeywords.slice(0, 5).map(k => k.keyword || 'N/A').join(', ');
-                    html += `<div class=\"text-xs text-[var(--text-secondary)] mt-1\">Preview: <span class=\"text-[var(--text-primary)]\">${debugList}</span></div>`;
-                    html += '</div></div>';
-
-                    // Top anchors (collapsible)
-                    html += '<div class="mt-2">';
-                    html += `<div class=\"flex items-center justify-between mb-2\"><h5 class=\"font-semibold text-[var(--text-primary)]\">Top Inbound Anchor Texts (by external domains)</h5><button id=\"toggle-kta-anchors-${idx}\" class=\"text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold\">Collapse</button></div>`;
-                    html += `<div id=\"kta-anchors-content-${idx}\">`;
-                    html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Anchor Text</th>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">External Root Domains</th>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">External Pages</th>';
-                    html += '</tr></thead><tbody>';
-                    const anchors = res.topAnchors || [];
-                    if (anchors.length === 0) {
-                        html += '<tr><td colspan="3" class="px-4 py-2 text-[var(--text-secondary)]">No anchor texts found.</td></tr>';
-                    }
-                    anchors.forEach(a => {
-                        html += '<tr class="border-b border-[var(--border-primary)]">';
-                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.text || 'N/A'}</td>`;
-                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.external_root_domains ?? 'N/A'}</td>`;
-                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.external_pages ?? 'N/A'}</td>`;
-                        html += '</tr>';
-                    });
-                    html += '</tbody></table></div>';
-                    html += '</div></div>';
+                    html += '</div>';
                 });
+                html += '</div>';
 
                 // Overlapping keywords across URLs
                 html += '<div id="url-overlap-section" class="mt-6">';
@@ -2168,70 +2136,7 @@
                 }
                 html += '</div>';
 
-                // Keyword Gap between URLs (what one URL ranks for that others do not)
-                html += '<div id="url-gap-section" class="mt-6">';
-                html += '<div class="flex items-center justify-between mb-4">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Keyword Gap Between URLs</h4>';
-                html += '</div>';
-                // Build per-URL keyword sets
-                const perUrlKeywords = {};
-                urls.forEach(u => {
-                    const arr = Array.isArray(resultsByUrl[u].rankingKeywords)
-                        ? resultsByUrl[u].rankingKeywords
-                        : (resultsByUrl[u].rankingKeywords && resultsByUrl[u].rankingKeywords.data && Array.isArray(resultsByUrl[u].rankingKeywords.data.ranking_keywords)
-                            ? resultsByUrl[u].rankingKeywords.data.ranking_keywords
-                            : []);
-                    perUrlKeywords[u] = new Set(arr.map(k => (k.keyword || '').toLowerCase()).filter(Boolean));
-                });
-                // Compute gaps for each URL vs others
-                const gapBlocks = [];
-                urls.forEach((u, idx) => {
-                    const allOthers = urls.filter(x => x !== u);
-                    const othersUnion = new Set();
-                    allOthers.forEach(o => { perUrlKeywords[o].forEach(k => othersUnion.add(k)); });
-                    const srcArray = Array.isArray(resultsByUrl[u].rankingKeywords)
-                        ? resultsByUrl[u].rankingKeywords
-                        : (resultsByUrl[u].rankingKeywords && resultsByUrl[u].rankingKeywords.data && Array.isArray(resultsByUrl[u].rankingKeywords.data.ranking_keywords)
-                            ? resultsByUrl[u].rankingKeywords.data.ranking_keywords
-                            : []);
-                    const gaps = srcArray.filter(k => {
-                        const kw = (k.keyword || '').toLowerCase();
-                        return kw && !othersUnion.has(kw);
-                    });
-                    gapBlocks.push({ url: u, idx, gaps });
-                });
-                const totalGapCount = gapBlocks.reduce((s, g) => s + g.gaps.length, 0);
-                if (totalGapCount === 0) {
-                    html += '<p class="text-[var(--text-secondary)]">No keyword gaps found between the selected URLs.</p>';
-                } else {
-                    gapBlocks.forEach(block => {
-                        html += `<div class="mb-4"><div class="text-sm text-[var(--text-secondary)] mb-2">Unique keywords for URL ${block.idx + 1} only</div>`;
-                        html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
-                        html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
-                        html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Rank</th>';
-                        html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Page</th>';
-                        html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Difficulty</th>';
-                        html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Volume</th>';
-                        html += '</tr></thead><tbody>';
-                        const limitGap = Math.max(5, Math.min(limit, 50));
-                        const list = block.gaps.slice(0, limitGap);
-                        if (list.length === 0) {
-                            html += '<tr><td colspan="5" class="px-4 py-2 text-[var(--text-secondary)]">No unique keywords for this URL.</td></tr>';
-                        } else {
-                            list.forEach(kw => {
-                                html += '<tr class="border-b border-[var(--border-primary)]">';
-                                html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.keyword || 'N/A'}</td>`;
-                                html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.rank_position ?? 'N/A'}</td>`;
-                                html += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm break-all max-w-xs">${kw.ranking_page || 'N/A'}</td>`;
-                                html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.difficulty ?? 'N/A'}</td>`;
-                                html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.volume ?? 'N/A'}</td>`;
-                                html += '</tr>';
-                            });
-                        }
-                        html += '</tbody></table></div></div>';
-                    });
-                }
-                html += '</div>';
+                // (Keyword Gap removed per request)
 
                 html += '</div>';
 
@@ -2241,27 +2146,17 @@
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.add('hidden');
 
-                // TEMP: disable selector-toggle while ensuring both panels are visible
-
-                // Wire collapsible toggles
-                urls.forEach((_, idx) => {
-                    const kwBtn = document.getElementById(`toggle-kta-kw-${idx}`);
-                    const kwContent = document.getElementById(`kta-kw-content-${idx}`);
-                    if (kwBtn && kwContent) {
-                        kwBtn.addEventListener('click', () => {
-                            const hidden = kwContent.classList.toggle('hidden');
-                            kwBtn.textContent = hidden ? 'Expand' : 'Collapse';
+                // Wire URL selector for unified Ranking Keywords panels
+                const ktaSelector = document.getElementById('kta-url-selector');
+                if (ktaSelector) {
+                    ktaSelector.addEventListener('change', (e) => {
+                        const selected = parseInt(e.target.value);
+                        urls.forEach((_, idx) => {
+                            const panel = document.getElementById(`kta-keywords-panel-${idx}`);
+                            if (panel) panel.classList.toggle('hidden', idx !== selected);
                         });
-                    }
-                    const anBtn = document.getElementById(`toggle-kta-anchors-${idx}`);
-                    const anContent = document.getElementById(`kta-anchors-content-${idx}`);
-                    if (anBtn && anContent) {
-                        anBtn.addEventListener('click', () => {
-                            const hidden = anContent.classList.toggle('hidden');
-                            anBtn.textContent = hidden ? 'Expand' : 'Collapse';
-                        });
-                    }
-                });
+                    });
+                }
                 } catch (err) {
                     displayError('Render error in Keyword Targeting Analysis: ' + (err && err.message ? err.message : err));
                 }
