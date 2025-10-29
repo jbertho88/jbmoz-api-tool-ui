@@ -1992,7 +1992,7 @@
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
-
+                try {
                 const { urls, locale, limit, resultsByUrl, overlaps } = payload;
                 const formatNumber = (num) => {
                     if (typeof num !== 'number' || num === 'N/A') return num;
@@ -2048,6 +2048,18 @@
                 html += '<select id="kta-url-selector" class="inline-block bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)]">';
                 urls.forEach((u, idx) => { html += `<option value="${idx}">URL ${idx + 1}</option>`; });
                 html += '</select></div></div>';
+
+                // Quick keyword count summary per URL (debug visibility aid)
+                html += '<div class="text-xs text-[var(--text-secondary)] mb-2">';
+                html += urls.map((u, idx) => {
+                    const arr = Array.isArray(resultsByUrl[u].rankingKeywords)
+                        ? resultsByUrl[u].rankingKeywords
+                        : (resultsByUrl[u].rankingKeywords && resultsByUrl[u].rankingKeywords.data && Array.isArray(resultsByUrl[u].rankingKeywords.data.ranking_keywords)
+                            ? resultsByUrl[u].rankingKeywords.data.ranking_keywords
+                            : []);
+                    return `URL ${idx + 1} keywords: <span class=\"text-[var(--text-primary)]\">${arr.length}</span>`;
+                }).join(' • ');
+                html += '</div>';
 
                 // Per-URL panels: intent distribution + keywords + anchors
                 urls.forEach((u, idx) => {
@@ -2251,6 +2263,9 @@
                         });
                     }
                 });
+                } catch (err) {
+                    displayError('Render error in Keyword Targeting Analysis: ' + (err && err.message ? err.message : err));
+                }
             }
 
             function showCompetitiveDashboard(data) {
