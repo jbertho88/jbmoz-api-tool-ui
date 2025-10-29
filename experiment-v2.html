@@ -2012,7 +2012,24 @@
                     const linkingDomains = sm.root_domains_to_page ?? 'N/A';
                     const inboundLinks = sm.external_pages_to_page ?? 'N/A';
                     const pageAuthority = sm.page_authority ?? 'N/A';
-                    html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                    let cardClasses = '';
+                    let gradientBar = '';
+                    if (idx === 0) {
+                        cardClasses = 'bg-gradient-to-br from-[var(--text-accent)]/10 to-[var(--bg-container)] border-2 border-[var(--text-accent)] rounded-lg p-4 shadow-lg relative';
+                        gradientBar = '<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--text-accent)] to-transparent rounded-t-lg"></div>';
+                    } else {
+                        const competitorBorders = [
+                            'border-2 border-fuchsia-400',
+                            'border-2 border-emerald-400',
+                            'border-2 border-violet-400'
+                        ];
+                        const gradientColors = ['from-fuchsia-400 via-fuchsia-500 to-transparent', 'from-emerald-400 via-emerald-500 to-transparent', 'from-violet-400 via-violet-500 to-transparent'];
+                        const gi = (idx - 1) % competitorBorders.length;
+                        cardClasses = 'bg-[var(--bg-container)] ' + competitorBorders[gi] + ' rounded-lg p-4 shadow-md relative';
+                        gradientBar = `<div class=\"absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradientColors[gi]} rounded-t-lg\"></div>`;
+                    }
+                    html += `<div class="${cardClasses}">`;
+                    html += gradientBar;
                     html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1">URL ${idx + 1}</h4>`;
                     html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3">${u}</p>`;
                     html += '<div class="grid grid-cols-3 gap-3">';
@@ -2045,7 +2062,9 @@
                     });
                     html += '</div></div>';
 
-                    // Ranking keywords
+                    // Ranking keywords (collapsible)
+                    html += `<div class=\"mt-2\"><div class=\"flex items-center justify-between mb-2\"><h5 class=\"font-semibold text-[var(--text-primary)]\">Ranking Keywords</h5><button id=\"toggle-kta-kw-${idx}\" class=\"text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold\">Collapse</button></div>`;
+                    html += `<div id=\"kta-kw-content-${idx}\" class=\"\">`;
                     html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Intent</th>';
@@ -2054,7 +2073,11 @@
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Difficulty</th>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Volume</th>';
                     html += '</tr></thead><tbody>';
-                    res.rankingKeywords.slice(0, limit).forEach(kw => {
+                    const visibleKeywords = (res.rankingKeywords || []).slice(0, limit);
+                    if (visibleKeywords.length === 0) {
+                        html += '<tr><td colspan="6" class="px-4 py-2 text-[var(--text-secondary)]">No ranking keywords found.</td></tr>';
+                    }
+                    visibleKeywords.forEach(kw => {
                         const intent = res.searchIntent[kw.keyword] || 'Unknown';
                         html += '<tr class="border-b border-[var(--border-primary)]">';
                         html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.keyword || 'N/A'}</td>`;
@@ -2066,16 +2089,22 @@
                         html += '</tr>';
                     });
                     html += '</tbody></table></div>';
+                    html += '</div></div>';
 
-                    // Top anchors
+                    // Top anchors (collapsible)
                     html += '<div class="mt-2">';
-                    html += '<h5 class="font-semibold text-[var(--text-primary)] mb-2">Top Inbound Anchor Texts (by external domains)</h5>';
+                    html += `<div class=\"flex items-center justify-between mb-2\"><h5 class=\"font-semibold text-[var(--text-primary)]\">Top Inbound Anchor Texts (by external domains)</h5><button id=\"toggle-kta-anchors-${idx}\" class=\"text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold\">Collapse</button></div>`;
+                    html += `<div id=\"kta-anchors-content-${idx}\">`;
                     html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Anchor Text</th>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">External Root Domains</th>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">External Pages</th>';
                     html += '</tr></thead><tbody>';
-                    (res.topAnchors || []).forEach(a => {
+                    const anchors = res.topAnchors || [];
+                    if (anchors.length === 0) {
+                        html += '<tr><td colspan="3" class="px-4 py-2 text-[var(--text-secondary)]">No anchor texts found.</td></tr>';
+                    }
+                    anchors.forEach(a => {
                         html += '<tr class="border-b border-[var(--border-primary)]">';
                         html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.text || 'N/A'}</td>`;
                         html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.external_root_domains ?? 'N/A'}</td>`;
@@ -2083,7 +2112,7 @@
                         html += '</tr>';
                     });
                     html += '</tbody></table></div>';
-                    html += '</div>';
+                    html += '</div></div>';
                 });
 
                 // Overlapping keywords across URLs
@@ -2131,6 +2160,26 @@
                         });
                     });
                 }
+
+                // Wire collapsible toggles
+                urls.forEach((_, idx) => {
+                    const kwBtn = document.getElementById(`toggle-kta-kw-${idx}`);
+                    const kwContent = document.getElementById(`kta-kw-content-${idx}`);
+                    if (kwBtn && kwContent) {
+                        kwBtn.addEventListener('click', () => {
+                            const hidden = kwContent.classList.toggle('hidden');
+                            kwBtn.textContent = hidden ? 'Expand' : 'Collapse';
+                        });
+                    }
+                    const anBtn = document.getElementById(`toggle-kta-anchors-${idx}`);
+                    const anContent = document.getElementById(`kta-anchors-content-${idx}`);
+                    if (anBtn && anContent) {
+                        anBtn.addEventListener('click', () => {
+                            const hidden = anContent.classList.toggle('hidden');
+                            anBtn.textContent = hidden ? 'Expand' : 'Collapse';
+                        });
+                    }
+                });
             }
 
             function showCompetitiveDashboard(data) {
