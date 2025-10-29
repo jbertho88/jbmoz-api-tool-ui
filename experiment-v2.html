@@ -3321,7 +3321,11 @@
                         break;
                     }
                     case 'keywordTargetingAnalysis': {
-                        const url = getInputValue('ktaUrl')?.trim();
+                        const urls = getInputValue('ktaUrl')
+                            ?.split(/[\n,]/)
+                            .map(s => s.trim())
+                            .filter(Boolean) || [];
+                        const url = urls[0];
                         if (!url) throw new Error('Please enter a URL.');
                         payload.params = {
                             url,
