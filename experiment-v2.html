@@ -2002,8 +2002,15 @@
                 };
 
                 let html = '<div id="keyword-targeting-dashboard" class="space-y-6">';
-                html += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-2">Keyword Targeting Analysis</h3>';
+                html += '<div class="flex items-start justify-between gap-3">';
+                html += '<div>';
+                html += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-1">Keyword Targeting Analysis</h3>';
                 html += `<p class="text-sm text-[var(--text-secondary)]">URLs: <span class="text-[var(--text-primary)]">${urls.length}</span> • Locale: ${locale}</p>`;
+                html += '</div>';
+                html += '<div class="shrink-0">';
+                html += '<button id="kta-export-csv-btn" class="px-3 py-2 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">Export CSV</button>';
+                html += '</div>';
+                html += '</div>';
 
                 // Cards per URL
                 html += '<div class="metrics-grid-container" style="display: grid !important; grid-template-columns: repeat(' + Math.min(urls.length, 4) + ', minmax(0, 1fr)) !important;">';
@@ -2063,11 +2070,14 @@
                         html += '<div class="text-[var(--text-secondary)] text-xs">No anchor texts found.</div>';
                     } else {
                         html += '<div class="space-y-2">';
-                        anchorsInline.forEach(a => {
+                        anchorsInline.forEach((a, aIdx) => {
                             const domains = (typeof a.external_root_domains === 'number') ? formatNumber(a.external_root_domains) : (a.external_root_domains ?? 'N/A');
                             const pages = (typeof a.external_pages === 'number') ? formatNumber(a.external_pages) : (a.external_pages ?? 'N/A');
                             html += '<div class="text-sm">';
-                            html += `<div class=\"font-semibold text-[var(--text-primary)] truncate\">${a.text || 'N/A'}</div>`;
+                            html += `<div class=\"flex items-start gap-2\">`;
+                            html += `<span id=\"kta-anchor-text-${idx}-${aIdx}\" class=\"font-semibold text-[var(--text-primary)] truncate\">${a.text || 'N/A'}</span>`;
+                            html += `<button type=\"button\" class=\"kta-anchor-toggle text-[11px] text-[var(--text-accent)] hover:text-[var(--text-accent-hover)]\" data-url-idx=\"${idx}\" data-anchor-idx=\"${aIdx}\">Expand</button>`;
+                            html += `</div>`;
                             html += `<div class=\"text-[var(--text-secondary)] text-xs\">Linking Domains: <span class=\"text-[var(--text-primary)]\">${domains}</span></div>`;
                             html += `<div class=\"text-[var(--text-secondary)] text-xs\">Inbound Links: <span class=\"text-[var(--text-primary)]\">${pages}</span></div>`;
                             html += '</div>';
@@ -2078,6 +2088,34 @@
                     html += '</div>';
                 });
                 html += '</div>';
+
+                // Overlapping keywords across URLs (moved above Ranking Keywords)
+                html += '<div id="url-overlap-section" class="mt-6">';
+                html += '<div class="flex items-center justify-between mb-4">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Keyword Overlap Across URLs</h4>';
+                html += '</div>';
+                if ((overlaps || []).length > 0) {
+                    html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Shared By</th>';
+                    urls.forEach(u => { html += `<th class=\"px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]\">URL ${urls.indexOf(u) + 1}</th>`; });
+                    html += '</tr></thead><tbody>';
+                    overlaps.forEach(row => {
+                        html += '<tr class="border-b border-[var(--border-primary)]">';
+                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)] font-semibold\">${row.keyword}</td>`;
+                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${row.urls.length} URLs</td>`;
+                        urls.forEach(u => {
+                            const data = row.data[u];
+                            html += `<td class=\"px-4 py-2 text-[var(--text-primary)] text-sm\">${data ? (data.rank ?? 'N/A') : 'Not ranking'}</td>`;
+                        });
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table></div>';
+                } else {
+                    html += '<p class="text-[var(--text-secondary)]">No overlapping keywords found across the selected URLs.</p>';
+                }
+                html += '</div>';
+
                 // Unified Ranking Keywords section with selector
                 html += '<div id="kta-keywords-section" class="mt-6">';
                 html += '<div class="flex items-center justify-between mb-4">';
@@ -2122,32 +2160,7 @@
                 });
                 html += '</div>';
 
-                // Overlapping keywords across URLs
-                html += '<div id="url-overlap-section" class="mt-6">';
-                html += '<div class="flex items-center justify-between mb-4">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Keyword Overlap Across URLs</h4>';
-                html += '</div>';
-                if ((overlaps || []).length > 0) {
-                    html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Shared By</th>';
-                    urls.forEach(u => { html += `<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">URL ${urls.indexOf(u) + 1}</th>`; });
-                    html += '</tr></thead><tbody>';
-                    overlaps.forEach(row => {
-                        html += '<tr class="border-b border-[var(--border-primary)]">';
-                        html += `<td class="px-4 py-2 text-[var(--text-primary)] font-semibold">${row.keyword}</td>`;
-                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${row.urls.length} URLs</td>`;
-                        urls.forEach(u => {
-                            const data = row.data[u];
-                            html += `<td class="px-4 py-2 text-[var(--text-primary)] text-sm">${data ? (data.rank ?? 'N/A') : 'Not ranking'}</td>`;
-                        });
-                        html += '</tr>';
-                    });
-                    html += '</tbody></table></div>';
-                } else {
-                    html += '<p class="text-[var(--text-secondary)]">No overlapping keywords found across the selected URLs.</p>';
-                }
-                html += '</div>';
+                // (Overlap section moved above Ranking Keywords)
 
                 // (Keyword Gap removed per request)
 
@@ -2168,6 +2181,120 @@
                             const panel = document.getElementById(`kta-keywords-panel-${idx}`);
                             if (panel) panel.classList.toggle('hidden', idx !== selected);
                         });
+                    });
+                }
+
+                // Wire anchor text expand/collapse toggles
+                document.querySelectorAll('.kta-anchor-toggle').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const urlIdx = btn.getAttribute('data-url-idx');
+                        const aIdx = btn.getAttribute('data-anchor-idx');
+                        const span = document.getElementById(`kta-anchor-text-${urlIdx}-${aIdx}`);
+                        if (span) {
+                            const isTruncated = span.classList.contains('truncate');
+                            if (isTruncated) {
+                                span.classList.remove('truncate');
+                                btn.textContent = 'Collapse';
+                            } else {
+                                span.classList.add('truncate');
+                                btn.textContent = 'Expand';
+                            }
+                        }
+                    });
+                });
+
+                // Export CSV for KTA (metrics, keywords, anchors, overlap)
+                const exportBtn = document.getElementById('kta-export-csv-btn');
+                if (exportBtn) {
+                    const csvEscape = (val) => {
+                        const s = (val === null || val === undefined) ? '' : String(val);
+                        if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+                        return s;
+                    };
+                    const downloadCSV = (filename, rows) => {
+                        const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    };
+                    exportBtn.addEventListener('click', () => {
+                        try {
+                            // Site/Page metrics
+                            const metricsRows = [['url_index','url','linking_domains','inbound_links','page_authority']];
+                            urls.forEach((u, idx) => {
+                                const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
+                                metricsRows.push([
+                                    idx + 1,
+                                    u,
+                                    sm.root_domains_to_page ?? '',
+                                    sm.external_pages_to_page ?? '',
+                                    sm.page_authority ?? ''
+                                ]);
+                            });
+                            downloadCSV('kta_page_metrics.csv', metricsRows);
+
+                            // Ranking keywords
+                            const kwRows = [['url_index','url','keyword','intent','rank','page','difficulty','volume']];
+                            urls.forEach((u, idx) => {
+                                const res = resultsByUrl[u] || {};
+                                const arr = Array.isArray(res.rankingKeywords)
+                                    ? res.rankingKeywords
+                                    : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
+                                        ? res.rankingKeywords.data.ranking_keywords
+                                        : []);
+                                arr.forEach(kw => {
+                                    const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || '';
+                                    kwRows.push([
+                                        idx + 1,
+                                        u,
+                                        kw.keyword || '',
+                                        intent,
+                                        kw.rank_position ?? '',
+                                        kw.ranking_page || '',
+                                        kw.difficulty ?? '',
+                                        kw.volume ?? ''
+                                    ]);
+                                });
+                            });
+                            downloadCSV('kta_ranking_keywords.csv', kwRows);
+
+                            // Anchors
+                            const anchorRows = [['url_index','url','anchor_text','external_root_domains','external_pages']];
+                            urls.forEach((u, idx) => {
+                                const anchors = resultsByUrl[u].topAnchors || [];
+                                anchors.forEach(a => {
+                                    anchorRows.push([
+                                        idx + 1,
+                                        u,
+                                        a.text || '',
+                                        a.external_root_domains ?? '',
+                                        a.external_pages ?? ''
+                                    ]);
+                                });
+                            });
+                            downloadCSV('kta_anchors.csv', anchorRows);
+
+                            // Overlap
+                            if (overlaps && overlaps.length > 0) {
+                                const header = ['keyword','shared_by'].concat(urls.map((_, idx) => `url_${idx+1}_rank`));
+                                const overlapRows = [header];
+                                overlaps.forEach(row => {
+                                    const base = [row.keyword, row.urls.length];
+                                    urls.forEach(u => {
+                                        const data = row.data[u];
+                                        base.push(data ? (data.rank ?? '') : '');
+                                    });
+                                    overlapRows.push(base);
+                                });
+                                downloadCSV('kta_overlap.csv', overlapRows);
+                            }
+                        } catch (e) {
+                            displayError('Failed to export CSV: ' + (e && e.message ? e.message : e));
+                        }
                     });
                 }
                 } catch (err) {
