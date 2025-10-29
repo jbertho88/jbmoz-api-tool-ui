@@ -2008,7 +2008,7 @@
                 html += `<p class="text-sm text-[var(--text-secondary)]">URLs: <span class="text-[var(--text-primary)]">${urls.length}</span> • Locale: ${locale}</p>`;
                 html += '</div>';
                 html += '<div class="shrink-0">';
-                html += '<button id="kta-export-csv-btn" class="px-3 py-2 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">Export CSV</button>';
+                html += '<button id="kta-export-xlsx-btn" class="px-3 py-2 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">Export Excel</button>';
                 html += '</div>';
                 html += '</div>';
 
@@ -2065,7 +2065,10 @@
 
                     // Inbound Anchor Texts section with per-anchor sublines
                     html += '<div class="">';
-                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Inbound Anchor Texts</div>';
+                    html += '<div class="flex items-center justify-between mb-2">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Inbound Anchor Texts</div>';
+                    html += `<button type=\"button\" class=\"kta-anchors-toggle text-[11px] text-[var(--text-accent)] hover:text-[var(--text-accent-hover)]\" data-url-idx=\"${idx}\">Expand Anchors</button>`;
+                    html += '</div>';
                     if (anchorsInline.length === 0) {
                         html += '<div class="text-[var(--text-secondary)] text-xs">No anchor texts found.</div>';
                     } else {
@@ -2075,8 +2078,7 @@
                             const pages = (typeof a.external_pages === 'number') ? formatNumber(a.external_pages) : (a.external_pages ?? 'N/A');
                             html += '<div class="text-sm">';
                             html += `<div class=\"flex items-start gap-2\">`;
-                            html += `<span id=\"kta-anchor-text-${idx}-${aIdx}\" class=\"font-semibold text-[var(--text-primary)] truncate\">${a.text || 'N/A'}</span>`;
-                            html += `<button type=\"button\" class=\"kta-anchor-toggle text-[11px] text-[var(--text-accent)] hover:text-[var(--text-accent-hover)]\" data-url-idx=\"${idx}\" data-anchor-idx=\"${aIdx}\">Expand</button>`;
+                            html += `<span id=\"kta-anchor-text-${idx}-${aIdx}\" class=\"font-semibold text-[var(--text-primary)] truncate kta-anchor-text-${idx}\">${a.text || 'N/A'}</span>`;
                             html += `</div>`;
                             html += `<div class=\"text-[var(--text-secondary)] text-xs\">Linking Domains: <span class=\"text-[var(--text-primary)]\">${domains}</span></div>`;
                             html += `<div class=\"text-[var(--text-secondary)] text-xs\">Inbound Links: <span class=\"text-[var(--text-primary)]\">${pages}</span></div>`;
@@ -2184,61 +2186,45 @@
                     });
                 }
 
-                // Wire anchor text expand/collapse toggles
-                document.querySelectorAll('.kta-anchor-toggle').forEach(btn => {
+                // Wire anchor text expand/collapse toggles (per card)
+                document.querySelectorAll('.kta-anchors-toggle').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const urlIdx = btn.getAttribute('data-url-idx');
-                        const aIdx = btn.getAttribute('data-anchor-idx');
-                        const span = document.getElementById(`kta-anchor-text-${urlIdx}-${aIdx}`);
-                        if (span) {
-                            const isTruncated = span.classList.contains('truncate');
-                            if (isTruncated) {
-                                span.classList.remove('truncate');
-                                btn.textContent = 'Collapse';
+                        const spans = document.querySelectorAll(`.kta-anchor-text-${urlIdx}`);
+                        if (spans.length > 0) {
+                            const anyTruncated = Array.from(spans).some(s => s.classList.contains('truncate'));
+                            if (anyTruncated) {
+                                spans.forEach(s => s.classList.remove('truncate'));
+                                btn.textContent = 'Collapse Anchors';
                             } else {
-                                span.classList.add('truncate');
-                                btn.textContent = 'Expand';
+                                spans.forEach(s => s.classList.add('truncate'));
+                                btn.textContent = 'Expand Anchors';
                             }
                         }
                     });
                 });
 
-                // Export CSV for KTA (metrics, keywords, anchors, overlap)
-                const exportBtn = document.getElementById('kta-export-csv-btn');
+                // Export Excel for KTA (multi-sheet like Competitive Analysis)
+                const exportBtn = document.getElementById('kta-export-xlsx-btn');
                 if (exportBtn) {
-                    const csvEscape = (val) => {
-                        const s = (val === null || val === undefined) ? '' : String(val);
-                        if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-                        return s;
-                    };
-                    const downloadCSV = (filename, rows) => {
-                        const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
-                        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                        const link = document.createElement('a');
-                        link.href = URL.createObjectURL(blob);
-                        link.download = filename;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    };
-                    exportBtn.addEventListener('click', () => {
+                    const buildAndDownloadWorkbook = () => {
                         try {
-                            // Site/Page metrics
-                            const metricsRows = [['url_index','url','linking_domains','inbound_links','page_authority']];
+                            const wb = XLSX.utils.book_new();
+                            // Sheet 1: Page Metrics
+                            const metrics = [['URL Index','URL','Linking Domains','Inbound Links','Page Authority']];
                             urls.forEach((u, idx) => {
                                 const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
-                                metricsRows.push([
+                                metrics.push([
                                     idx + 1,
                                     u,
-                                    sm.root_domains_to_page ?? '',
-                                    sm.external_pages_to_page ?? '',
-                                    sm.page_authority ?? ''
+                                    sm.root_domains_to_page ?? 'N/A',
+                                    sm.external_pages_to_page ?? 'N/A',
+                                    sm.page_authority ?? 'N/A'
                                 ]);
                             });
-                            downloadCSV('kta_page_metrics.csv', metricsRows);
+                            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(metrics), 'Page Metrics');
 
-                            // Ranking keywords
-                            const kwRows = [['url_index','url','keyword','intent','rank','page','difficulty','volume']];
+                            // Sheets: Ranking Keywords per URL
                             urls.forEach((u, idx) => {
                                 const res = resultsByUrl[u] || {};
                                 const arr = Array.isArray(res.rankingKeywords)
@@ -2246,54 +2232,68 @@
                                     : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
                                         ? res.rankingKeywords.data.ranking_keywords
                                         : []);
+                                const rows = [['Keyword','Intent','Rank','Page','Difficulty','Volume']];
                                 arr.forEach(kw => {
-                                    const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || '';
-                                    kwRows.push([
-                                        idx + 1,
-                                        u,
-                                        kw.keyword || '',
+                                    const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || 'Unknown';
+                                    rows.push([
+                                        kw.keyword || 'N/A',
                                         intent,
-                                        kw.rank_position ?? '',
-                                        kw.ranking_page || '',
-                                        kw.difficulty ?? '',
-                                        kw.volume ?? ''
+                                        kw.rank_position ?? 'N/A',
+                                        kw.ranking_page || 'N/A',
+                                        kw.difficulty ?? 'N/A',
+                                        kw.volume ?? 'N/A'
                                     ]);
                                 });
+                                const sheetName = `URL ${idx + 1} Keywords`.substring(0,31);
+                                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sheetName);
                             });
-                            downloadCSV('kta_ranking_keywords.csv', kwRows);
 
-                            // Anchors
-                            const anchorRows = [['url_index','url','anchor_text','external_root_domains','external_pages']];
+                            // Sheet: Overlapping Keywords
+                            if (overlaps && overlaps.length > 0) {
+                                const header = ['Keyword','Shared By', ...urls.map((_, i) => `URL ${i+1} Rank`)];
+                                const rows = [header];
+                                overlaps.forEach(row => {
+                                    const r = [row.keyword, `${row.urls.length} URLs`];
+                                    urls.forEach(u => {
+                                        const d = row.data[u];
+                                        r.push(d ? (d.rank ?? 'N/A') : 'Not ranking');
+                                    });
+                                    rows.push(r);
+                                });
+                                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Overlapping Keywords');
+                            }
+
+                            // Sheet: Anchors
+                            const anchorRows = [['URL Index','URL','Anchor Text','External Root Domains','External Pages']];
                             urls.forEach((u, idx) => {
                                 const anchors = resultsByUrl[u].topAnchors || [];
                                 anchors.forEach(a => {
                                     anchorRows.push([
                                         idx + 1,
                                         u,
-                                        a.text || '',
-                                        a.external_root_domains ?? '',
-                                        a.external_pages ?? ''
+                                        a.text || 'N/A',
+                                        a.external_root_domains ?? 'N/A',
+                                        a.external_pages ?? 'N/A'
                                     ]);
                                 });
                             });
-                            downloadCSV('kta_anchors.csv', anchorRows);
+                            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(anchorRows), 'Anchors');
 
-                            // Overlap
-                            if (overlaps && overlaps.length > 0) {
-                                const header = ['keyword','shared_by'].concat(urls.map((_, idx) => `url_${idx+1}_rank`));
-                                const overlapRows = [header];
-                                overlaps.forEach(row => {
-                                    const base = [row.keyword, row.urls.length];
-                                    urls.forEach(u => {
-                                        const data = row.data[u];
-                                        base.push(data ? (data.rank ?? '') : '');
-                                    });
-                                    overlapRows.push(base);
-                                });
-                                downloadCSV('kta_overlap.csv', overlapRows);
-                            }
+                            const dateStr = new Date().toISOString().split('T')[0];
+                            XLSX.writeFile(wb, `keyword-targeting-${dateStr}.xlsx`);
                         } catch (e) {
-                            displayError('Failed to export CSV: ' + (e && e.message ? e.message : e));
+                            displayError('Failed to export Excel: ' + (e && e.message ? e.message : e));
+                        }
+                    };
+                    exportBtn.addEventListener('click', () => {
+                        if (typeof XLSX === 'undefined') {
+                            const script = document.createElement('script');
+                            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                            script.onload = buildAndDownloadWorkbook;
+                            script.onerror = () => displayError('Failed to load Excel export library.');
+                            document.head.appendChild(script);
+                        } else {
+                            buildAndDownloadWorkbook();
                         }
                     });
                 }
