@@ -1515,6 +1515,12 @@
                     return;
                 }
                 
+                // For non-competitive analysis methods, ensure dashboard is cleared
+                const existingDashboard = document.getElementById('competitive-dashboard');
+                if (existingDashboard) {
+                    existingDashboard.remove();
+                }
+                
                 try {
                     const response = await fetch(PROXY_URL, {
                         method: 'POST',
@@ -2018,11 +2024,23 @@
                 if (currentMethod === 'competitiveAnalysis') {
                     return;
                 }
+                
+                // Clear any existing dashboard
+                const dashboard = document.getElementById('competitive-dashboard');
+                if (dashboard) {
+                    dashboard.remove();
+                }
+                
+                // Reset to standard JSON view
+                allDOMElements.rawWrapper.innerHTML = '<pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>';
+                allDOMElements.rawCode = document.querySelector('#raw-wrapper code');
+                
                 allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View Table';
+                allDOMElements.exportPdfBtn.classList.add('hidden');
             }
 
             function clearResultsData() {
@@ -2034,7 +2052,18 @@
                     table.destroy();
                     table = null;
                 }
+                
+                // Clear any competitive dashboard
+                const dashboard = document.getElementById('competitive-dashboard');
+                if (dashboard) {
+                    dashboard.remove();
+                }
+                
+                // Reset rawWrapper to default structure
+                allDOMElements.rawWrapper.innerHTML = '<pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>';
+                allDOMElements.rawCode = document.querySelector('#raw-wrapper code');
                 allDOMElements.rawCode.textContent = '';
+                
                 allDOMElements.resultsContainer.classList.add('hidden');
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.rawWrapper.classList.add('hidden');
