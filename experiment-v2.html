@@ -465,13 +465,13 @@
         
         /* Competitive Analysis Dashboard Grid Constraints */
         .metrics-grid-container {
-            display: grid;
-            width: 100%;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            grid-template-columns: repeat(1, minmax(0, 1fr));
-            max-width: 100%;
-            box-sizing: border-box;
+            display: grid !important;
+            width: 100% !important;
+            gap: 1rem !important;
+            margin-bottom: 1.5rem !important;
+            grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
         }
         
         .metrics-grid-container > * {
@@ -480,44 +480,54 @@
             width: 100% !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
-            word-wrap: break-word;
-            word-break: break-word;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
         }
         
         /* Ensure card content doesn't cause expansion */
         .metrics-grid-container > * > * {
-            max-width: 100%;
-            box-sizing: border-box;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
         }
         
         @media (min-width: 768px) {
             .metrics-grid-container {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             }
         }
         
         @media (min-width: 1280px) {
             .metrics-grid-container {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
             }
         }
         
         /* Ensure parent containers don't cause overflow */
         #competitive-dashboard {
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
         }
         
         #raw-wrapper {
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
-            overflow-x: hidden;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            overflow-x: hidden !important;
         }
         
         #results-container {
-            overflow-x: hidden;
+            overflow-x: hidden !important;
+        }
+        
+        /* Override any Tailwind classes that might interfere */
+        .metrics-grid-container.grid {
+            display: grid !important;
+        }
+        
+        /* Force grid behavior even if other classes are present */
+        div.metrics-grid-container {
+            display: grid !important;
         }
     </style>
 </head>
@@ -1850,7 +1860,7 @@
                 dashboardHTML += '</select></div>';
                 
                 // Create metrics grid - ensure all 4 boxes in one row on large screens
-                dashboardHTML += '<div class="metrics-grid-container">';
+                dashboardHTML += '<div class="metrics-grid-container" style="display: grid !important; grid-template-columns: repeat(1, minmax(0, 1fr)) !important; width: 100% !important; max-width: 100% !important; gap: 1rem !important; margin-bottom: 1.5rem !important; box-sizing: border-box !important;">';
                 Object.values(data).forEach((domainData, idx) => {
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
@@ -2134,6 +2144,26 @@
                 allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.remove('hidden');
+                
+                // Force grid layout after DOM insertion
+                setTimeout(() => {
+                    const gridContainer = document.querySelector('.metrics-grid-container');
+                    if (gridContainer) {
+                        const updateGrid = () => {
+                            const width = window.innerWidth;
+                            if (width >= 1280) {
+                                gridContainer.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
+                            } else if (width >= 768) {
+                                gridContainer.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+                            } else {
+                                gridContainer.style.gridTemplateColumns = 'repeat(1, minmax(0, 1fr))';
+                            }
+                            gridContainer.style.display = 'grid';
+                        };
+                        updateGrid();
+                        window.addEventListener('resize', updateGrid);
+                    }
+                }, 100);
                 
                 // Change "Clear Data" button to "Reset" for competitive analysis
                 const clearBtn = allDOMElements.clearDataBtn;
