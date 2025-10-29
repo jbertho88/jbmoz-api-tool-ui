@@ -1792,8 +1792,8 @@
                 });
                 dashboardHTML += '</select></div>';
                 
-                // Create metrics grid
-                dashboardHTML += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">';
+                // Create metrics grid - ensure all 4 boxes in one row on large screens
+                dashboardHTML += '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">';
                 Object.values(data).forEach((domainData, idx) => {
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
@@ -1805,16 +1805,29 @@
                     // Extract domain name from URL
                     const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                     
-                    // Enhanced styling for "Your Domain" card
+                    // Enhanced styling for "Your Domain" and competitor cards with gradients
                     const isYourDomain = idx === 0;
-                    const cardClasses = isYourDomain 
-                        ? 'bg-gradient-to-br from-[var(--text-accent)]/10 to-[var(--bg-container)] border-2 border-[var(--text-accent)] rounded-lg p-4 shadow-lg relative'
-                        : 'bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4';
+                    let cardClasses = '';
+                    let gradientBar = '';
+                    
+                    if (isYourDomain) {
+                        cardClasses = 'bg-gradient-to-br from-[var(--text-accent)]/10 to-[var(--bg-container)] border-2 border-[var(--text-accent)] rounded-lg p-4 shadow-lg relative';
+                        gradientBar = '<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--text-accent)] to-transparent rounded-t-lg"></div>';
+                    } else {
+                        // Competitor gradients: neon pink (idx 1), neon green (idx 2), neon purple (idx 3)
+                        const competitorGradients = [
+                            'bg-gradient-to-br from-fuchsia-400/30 via-fuchsia-500/20 to-fuchsia-600/10 border-2 border-fuchsia-400',
+                            'bg-gradient-to-br from-emerald-400/30 via-emerald-500/20 to-emerald-600/10 border-2 border-emerald-400',
+                            'bg-gradient-to-br from-violet-400/30 via-violet-500/20 to-violet-600/10 border-2 border-violet-400'
+                        ];
+                        const gradientIndex = idx - 1;
+                        cardClasses = competitorGradients[gradientIndex] + ' rounded-lg p-4 shadow-md relative';
+                        const gradientColors = ['from-fuchsia-400 via-fuchsia-500 to-transparent', 'from-emerald-400 via-emerald-500 to-transparent', 'from-violet-400 via-violet-500 to-transparent'];
+                        gradientBar = `<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradientColors[gradientIndex]} rounded-t-lg"></div>`;
+                    }
                     
                     dashboardHTML += `<div class="${cardClasses}">`;
-                    if (isYourDomain) {
-                        dashboardHTML += '<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--text-accent)] to-transparent rounded-t-lg"></div>';
-                    }
+                    dashboardHTML += gradientBar;
                     dashboardHTML += `<h4 class="font-bold text-[var(--text-primary)] mb-1 ${isYourDomain ? 'text-lg' : ''}">${isYourDomain ? 'Your Domain' : domainName}</h4>`;
                     dashboardHTML += `<p class="text-xs text-[var(--text-secondary)] mb-3">${domainData.domain}</p>`;
                     
@@ -1957,7 +1970,8 @@
                 
                 // Add Keyword Gap Snapshot section
                 dashboardHTML += '<div id="keyword-gap-section" class="mt-6">';
-                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Keyword Gap Snapshot</h4>';
+                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-2">Keyword Gap Snapshot</h4>';
+                dashboardHTML += '<p class="text-sm text-[var(--text-secondary)] mb-4">Here\'s a list of keywords your competitors are ranking for that may be fruitful opportunities to target.</p>';
                 
                 // Get your domain's keywords
                 const yourDomainData = Object.values(data)[0];
@@ -2061,6 +2075,13 @@
                 allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.remove('hidden');
+                
+                // Change "Clear Data" button to "Reset" for competitive analysis
+                const clearBtn = allDOMElements.clearDataBtn;
+                if (clearBtn) {
+                    clearBtn.textContent = 'Reset';
+                    clearBtn.dataset.originalText = 'Clear Data';
+                }
                 
                 // Add event listener for domain selector
                 const selector = document.getElementById('domain-selector');
@@ -2249,11 +2270,190 @@
             }
             
             function handleExportCsv() {
-                 if (currentResultsData) {
+                if (currentMethod === 'competitiveAnalysis' && currentResultsData) {
+                    exportCompetitiveAnalysisToCsv(currentResultsData, currentOriginalParams);
+                } else if (currentResultsData) {
                     exportDataToCsv(currentResultsData, currentMethod, currentOriginalParams);
                 } else {
                     displayError("No data available to export.");
                 }
+            }
+            
+            function exportCompetitiveAnalysisToCsv(data, params) {
+                // Load SheetJS library dynamically
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                script.onload = () => {
+                    try {
+                        const workbook = XLSX.utils.book_new();
+                        
+                        // Sheet 1: Domain Metrics Summary
+                        const metricsData = [];
+                        metricsData.push(['Domain', 'Brand Authority', 'Domain Authority', 'Total Links', 'Linking Domains', 'Spam Score', 'Ranks 1-3', 'Ranks 4-10', 'Ranks 11-20', 'Ranks 21-50', 'Total Keywords']);
+                        
+                        Object.values(data).forEach((domainData) => {
+                            const sm = domainData.siteMetrics?.data?.site_metrics || {};
+                            const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
+                            const da = sm.domain_authority ?? 'N/A';
+                            const links = sm.external_pages_to_root_domain ?? 'N/A';
+                            const linkingDomains = sm.root_domains_to_root_domain ?? 'N/A';
+                            const spam = sm.spam_score ?? 'N/A';
+                            
+                            const kc = domainData.keywordCount?.data?.ranking_keyword_count;
+                            const positions = kc?.position || {};
+                            const rank1_3 = (positions.rank_1 || 0) + (positions.rank_2 || 0) + (positions.rank_3 || 0);
+                            const rank4_10 = [4,5,6,7,8,9,10].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                            const rank11_20 = [11,12,13,14,15,16,17,18,19,20].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                            const rank21_50 = [21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                            
+                            const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                            metricsData.push([
+                                domainName,
+                                ba,
+                                da,
+                                typeof links === 'number' ? links : links,
+                                typeof linkingDomains === 'number' ? linkingDomains : linkingDomains,
+                                spam,
+                                rank1_3,
+                                rank4_10,
+                                rank11_20,
+                                rank21_50,
+                                kc?.total || 0
+                            ]);
+                        });
+                        
+                        const metricsSheet = XLSX.utils.aoa_to_sheet(metricsData);
+                        XLSX.utils.book_append_sheet(workbook, metricsSheet, 'Domain Metrics');
+                        
+                        // Sheet 2: Ranking Keywords (one per domain)
+                        Object.values(data).forEach((domainData, idx) => {
+                            const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
+                            const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                            const sheetName = idx === 0 ? 'Your Domain Keywords' : `${domainName} Keywords`;
+                            
+                            const keywordsData = [['Keyword', 'Rank', 'Page', 'Difficulty', 'Volume']];
+                            keywords.forEach(kw => {
+                                keywordsData.push([
+                                    kw.keyword || 'N/A',
+                                    kw.rank_position ?? 'N/A',
+                                    kw.ranking_page || 'N/A',
+                                    kw.difficulty ?? 'N/A',
+                                    kw.volume || 'N/A'
+                                ]);
+                            });
+                            
+                            const keywordsSheet = XLSX.utils.aoa_to_sheet(keywordsData);
+                            XLSX.utils.book_append_sheet(workbook, keywordsSheet, sheetName.substring(0, 31)); // Excel sheet name limit
+                        });
+                        
+                        // Sheet 3: Overlapping Keywords
+                        const domainKeywords = {};
+                        Object.values(data).forEach((domainData) => {
+                            const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
+                            const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                            domainKeywords[domainName] = keywords.map(kw => kw.keyword?.toLowerCase()).filter(Boolean);
+                        });
+                        
+                        const domainNames = Object.keys(domainKeywords);
+                        if (domainNames.length > 1) {
+                            const keywordToDomains = {};
+                            domainNames.forEach(domain => {
+                                domainKeywords[domain].forEach(keyword => {
+                                    if (!keywordToDomains[keyword]) {
+                                        keywordToDomains[keyword] = [];
+                                    }
+                                    if (!keywordToDomains[keyword].includes(domain)) {
+                                        keywordToDomains[keyword].push(domain);
+                                    }
+                                });
+                            });
+                            
+                            const overlappingKeywords = Object.entries(keywordToDomains)
+                                .filter(([keyword, domains]) => domains.length > 1)
+                                .map(([keyword, domains]) => {
+                                    const keywordData = {};
+                                    domainNames.forEach(domain => {
+                                        const domainEntry = Object.values(data).find(d => {
+                                            const dName = d.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                                            return dName === domain;
+                                        });
+                                        const kwData = domainEntry?.rankingKeywords?.data?.ranking_keywords?.find(k => k.keyword?.toLowerCase() === keyword);
+                                        if (kwData) {
+                                            keywordData[domain] = { rank: kwData.rank_position };
+                                        }
+                                    });
+                                    return { keyword, domains, data: keywordData };
+                                })
+                                .sort((a, b) => b.domains.length - a.domains.length || a.keyword.localeCompare(b.keyword));
+                            
+                            if (overlappingKeywords.length > 0) {
+                                const overlapData = [['Keyword', 'Shared By', ...domainNames]];
+                                overlappingKeywords.forEach(overlap => {
+                                    const row = [overlap.keyword, `${overlap.domains.length} domains`];
+                                    domainNames.forEach(domain => {
+                                        const kwData = overlap.data[domain];
+                                        row.push(kwData ? kwData.rank : 'Not ranking');
+                                    });
+                                    overlapData.push(row);
+                                });
+                                
+                                const overlapSheet = XLSX.utils.aoa_to_sheet(overlapData);
+                                XLSX.utils.book_append_sheet(workbook, overlapSheet, 'Overlapping Keywords');
+                            }
+                        }
+                        
+                        // Sheet 4: Keyword Gap Snapshot
+                        const yourDomainData = Object.values(data)[0];
+                        const yourKeywords = new Set((yourDomainData.rankingKeywords?.data?.ranking_keywords || []).map(kw => kw.keyword?.toLowerCase()).filter(Boolean));
+                        
+                        const gapKeywords = [];
+                        Object.values(data).slice(1).forEach((competitorData) => {
+                            const competitorKeywords = competitorData.rankingKeywords?.data?.ranking_keywords || [];
+                            competitorKeywords.forEach(kw => {
+                                const kwLower = kw.keyword?.toLowerCase();
+                                if (kwLower && !yourKeywords.has(kwLower) && kw.volume) {
+                                    gapKeywords.push({
+                                        keyword: kw.keyword,
+                                        volume: kw.volume || 0,
+                                        difficulty: kw.difficulty,
+                                        competitor: competitorData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0]
+                                    });
+                                }
+                            });
+                        });
+                        
+                        const uniqueGapKeywords = [];
+                        const seenKeywords = new Set();
+                        gapKeywords.forEach(kw => {
+                            if (!seenKeywords.has(kw.keyword.toLowerCase())) {
+                                seenKeywords.add(kw.keyword.toLowerCase());
+                                uniqueGapKeywords.push(kw);
+                            }
+                        });
+                        uniqueGapKeywords.sort((a, b) => (b.volume || 0) - (a.volume || 0));
+                        
+                        if (uniqueGapKeywords.length > 0) {
+                            const gapData = [['Keyword', 'Volume', 'Difficulty', 'Competitor']];
+                            uniqueGapKeywords.forEach(kw => {
+                                gapData.push([kw.keyword, kw.volume || 'N/A', kw.difficulty ?? 'N/A', kw.competitor]);
+                            });
+                            
+                            const gapSheet = XLSX.utils.aoa_to_sheet(gapData);
+                            XLSX.utils.book_append_sheet(workbook, gapSheet, 'Keyword Gap Opportunities');
+                        }
+                        
+                        // Export the workbook
+                        const dateStr = new Date().toISOString().split('T')[0];
+                        XLSX.writeFile(workbook, `competitive-analysis-${dateStr}.xlsx`);
+                    } catch (error) {
+                        console.error('Excel export error:', error);
+                        displayError('Failed to export Excel file. Please try again.');
+                    }
+                };
+                script.onerror = () => {
+                    displayError('Failed to load Excel export library. Please try again.');
+                };
+                document.head.appendChild(script);
             }
 
             function toggleDataView() {
@@ -2309,6 +2509,12 @@
                     dashboard.remove();
                 }
                 
+                // Reset "Reset" button back to "Clear Data" if it was changed
+                if (allDOMElements.clearDataBtn && allDOMElements.clearDataBtn.dataset.originalText) {
+                    allDOMElements.clearDataBtn.textContent = allDOMElements.clearDataBtn.dataset.originalText;
+                    delete allDOMElements.clearDataBtn.dataset.originalText;
+                }
+                
                 // Reset to standard JSON view
                 allDOMElements.rawWrapper.innerHTML = '<pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>';
                 allDOMElements.rawCode = document.querySelector('#raw-wrapper code');
@@ -2335,6 +2541,12 @@
                 const dashboard = document.getElementById('competitive-dashboard');
                 if (dashboard) {
                     dashboard.remove();
+                }
+                
+                // Reset "Reset" button back to "Clear Data" if it was changed
+                if (allDOMElements.clearDataBtn && allDOMElements.clearDataBtn.dataset.originalText) {
+                    allDOMElements.clearDataBtn.textContent = allDOMElements.clearDataBtn.dataset.originalText;
+                    delete allDOMElements.clearDataBtn.dataset.originalText;
                 }
                 
                 // Reset rawWrapper to default structure
