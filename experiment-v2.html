@@ -2092,6 +2092,8 @@
                             ? res.rankingKeywords.data.ranking_keywords
                             : []);
                     const visibleKeywords = rkArray.slice(0, limit);
+                    // Panel-level debug badge to confirm render counts
+                    html += `<div class=\"text-xs text-[var(--text-secondary)] mb-2\">Keywords rendered in this panel: <span class=\"text-[var(--text-primary)]\">${visibleKeywords.length}</span></div>`;
                     if (visibleKeywords.length === 0) {
                         html += '<tr><td colspan="6" class="px-4 py-2 text-[var(--text-secondary)]">No ranking keywords found.</td></tr>';
                     }
