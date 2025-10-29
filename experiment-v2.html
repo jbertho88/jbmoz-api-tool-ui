@@ -2297,6 +2297,29 @@
                         .map(x => x.idx + 1);
                     if (missing.length > 0) {
                         displayError('Missing URL panels: ' + missing.join(', '));
+                        // Fallback: create missing panels with a minimal list renderer
+                        const dash = document.getElementById('keyword-targeting-dashboard') || allDOMElements.rawWrapper;
+                        urls.forEach((u, idx) => {
+                            if (!document.getElementById(`kta-panel-${idx}`)) {
+                                const res = resultsByUrl[u] || {};
+                                const rkArray = Array.isArray(res.rankingKeywords)
+                                    ? res.rankingKeywords
+                                    : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
+                                        ? res.rankingKeywords.data.ranking_keywords
+                                        : []);
+                                const container = document.createElement('div');
+                                container.id = `kta-panel-${idx}`;
+                                container.className = 'space-y-4';
+                                container.innerHTML = `
+                                    <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">
+                                        <div class="text-sm font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Fallback Panel (URL ${idx + 1})</div>
+                                        <div class="text-xs text-[var(--text-secondary)] mb-2">Keywords rendered in this panel: <span class="text-[var(--text-primary)]">${rkArray.length}</span></div>
+                                        <ul class="list-disc pl-5 text-sm text-[var(--text-primary)]">${rkArray.slice(0, 25).map(k => `<li>${(k && k.keyword) || 'N/A'}</li>`).join('')}</ul>
+                                    </div>
+                                `;
+                                dash.appendChild(container);
+                            }
+                        });
                     }
                 } catch (_) {}
             }
