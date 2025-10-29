@@ -2235,13 +2235,23 @@
 
                 const selector = document.getElementById('kta-url-selector');
                 if (selector) {
-                    selector.addEventListener('change', (e) => {
-                        const selected = parseInt(e.target.value);
+                    const showSelectedPanel = (val) => {
+                        const selected = parseInt(val);
                         urls.forEach((_, idx) => {
                             const panel = document.getElementById(`kta-panel-${idx}`);
-                            if (panel) panel.classList.toggle('hidden', idx !== selected);
+                            if (panel) {
+                                if (idx === selected) {
+                                    panel.classList.remove('hidden');
+                                } else {
+                                    panel.classList.add('hidden');
+                                }
+                            }
                         });
-                    });
+                    };
+                    selector.addEventListener('change', (e) => showSelectedPanel(e.target.value));
+                    selector.addEventListener('input', (e) => showSelectedPanel(e.target.value));
+                    // Ensure current selection is applied immediately
+                    showSelectedPanel(selector.value);
                 }
 
                 // Wire collapsible toggles
