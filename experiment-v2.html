@@ -2063,6 +2063,7 @@
 
                 // Per-URL panels: intent distribution + keywords + anchors
                 urls.forEach((u, idx) => {
+                    html += `<div class=\"text-xs text-[var(--text-secondary)]\">Rendering panel ${idx + 1} for <span class=\"text-[var(--text-primary)]\">${u}</span></div>`;
                     const res = resultsByUrl[u];
                     const idist = res.intentDistribution || {};
                     html += `<div id="kta-panel-${idx}" class="${idx === 0 ? '' : 'hidden'} space-y-4">`;
@@ -2287,6 +2288,17 @@
                 } catch (err) {
                     displayError('Render error in Keyword Targeting Analysis: ' + (err && err.message ? err.message : err));
                 }
+
+                // Post-render validation: ensure both panels exist
+                try {
+                    const missing = urls
+                        .map((_, idx) => ({ idx, el: document.getElementById(`kta-panel-${idx}`) }))
+                        .filter(x => !x.el)
+                        .map(x => x.idx + 1);
+                    if (missing.length > 0) {
+                        displayError('Missing URL panels: ' + missing.join(', '));
+                    }
+                } catch (_) {}
             }
 
             function showCompetitiveDashboard(data) {
