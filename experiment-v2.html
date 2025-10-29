@@ -2095,10 +2095,25 @@
                 html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Keyword Overlap Across URLs</h4>';
                 html += '</div>';
                 if ((overlaps || []).length > 0) {
+                    // Legend for URL mappings
+                    html += '<div class="mb-3 p-3 bg-[var(--bg-input)] rounded-md border border-[var(--border-primary)]">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">URL Legend</div>';
+                    html += '<div class="flex flex-wrap gap-x-4 gap-y-1">';
+                    urls.forEach((u, idx) => {
+                        html += `<div class="text-sm text-[var(--text-primary)]">URL ${idx + 1}: <span class="text-[var(--text-secondary)] font-mono text-xs">${u}</span></div>`;
+                    });
+                    html += '</div></div>';
+                    
+                    // Collapse/Expand button
+                    html += '<div class="mb-2">';
+                    html += '<button id="kta-overlap-toggle" class="px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">Collapse Table</button>';
+                    html += '</div>';
+                    
+                    html += '<div id="kta-overlap-table-wrapper">';
                     html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Shared By</th>';
-                    urls.forEach(u => { html += `<th class=\"px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]\">URL ${urls.indexOf(u) + 1}</th>`; });
+                    urls.forEach((u, idx) => { html += `<th class=\"px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]\">URL ${idx + 1}</th>`; });
                     html += '</tr></thead><tbody>';
                     overlaps.forEach(row => {
                         html += '<tr class="border-b border-[var(--border-primary)]">';
@@ -2110,7 +2125,7 @@
                         });
                         html += '</tr>';
                     });
-                    html += '</tbody></table></div>';
+                    html += '</tbody></table></div></div>';
                 } else {
                     html += '<p class="text-[var(--text-secondary)]">No overlapping keywords found across the selected URLs.</p>';
                 }
@@ -2201,6 +2216,23 @@
                         }
                     });
                 });
+
+                // Wire overlap table collapse/expand toggle
+                const overlapToggle = document.getElementById('kta-overlap-toggle');
+                if (overlapToggle) {
+                    overlapToggle.addEventListener('click', () => {
+                        const wrapper = document.getElementById('kta-overlap-table-wrapper');
+                        if (wrapper) {
+                            if (wrapper.classList.contains('hidden')) {
+                                wrapper.classList.remove('hidden');
+                                overlapToggle.textContent = 'Collapse Table';
+                            } else {
+                                wrapper.classList.add('hidden');
+                                overlapToggle.textContent = 'Expand Table';
+                            }
+                        }
+                    });
+                }
 
                 // (Export handled by global button)
                 } catch (err) {
@@ -2903,100 +2935,8 @@
                             domainNames.forEach(domain => {
                                 domainKeywords[domain].forEach(keyword => {
                                     if (!keywordToDomains[keyword]) {
-                                        keywordToDomains[keyword] = [];
-                                    }
-
-    function exportKeywordTargetingToCsv(data) {
-        // Load SheetJS library dynamically
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-        script.onload = () => {
-            try {
-                const workbook = XLSX.utils.book_new();
-                const { urls = [], resultsByUrl = {}, overlaps = [] } = data || {};
-
-                // Sheet 1: Page Metrics
-                const metrics = [['URL Index','URL','Linking Domains','Inbound Links','Page Authority']];
-                urls.forEach((u, idx) => {
-                    const sm = resultsByUrl[u]?.siteMetrics?.data?.site_metrics || {};
-                    metrics.push([
-                        idx + 1,
-                        u,
-                        sm.root_domains_to_page ?? 'N/A',
-                        sm.external_pages_to_page ?? 'N/A',
-                        sm.page_authority ?? 'N/A'
-                    ]);
-                });
-                XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(metrics), 'Page Metrics');
-
-                // Sheets: Ranking Keywords per URL
-                urls.forEach((u, idx) => {
-                    const res = resultsByUrl[u] || {};
-                    const arr = Array.isArray(res.rankingKeywords)
-                        ? res.rankingKeywords
-                        : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
-                            ? res.rankingKeywords.data.ranking_keywords
-                            : []);
-                    const rows = [['Keyword','Intent','Rank','Page','Difficulty','Volume']];
-                    arr.forEach(kw => {
-                        const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || 'Unknown';
-                        rows.push([
-                            kw.keyword || 'N/A',
-                            intent,
-                            kw.rank_position ?? 'N/A',
-                            kw.ranking_page || 'N/A',
-                            kw.difficulty ?? 'N/A',
-                            kw.volume ?? 'N/A'
-                        ]);
-                    });
-                    const sheetName = `URL ${idx + 1} Keywords`.substring(0,31);
-                    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), sheetName);
-                });
-
-                // Sheet: Overlapping Keywords
-                if (overlaps && overlaps.length > 0) {
-                    const header = ['Keyword','Shared By', ...urls.map((_, i) => `URL ${i+1} Rank`)];
-                    const rows = [header];
-                    overlaps.forEach(row => {
-                        const r = [row.keyword, `${row.urls.length} URLs`];
-                        urls.forEach(u => {
-                            const d = row.data[u];
-                            r.push(d ? (d.rank ?? 'N/A') : 'Not ranking');
-                        });
-                        rows.push(r);
-                    });
-                    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), 'Overlapping Keywords');
-                }
-
-                // Sheet: Anchors
-                const anchorRows = [['URL Index','URL','Anchor Text','External Root Domains','External Pages']];
-                urls.forEach((u, idx) => {
-                    const anchors = resultsByUrl[u]?.topAnchors || [];
-                    anchors.forEach(a => {
-                        anchorRows.push([
-                            idx + 1,
-                            u,
-                            a.text || 'N/A',
-                            a.external_root_domains ?? 'N/A',
-                            a.external_pages ?? 'N/A'
-                        ]);
-                    });
-                });
-                XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(anchorRows), 'Anchors');
-
-                // Export the workbook
-                const dateStr = new Date().toISOString().split('T')[0];
-                XLSX.writeFile(workbook, `keyword-targeting-${dateStr}.xlsx`);
-            } catch (error) {
-                console.error('Excel export error:', error);
-                displayError('Failed to export Excel file. Please try again.');
-            }
-        };
-        script.onerror = () => {
-            displayError('Failed to load Excel export library. Please try again.');
-        };
-        document.head.appendChild(script);
-    }
+                                    keywordToDomains[keyword] = [];
+                                }
                                     if (!keywordToDomains[keyword].includes(domain)) {
                                         keywordToDomains[keyword].push(domain);
                                     }
@@ -3080,6 +3020,98 @@
                         // Export the workbook
                         const dateStr = new Date().toISOString().split('T')[0];
                         XLSX.writeFile(workbook, `competitive-analysis-${dateStr}.xlsx`);
+                    } catch (error) {
+                        console.error('Excel export error:', error);
+                        displayError('Failed to export Excel file. Please try again.');
+                    }
+                };
+                script.onerror = () => {
+                    displayError('Failed to load Excel export library. Please try again.');
+                };
+                document.head.appendChild(script);
+            }
+
+            function exportKeywordTargetingToCsv(data) {
+                // Load SheetJS library dynamically
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                script.onload = () => {
+                    try {
+                        const workbook = XLSX.utils.book_new();
+                        const { urls = [], resultsByUrl = {}, overlaps = [] } = data || {};
+
+                        // Sheet 1: Page Metrics
+                        const metrics = [['URL Index','URL','Linking Domains','Inbound Links','Page Authority']];
+                        urls.forEach((u, idx) => {
+                            const sm = resultsByUrl[u]?.siteMetrics?.data?.site_metrics || {};
+                            metrics.push([
+                                idx + 1,
+                                u,
+                                sm.root_domains_to_page ?? 'N/A',
+                                sm.external_pages_to_page ?? 'N/A',
+                                sm.page_authority ?? 'N/A'
+                            ]);
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(metrics), 'Page Metrics');
+
+                        // Sheets: Ranking Keywords per URL
+                        urls.forEach((u, idx) => {
+                            const res = resultsByUrl[u] || {};
+                            const arr = Array.isArray(res.rankingKeywords)
+                                ? res.rankingKeywords
+                                : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
+                                    ? res.rankingKeywords.data.ranking_keywords
+                                    : []);
+                            const rows = [['Keyword','Intent','Rank','Page','Difficulty','Volume']];
+                            arr.forEach(kw => {
+                                const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || 'Unknown';
+                                rows.push([
+                                    kw.keyword || 'N/A',
+                                    intent,
+                                    kw.rank_position ?? 'N/A',
+                                    kw.ranking_page || 'N/A',
+                                    kw.difficulty ?? 'N/A',
+                                    kw.volume ?? 'N/A'
+                                ]);
+                            });
+                            const sheetName = `URL ${idx + 1} Keywords`.substring(0,31);
+                            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), sheetName);
+                        });
+
+                        // Sheet: Overlapping Keywords
+                        if (overlaps && overlaps.length > 0) {
+                            const header = ['Keyword','Shared By', ...urls.map((_, i) => `URL ${i+1} Rank`)];
+                            const rows = [header];
+                            overlaps.forEach(row => {
+                                const r = [row.keyword, `${row.urls.length} URLs`];
+                                urls.forEach(u => {
+                                    const d = row.data[u];
+                                    r.push(d ? (d.rank ?? 'N/A') : 'Not ranking');
+                                });
+                                rows.push(r);
+                            });
+                            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), 'Overlapping Keywords');
+                        }
+
+                        // Sheet: Anchors
+                        const anchorRows = [['URL Index','URL','Anchor Text','External Root Domains','External Pages']];
+                        urls.forEach((u, idx) => {
+                            const anchors = resultsByUrl[u]?.topAnchors || [];
+                            anchors.forEach(a => {
+                                anchorRows.push([
+                                    idx + 1,
+                                    u,
+                                    a.text || 'N/A',
+                                    a.external_root_domains ?? 'N/A',
+                                    a.external_pages ?? 'N/A'
+                                ]);
+                            });
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(anchorRows), 'Anchors');
+
+                        // Export the workbook
+                        const dateStr = new Date().toISOString().split('T')[0];
+                        XLSX.writeFile(workbook, `keyword-targeting-${dateStr}.xlsx`);
                     } catch (error) {
                         console.error('Excel export error:', error);
                         displayError('Failed to export Excel file. Please try again.');
