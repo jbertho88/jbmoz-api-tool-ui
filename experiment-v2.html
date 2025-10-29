@@ -462,6 +462,20 @@
         tr:hover .copy-keyword-btn {
             opacity: 1;
         }
+        
+        /* Competitive Analysis Dashboard Grid Constraints */
+        #competitive-dashboard .grid > * {
+            min-width: 0;
+            max-width: 100%;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        @media (min-width: 1280px) {
+            #competitive-dashboard .grid.xl\\:grid-cols-4 {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
     </style>
 </head>
 <body data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData" class="transition-colors duration-300 css-loading">
@@ -1793,7 +1807,7 @@
                 dashboardHTML += '</select></div>';
                 
                 // Create metrics grid - ensure all 4 boxes in one row on large screens
-                dashboardHTML += '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6" style="min-width: 0;">';
+                dashboardHTML += '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">';
                 Object.values(data).forEach((domainData, idx) => {
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
@@ -1815,6 +1829,7 @@
                         gradientBar = '<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--text-accent)] to-transparent rounded-t-lg"></div>';
                     } else {
                         // Competitor outlines: neon pink (idx 1), neon green (idx 2), neon purple (idx 3)
+                        // Only outline/border, no background fill - matching "Your Domain" style
                         const competitorBorders = [
                             'border-2 border-fuchsia-400',
                             'border-2 border-emerald-400',
@@ -1826,7 +1841,8 @@
                         gradientBar = `<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradientColors[gradientIndex]} rounded-t-lg"></div>`;
                     }
                     
-                    dashboardHTML += `<div class="${cardClasses}" style="min-width: 0; width: 100%; max-width: 100%;">`;
+                    // Ensure grid items are properly constrained
+                    dashboardHTML += `<div class="${cardClasses}" style="min-width: 0; max-width: 100%; box-sizing: border-box;">`;
                     dashboardHTML += gradientBar;
                     dashboardHTML += `<h4 class="font-bold text-[var(--text-primary)] mb-1 ${isYourDomain ? 'text-lg' : ''}">${isYourDomain ? 'Your Domain' : domainName}</h4>`;
                     dashboardHTML += `<p class="text-xs text-[var(--text-secondary)] mb-3">${domainData.domain}</p>`;
