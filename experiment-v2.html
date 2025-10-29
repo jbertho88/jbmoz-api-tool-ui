@@ -2073,7 +2073,13 @@
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Difficulty</th>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Volume</th>';
                     html += '</tr></thead><tbody>';
-                    const visibleKeywords = (res.rankingKeywords || []).slice(0, limit);
+                    // Support both array shape and object-with-data shape just in case
+                    const rkArray = Array.isArray(res.rankingKeywords)
+                        ? res.rankingKeywords
+                        : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
+                            ? res.rankingKeywords.data.ranking_keywords
+                            : []);
+                    const visibleKeywords = rkArray.slice(0, limit);
                     if (visibleKeywords.length === 0) {
                         html += '<tr><td colspan="6" class="px-4 py-2 text-[var(--text-secondary)]">No ranking keywords found.</td></tr>';
                     }
