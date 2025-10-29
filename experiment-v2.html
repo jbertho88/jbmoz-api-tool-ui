@@ -2065,7 +2065,8 @@
                 urls.forEach((u, idx) => {
                     const res = resultsByUrl[u];
                     const idist = res.intentDistribution || {};
-                    html += `<div id="kta-panel-${idx}" class="${idx === 0 ? '' : 'hidden'} space-y-4">`;
+                    // TEMP: show all panels to guarantee visibility while debugging
+                    html += `<div id="kta-panel-${idx}" class="space-y-4">`;
                     html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
                     html += '<div class="text-sm font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Search Intent Distribution</div>';
                     html += '<div class="grid grid-cols-2 md:grid-cols-5 gap-3">';
@@ -2238,32 +2239,7 @@
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.add('hidden');
 
-                const selector = document.getElementById('kta-url-selector');
-                if (selector) {
-                    const showSelectedPanel = (val) => {
-                        const selected = parseInt(val);
-                        urls.forEach((_, idx) => {
-                            const panel = document.getElementById(`kta-panel-${idx}`);
-                            if (panel) {
-                                if (idx === selected) {
-                                    panel.classList.remove('hidden');
-                                    panel.style.display = '';
-                                } else {
-                                    panel.classList.add('hidden');
-                                    panel.style.display = 'none';
-                                }
-                            }
-                        });
-                        const shown = document.getElementById(`kta-panel-${selected}`);
-                        if (shown) {
-                            shown.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                    };
-                    selector.addEventListener('change', (e) => showSelectedPanel(e.target.value));
-                    selector.addEventListener('input', (e) => showSelectedPanel(e.target.value));
-                    // Ensure current selection is applied immediately
-                    showSelectedPanel(selector.value);
-                }
+                // TEMP: disable selector-toggle while ensuring both panels are visible
 
                 // Wire collapsible toggles
                 urls.forEach((_, idx) => {
