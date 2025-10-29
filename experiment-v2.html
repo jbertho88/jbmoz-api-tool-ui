@@ -2067,6 +2067,8 @@
                     const idist = res.intentDistribution || {};
                     // TEMP: show all panels to guarantee visibility while debugging
                     html += `<div id="kta-panel-${idx}" class="space-y-4">`;
+                    // Panel header with URL label for clarity
+                    html += `<div class="mb-1"><span class="text-sm font-semibold text-[var(--text-secondary)]">URL ${idx + 1}</span> <span class="text-xs text-[var(--text-secondary)] break-all">— ${u}</span></div>`;
                     html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
                     html += '<div class="text-sm font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Search Intent Distribution</div>';
                     html += '<div class="grid grid-cols-2 md:grid-cols-5 gap-3">';
