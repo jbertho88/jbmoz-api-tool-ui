@@ -2063,7 +2063,6 @@
 
                 // Per-URL panels: intent distribution + keywords + anchors
                 urls.forEach((u, idx) => {
-                    html += `<div class=\"text-xs text-[var(--text-secondary)]\">Rendering panel ${idx + 1} for <span class=\"text-[var(--text-primary)]\">${u}</span></div>`;
                     const res = resultsByUrl[u];
                     const idist = res.intentDistribution || {};
                     html += `<div id="kta-panel-${idx}" class="${idx === 0 ? '' : 'hidden'} space-y-4">`;
@@ -2248,22 +2247,22 @@
                             if (panel) {
                                 if (idx === selected) {
                                     panel.classList.remove('hidden');
+                                    panel.style.display = '';
                                 } else {
                                     panel.classList.add('hidden');
+                                    panel.style.display = 'none';
                                 }
                             }
                         });
+                        const shown = document.getElementById(`kta-panel-${selected}`);
+                        if (shown) {
+                            shown.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
                     };
                     selector.addEventListener('change', (e) => showSelectedPanel(e.target.value));
                     selector.addEventListener('input', (e) => showSelectedPanel(e.target.value));
                     // Ensure current selection is applied immediately
                     showSelectedPanel(selector.value);
-
-                    // DEBUG: Force-show all URL panels to validate rendering
-                    urls.forEach((_, idx) => {
-                        const panel = document.getElementById(`kta-panel-${idx}`);
-                        if (panel) panel.classList.remove('hidden');
-                    });
                 }
 
                 // Wire collapsible toggles
