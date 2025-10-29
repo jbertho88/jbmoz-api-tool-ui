@@ -1857,7 +1857,7 @@
             }
 
             async function runKeywordTargetingAnalysis(apiKey, params, proxyUrl, opensignal) {
-                const url = params.url;
+                const url = (Array.isArray(params.urls) ? params.urls[0] : params.url);
                 const locale = params.locale || 'en-US';
                 const limit = params.limit || 25;
                 const result = {
@@ -1875,53 +1875,68 @@
                 // Update progress text
                 allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching page metrics...</span>';
 
-                // Site Metrics (URL scope)
-                try {
-                    const smResponse = await fetch(proxyUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            apiKey,
-                            method: 'siteMetrics',
-                            params: { scope: 'url', targets: [url] }
-                        }),
-                        signal: opensignal.signal
-                    });
-                    const smData = await smResponse.json();
-                    if (smResponse.ok && Array.isArray(smData) && smData[0]?.status === 'success') {
-                        result.siteMetrics = smData[0];
-                    } else {
-                        result.errors.push('Site Metrics: ' + (smData[0]?.reason || 'Failed'));
+                // Fire Site Metrics, Ranking Keywords, and Anchor Text concurrently
+                const keywordStrings = [];
+                const smPromise = (async () => {
+                    try {
+                        const resp = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ apiKey, method: 'siteMetrics', params: { scope: 'url', targets: [url] } }),
+                            signal: opensignal.signal
+                        });
+                        const data = await resp.json();
+                        if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
+                            result.siteMetrics = data[0];
+                        } else {
+                            result.errors.push('Site Metrics: ' + (data[0]?.reason || 'Failed'));
+                        }
+                    } catch (e) {
+                        result.errors.push('Site Metrics: ' + e.message);
                     }
-                } catch (e) {
-                    result.errors.push('Site Metrics: ' + e.message);
-                }
-
-                // Ranking Keywords (URL scope)
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching ranking keywords...</span>';
-                let keywordStrings = [];
-                try {
-                    const rkResponse = await fetch(proxyUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            apiKey,
-                            method: 'rankingKeywords',
-                            params: { scope: 'url', locale, targets: [url], limit }
-                        }),
-                        signal: opensignal.signal
-                    });
-                    const rkData = await rkResponse.json();
-                    if (rkResponse.ok && Array.isArray(rkData) && rkData[0]?.status === 'success') {
-                        const kws = rkData[0]?.data?.ranking_keywords || [];
-                        result.rankingKeywords = kws;
-                        keywordStrings = kws.map(k => k.keyword).filter(Boolean);
-                    } else {
-                        result.errors.push('Ranking Keywords: ' + (rkData[0]?.reason || 'Failed'));
+                })();
+                const rkPromise = (async () => {
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching ranking keywords...</span>';
+                    try {
+                        const resp = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ apiKey, method: 'rankingKeywords', params: { scope: 'url', locale, targets: [url], limit } }),
+                            signal: opensignal.signal
+                        });
+                        const data = await resp.json();
+                        if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
+                            const kws = data[0]?.data?.ranking_keywords || [];
+                            result.rankingKeywords = kws;
+                            kws.forEach(k => { if (k?.keyword) keywordStrings.push(k.keyword); });
+                        } else {
+                            result.errors.push('Ranking Keywords: ' + (data[0]?.reason || 'Failed'));
+                        }
+                    } catch (e) {
+                        result.errors.push('Ranking Keywords: ' + e.message);
                     }
-                } catch (e) {
-                    result.errors.push('Ranking Keywords: ' + e.message);
-                }
+                })();
+                const atPromise = (async () => {
+                    try {
+                        const resp = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ apiKey, method: 'anchorText', params: { scope: 'url', targets: [url], limit: 50 } }),
+                            signal: opensignal.signal
+                        });
+                        const data = await resp.json();
+                        if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
+                            const anchors = data[0]?.data?.anchor_texts || [];
+                            anchors.sort((a, b) => (b.external_root_domains || 0) - (a.external_root_domains || 0));
+                            result.topAnchors = anchors.slice(0, 10);
+                        } else {
+                            result.errors.push('Anchor Text: ' + (data[0]?.reason || 'Failed'));
+                        }
+                    } catch (e) {
+                        result.errors.push('Anchor Text: ' + e.message);
+                    }
+                })();
+                await Promise.all([smPromise, rkPromise, atPromise]);
 
                 // Fetch Search Intent for ranking keywords (default locale same as above)
                 if (keywordStrings.length > 0) {
@@ -1965,31 +1980,6 @@
                     } catch (e) {
                         result.errors.push('Search Intent: ' + e.message);
                     }
-                }
-
-                // Anchor Text (URL scope) - top 10 by external root domains
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching anchor texts...</span>';
-                try {
-                    const atResponse = await fetch(proxyUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            apiKey,
-                            method: 'anchorText',
-                            params: { scope: 'url', targets: [url], limit: 50 }
-                        }),
-                        signal: opensignal.signal
-                    });
-                    const atData = await atResponse.json();
-                    if (atResponse.ok && Array.isArray(atData) && atData[0]?.status === 'success') {
-                        const anchors = atData[0]?.data?.anchor_texts || [];
-                        anchors.sort((a, b) => (b.external_root_domains || 0) - (a.external_root_domains || 0));
-                        result.topAnchors = anchors.slice(0, 10);
-                    } else {
-                        result.errors.push('Anchor Text: ' + (atData[0]?.reason || 'Failed'));
-                    }
-                } catch (e) {
-                    result.errors.push('Anchor Text: ' + e.message);
                 }
 
                 return result;
@@ -3215,7 +3205,7 @@
                         'limit': 'caLimit'
                     },
                     'keywordTargetingAnalysis': {
-                        'url': 'ktaUrl',
+                        'urls': 'ktaUrl',
                         'locale': 'ktaLocaleSelect',
                         'limit': 'ktaLimit'
                     }
@@ -3325,10 +3315,9 @@
                             ?.split(/[\n,]/)
                             .map(s => s.trim())
                             .filter(Boolean) || [];
-                        const url = urls[0];
-                        if (!url) throw new Error('Please enter a URL.');
+                        if (urls.length === 0) throw new Error('Please enter at least one URL.');
                         payload.params = {
-                            url,
+                            urls,
                             locale: getInputValue('ktaLocaleSelect') || 'en-US',
                             limit: parseInt(getInputValue('ktaLimit'), 10) || 25
                         };
