@@ -468,15 +468,26 @@
             display: grid;
             width: 100%;
             gap: 1rem;
+            margin-bottom: 1.5rem;
             grid-template-columns: repeat(1, minmax(0, 1fr));
+            max-width: 100%;
+            box-sizing: border-box;
         }
         
         .metrics-grid-container > * {
-            min-width: 0;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        
+        /* Ensure card content doesn't cause expansion */
+        .metrics-grid-container > * > * {
             max-width: 100%;
-            width: 100%;
             box-sizing: border-box;
-            overflow: hidden;
         }
         
         @media (min-width: 768px) {
@@ -489,6 +500,24 @@
             .metrics-grid-container {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
+        }
+        
+        /* Ensure parent containers don't cause overflow */
+        #competitive-dashboard {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        
+        #raw-wrapper {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+        
+        #results-container {
+            overflow-x: hidden;
         }
     </style>
 </head>
@@ -1821,7 +1850,7 @@
                 dashboardHTML += '</select></div>';
                 
                 // Create metrics grid - ensure all 4 boxes in one row on large screens
-                dashboardHTML += '<div class="metrics-grid-container gap-4 mb-6">';
+                dashboardHTML += '<div class="metrics-grid-container">';
                 Object.values(data).forEach((domainData, idx) => {
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
@@ -1856,7 +1885,7 @@
                     }
                     
                     // Ensure grid items are properly constrained
-                    dashboardHTML += `<div class="${cardClasses}">`;
+                    dashboardHTML += `<div class="${cardClasses}" style="min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; overflow: hidden;">`;
                     dashboardHTML += gradientBar;
                     dashboardHTML += `<h4 class="font-bold text-[var(--text-primary)] mb-1 ${isYourDomain ? 'text-lg' : ''}">${isYourDomain ? 'Your Domain' : domainName}</h4>`;
                     dashboardHTML += `<p class="text-xs text-[var(--text-secondary)] mb-3">${domainData.domain}</p>`;
