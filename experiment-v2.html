@@ -42,6 +42,9 @@
             document.head.appendChild(script);
         })();
     </script>
+    <!-- Load jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* Critical CSS - Prevents FOUC */
         body {
@@ -485,6 +488,7 @@
                         <button id="filter-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Filter table data">Filter</button>
                         <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Copy JSON data to clipboard">Copy JSON</button>
                         <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Export data as CSV file">Export to CSV</button>
+                        <button id="export-pdf-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Export dashboard as PDF">Export to PDF</button>
                         <button id="clear-data-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Clear results data">Clear Data</button>
                     </div>
                 </div>
@@ -914,7 +918,8 @@
                 historyList: document.getElementById('history-list'),
                 historyEmpty: document.getElementById('history-empty'),
                 exportHistoryBtn: document.getElementById('export-history-btn'),
-                clearHistoryBtn: document.getElementById('clear-history-btn')
+                clearHistoryBtn: document.getElementById('clear-history-btn'),
+                exportPdfBtn: document.getElementById('export-pdf-btn')
             };
 
             const populateInputs = () => {
@@ -1325,6 +1330,7 @@
                     renderHistoryList();
                 });
                 allDOMElements.clearDataBtn.addEventListener('click', clearResultsData);
+                allDOMElements.exportPdfBtn.addEventListener('click', handleExportPdf);
                 allDOMElements.filterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.remove('hidden'));
                 allDOMElements.closeFilterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.add('hidden'));
                 allDOMElements.cancelFilterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.add('hidden'));
@@ -1556,6 +1562,7 @@
                         siteMetrics: null,
                         brandAuthority: null,
                         rankingKeywords: null,
+                        keywordCount: null,
                         errors: []
                     };
                     
@@ -1629,6 +1636,32 @@
                     } catch (e) {
                         results[domain].errors.push('Ranking Keywords: ' + e.message);
                     }
+                    
+                    // Fetch Keyword Count
+                    try {
+                        const kcResponse = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                apiKey,
+                                method: 'keywordCount',
+                                params: { 
+                                    scope: 'domain', 
+                                    locale: params.locale || 'en-US',
+                                    targets: [domain]
+                                }
+                            }),
+                            signal: opensignal.signal
+                        });
+                        const kcData = await kcResponse.json();
+                        if (kcResponse.ok && Array.isArray(kcData) && kcData[0]?.status === 'success') {
+                            results[domain].keywordCount = kcData[0];
+                        } else {
+                            results[domain].errors.push('Keyword Count: ' + (kcData[0]?.reason || 'Failed'));
+                        }
+                    } catch (e) {
+                        results[domain].errors.push('Keyword Count: ' + e.message);
+                    }
                 }
                 
                 return results;
@@ -1664,14 +1697,39 @@
                     const linkingDomains = sm.root_domains_to_root_domain ?? 'N/A';
                     const spam = sm.spam_score ?? 'N/A';
                     
+                    // Extract domain name from URL
+                    const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                    
                     dashboardHTML += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4 ${idx === 0 ? 'ring-2 ring-[var(--text-accent)]' : ''}">`;
-                    dashboardHTML += `<h4 class="font-bold text-[var(--text-primary)] mb-3">${domainData.label}</h4>`;
+                    dashboardHTML += `<h4 class="font-bold text-[var(--text-primary)] mb-1">${idx === 0 ? 'Your Domain' : domainName}</h4>`;
+                    dashboardHTML += `<p class="text-xs text-[var(--text-secondary)] mb-3">${domainData.domain}</p>`;
                     dashboardHTML += `<div class="space-y-2 text-sm">`;
                     dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Brand Authority:</span> <span class="font-semibold text-[var(--text-primary)]">${ba}</span></div>`;
                     dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Domain Authority:</span> <span class="font-semibold text-[var(--text-primary)]">${da}</span></div>`;
                     dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Total Links:</span> <span class="font-semibold text-[var(--text-primary)]">${typeof links === 'number' ? links.toLocaleString() : links}</span></div>`;
                     dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Linking Domains:</span> <span class="font-semibold text-[var(--text-primary)]">${typeof linkingDomains === 'number' ? linkingDomains.toLocaleString() : linkingDomains}</span></div>`;
                     dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Spam Score:</span> <span class="font-semibold text-[var(--text-primary)]">${spam}</span></div>`;
+                    
+                    // Add keyword count breakdown
+                    const kc = domainData.keywordCount?.data?.ranking_keyword_count;
+                    if (kc) {
+                        const positions = kc.position || {};
+                        const rank1_3 = (positions.rank_1 || 0) + (positions.rank_2 || 0) + (positions.rank_3 || 0);
+                        const rank4_10 = [4,5,6,7,8,9,10].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                        const rank11_20 = [11,12,13,14,15,16,17,18,19,20].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                        const rank21_50 = [21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                        
+                        dashboardHTML += `<div class="mt-3 pt-3 border-t border-[var(--border-primary)]">`;
+                        dashboardHTML += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2">Ranking Keywords:</div>`;
+                        dashboardHTML += `<div class="space-y-1 text-xs">`;
+                        dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Ranks 1-3:</span> <span class="font-semibold text-[var(--text-primary)]">${rank1_3.toLocaleString()}</span></div>`;
+                        dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Ranks 4-10:</span> <span class="font-semibold text-[var(--text-primary)]">${rank4_10.toLocaleString()}</span></div>`;
+                        dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Ranks 11-20:</span> <span class="font-semibold text-[var(--text-primary)]">${rank11_20.toLocaleString()}</span></div>`;
+                        dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Ranks 21-50:</span> <span class="font-semibold text-[var(--text-primary)]">${rank21_50.toLocaleString()}</span></div>`;
+                        dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Total:</span> <span class="font-semibold text-[var(--text-primary)]">${(kc.total || 0).toLocaleString()}</span></div>`;
+                        dashboardHTML += `</div></div>`;
+                    }
+                    
                     dashboardHTML += `</div>`;
                     
                     if (domainData.errors && domainData.errors.length > 0) {
@@ -1679,6 +1737,91 @@
                     }
                     dashboardHTML += `</div>`;
                 });
+                dashboardHTML += '</div>';
+                
+                // Add overlapping keywords section
+                dashboardHTML += '<div id="overlapping-keywords-section" class="mt-6">';
+                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Overlapping Keywords</h4>';
+                
+                // Extract all keywords for each domain
+                const domainKeywords = {};
+                Object.values(data).forEach((domainData, idx) => {
+                    const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
+                    const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                    domainKeywords[domainName] = keywords.map(kw => kw.keyword?.toLowerCase()).filter(Boolean);
+                });
+                
+                // Find overlapping keywords
+                const domainNames = Object.keys(domainKeywords);
+                if (domainNames.length > 1) {
+                    // Create a map of keyword to domains that rank for it
+                    const keywordToDomains = {};
+                    domainNames.forEach(domain => {
+                        domainKeywords[domain].forEach(keyword => {
+                            if (!keywordToDomains[keyword]) {
+                                keywordToDomains[keyword] = [];
+                            }
+                            if (!keywordToDomains[keyword].includes(domain)) {
+                                keywordToDomains[keyword].push(domain);
+                            }
+                        });
+                    });
+                    
+                    // Find keywords that appear in 2+ domains
+                    const overlappingKeywords = Object.entries(keywordToDomains)
+                        .filter(([keyword, domains]) => domains.length > 1)
+                        .map(([keyword, domains]) => {
+                            const keywordData = {};
+                            domainNames.forEach(domain => {
+                                // Find the domain data entry that matches this domain name
+                                const domainEntry = Object.values(data).find(d => {
+                                    const dName = d.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                                    return dName === domain;
+                                });
+                                const kwData = domainEntry?.rankingKeywords?.data?.ranking_keywords?.find(k => k.keyword?.toLowerCase() === keyword);
+                                if (kwData) {
+                                    keywordData[domain] = {
+                                        rank: kwData.rank_position,
+                                        volume: kwData.volume,
+                                        difficulty: kwData.difficulty
+                                    };
+                                }
+                            });
+                            return { keyword, domains, data: keywordData };
+                        })
+                        .sort((a, b) => b.domains.length - a.domains.length || a.keyword.localeCompare(b.keyword));
+                    
+                    if (overlappingKeywords.length > 0) {
+                        dashboardHTML += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
+                        dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
+                        dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Shared By</th>';
+                        domainNames.forEach(domain => {
+                            dashboardHTML += `<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">${domain}</th>`;
+                        });
+                        dashboardHTML += '</tr></thead><tbody>';
+                        
+                        overlappingKeywords.forEach(overlap => {
+                            dashboardHTML += '<tr class="border-b border-[var(--border-primary)]">';
+                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)] font-semibold">${overlap.keyword}</td>`;
+                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${overlap.domains.length} domains</td>`;
+                            domainNames.forEach(domain => {
+                                const kwData = overlap.data[domain];
+                                if (kwData) {
+                                    dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)] text-sm">Rank: ${kwData.rank ?? 'N/A'}<br>Vol: ${kwData.volume ? kwData.volume.toLocaleString() : 'N/A'}<br>Diff: ${kwData.difficulty ?? 'N/A'}</td>`;
+                                } else {
+                                    dashboardHTML += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm">Not ranking</td>`;
+                                }
+                            });
+                            dashboardHTML += '</tr>';
+                        });
+                        
+                        dashboardHTML += '</tbody></table></div>';
+                    } else {
+                        dashboardHTML += '<p class="text-[var(--text-secondary)]">No overlapping keywords found.</p>';
+                    }
+                } else {
+                    dashboardHTML += '<p class="text-[var(--text-secondary)]">Add competitors to see overlapping keywords.</p>';
+                }
                 dashboardHTML += '</div>';
                 
                 // Create keywords section
@@ -1718,10 +1861,12 @@
                 dashboardHTML += '</div>';
                 dashboardHTML += '</div>';
                 
-                // Replace raw code with dashboard
+                // Store JSON data and replace raw wrapper with dashboard
                 allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
                 allDOMElements.rawWrapper.innerHTML = dashboardHTML;
+                allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
+                allDOMElements.exportPdfBtn.classList.remove('hidden');
                 
                 // Add event listener for domain selector
                 const selector = document.getElementById('domain-selector');
@@ -1733,6 +1878,63 @@
                         });
                     });
                 }
+            }
+
+            function handleExportPdf() {
+                if (currentMethod !== 'competitiveAnalysis' || !currentResultsData) {
+                    displayError('PDF export is only available for competitive analysis results.');
+                    return;
+                }
+                
+                const dashboard = document.getElementById('competitive-dashboard');
+                if (!dashboard) {
+                    displayError('Dashboard not found. Please run the analysis again.');
+                    return;
+                }
+                
+                // Show loading state
+                const originalText = allDOMElements.exportPdfBtn.textContent;
+                allDOMElements.exportPdfBtn.textContent = 'Generating PDF...';
+                allDOMElements.exportPdfBtn.disabled = true;
+                
+                // Use html2canvas to capture the dashboard
+                html2canvas(dashboard, {
+                    backgroundColor: getComputedStyle(document.body).backgroundColor,
+                    scale: 2,
+                    logging: false
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    
+                    const imgWidth = 210; // A4 width in mm
+                    const pageHeight = 297; // A4 height in mm
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 0;
+                    
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                    
+                    while (heightLeft > 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+                    
+                    const dateStr = new Date().toISOString().split('T')[0];
+                    pdf.save(`competitive-analysis-${dateStr}.pdf`);
+                    
+                    // Reset button
+                    allDOMElements.exportPdfBtn.textContent = originalText;
+                    allDOMElements.exportPdfBtn.disabled = false;
+                }).catch(error => {
+                    console.error('PDF export error:', error);
+                    displayError('Failed to export PDF. Please try again.');
+                    allDOMElements.exportPdfBtn.textContent = originalText;
+                    allDOMElements.exportPdfBtn.disabled = false;
+                });
             }
 
             function handleCopyJson() {
@@ -1783,10 +1985,12 @@
                         if (codeEl) codeEl.textContent = JSON.stringify(currentResultsData, null, 2);
                         allDOMElements.viewDataBtn.textContent = 'View Dashboard';
                         allDOMElements.rawWrapper.classList.remove('hidden');
+                        allDOMElements.exportPdfBtn.classList.add('hidden');
                     } else {
                         // Switch back to dashboard
                         showCompetitiveDashboard(currentResultsData);
                         allDOMElements.viewDataBtn.textContent = 'View JSON';
+                        allDOMElements.exportPdfBtn.classList.remove('hidden');
                     }
                     return;
                 }
@@ -1798,11 +2002,13 @@
                     allDOMElements.rawWrapper.classList.remove('hidden');
                     allDOMElements.viewDataBtn.textContent = 'View Table';
                     allDOMElements.filterBtn.classList.add('hidden');
+                    allDOMElements.exportPdfBtn.classList.add('hidden');
                 } else {
                     allDOMElements.rawWrapper.classList.add('hidden');
                     allDOMElements.tableWrapper.classList.remove('hidden');
                     allDOMElements.viewDataBtn.textContent = 'View JSON';
                     allDOMElements.filterBtn.classList.remove('hidden');
+                    allDOMElements.exportPdfBtn.classList.add('hidden');
                     renderTable(currentResultsData, currentMethod, currentOriginalParams);
                 }
             }
@@ -1833,6 +2039,7 @@
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.rawWrapper.classList.add('hidden');
                 allDOMElements.filterBtn.classList.add('hidden');
+                allDOMElements.exportPdfBtn.classList.add('hidden');
                 allDOMElements.activeFiltersContainer.classList.add('hidden');
                 allDOMElements.activeFiltersContainer.innerHTML = '';
             }
