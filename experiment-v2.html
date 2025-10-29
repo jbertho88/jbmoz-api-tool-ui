@@ -2078,7 +2078,7 @@
                         html += '<tr><td colspan="6" class="px-4 py-2 text-[var(--text-secondary)]">No ranking keywords found.</td></tr>';
                     }
                     visibleKeywords.forEach(kw => {
-                        const intent = res.searchIntent[kw.keyword] || 'Unknown';
+                        const intent = res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()] || 'Unknown';
                         html += '<tr class="border-b border-[var(--border-primary)]">';
                         html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.keyword || 'N/A'}</td>`;
                         html += `<td class="px-4 py-2 text-[var(--text-primary)]">${intent}</td>`;
