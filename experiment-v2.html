@@ -2077,6 +2077,14 @@
                     // Ranking keywords (collapsible)
                     html += `<div class=\"mt-2\"><div class=\"flex items-center justify-between mb-2\"><h5 class=\"font-semibold text-[var(--text-primary)]\">Ranking Keywords</h5><button id=\"toggle-kta-kw-${idx}\" class=\"text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold\">Collapse</button></div>`;
                     html += `<div id=\"kta-kw-content-${idx}\" class=\"\">`;
+                    // Panel-level debug badge to confirm render counts (outside of table for valid markup)
+                    const rkArray = Array.isArray(res.rankingKeywords)
+                        ? res.rankingKeywords
+                        : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
+                            ? res.rankingKeywords.data.ranking_keywords
+                            : []);
+                    const visibleKeywords = rkArray.slice(0, limit);
+                    html += `<div class=\"text-xs text-[var(--text-secondary)] mb-2\">Keywords rendered in this panel: <span class=\"text-[var(--text-primary)]\">${visibleKeywords.length}</span></div>`;
                     html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Intent</th>';
@@ -2085,15 +2093,7 @@
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Difficulty</th>';
                     html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Volume</th>';
                     html += '</tr></thead><tbody>';
-                    // Support both array shape and object-with-data shape just in case
-                    const rkArray = Array.isArray(res.rankingKeywords)
-                        ? res.rankingKeywords
-                        : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
-                            ? res.rankingKeywords.data.ranking_keywords
-                            : []);
-                    const visibleKeywords = rkArray.slice(0, limit);
-                    // Panel-level debug badge to confirm render counts
-                    html += `<div class=\"text-xs text-[var(--text-secondary)] mb-2\">Keywords rendered in this panel: <span class=\"text-[var(--text-primary)]\">${visibleKeywords.length}</span></div>`;
+                    // Note: visibleKeywords computed above
                     if (visibleKeywords.length === 0) {
                         html += '<tr><td colspan="6" class="px-4 py-2 text-[var(--text-secondary)]">No ranking keywords found.</td></tr>';
                     }
