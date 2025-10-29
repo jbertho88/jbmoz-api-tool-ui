@@ -1857,145 +1857,143 @@
             }
 
             async function runKeywordTargetingAnalysis(apiKey, params, proxyUrl, opensignal) {
-                const url = (Array.isArray(params.urls) ? params.urls[0] : params.url);
+                const urls = Array.isArray(params.urls) ? params.urls : [params.url].filter(Boolean);
                 const locale = params.locale || 'en-US';
                 const limit = params.limit || 25;
-                const result = {
-                    url,
-                    locale,
-                    limit,
-                    siteMetrics: null,
-                    rankingKeywords: [],
-                    searchIntent: {},
-                    intentDistribution: {},
-                    topAnchors: [],
-                    errors: []
+                const resultsByUrl = {};
+
+                // Kick off per-URL requests in parallel
+                const perUrlPromises = urls.map(async (u) => {
+                    resultsByUrl[u] = {
+                        url: u,
+                        siteMetrics: null,
+                        rankingKeywords: [],
+                        topAnchors: [],
+                        searchIntent: {},
+                        intentDistribution: {},
+                        errors: []
+                    };
+
+                    // Site Metrics, Ranking Keywords, Anchor Text concurrently per URL
+                    const sm = (async () => {
+                        try {
+                            const resp = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey, method: 'siteMetrics', params: { scope: 'url', targets: [u] } }), signal: opensignal.signal });
+                            const data = await resp.json();
+                            if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') resultsByUrl[u].siteMetrics = data[0];
+                            else resultsByUrl[u].errors.push('Site Metrics: ' + (data[0]?.reason || 'Failed'));
+                        } catch (e) { resultsByUrl[u].errors.push('Site Metrics: ' + e.message); }
+                    })();
+                    const rk = (async () => {
+                        try {
+                            const resp = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey, method: 'rankingKeywords', params: { scope: 'url', locale, targets: [u], limit } }), signal: opensignal.signal });
+                            const data = await resp.json();
+                            if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') resultsByUrl[u].rankingKeywords = data[0]?.data?.ranking_keywords || [];
+                            else resultsByUrl[u].errors.push('Ranking Keywords: ' + (data[0]?.reason || 'Failed'));
+                        } catch (e) { resultsByUrl[u].errors.push('Ranking Keywords: ' + e.message); }
+                    })();
+                    const at = (async () => {
+                        try {
+                            const resp = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey, method: 'anchorText', params: { scope: 'url', targets: [u], limit: 50 } }), signal: opensignal.signal });
+                            const data = await resp.json();
+                            if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
+                                const anchors = data[0]?.data?.anchor_texts || [];
+                                anchors.sort((a, b) => (b.external_root_domains || 0) - (a.external_root_domains || 0));
+                                resultsByUrl[u].topAnchors = anchors.slice(0, 10);
+                            } else resultsByUrl[u].errors.push('Anchor Text: ' + (data[0]?.reason || 'Failed'));
+                        } catch (e) { resultsByUrl[u].errors.push('Anchor Text: ' + e.message); }
+                    })();
+                    await Promise.all([sm, rk, at]);
+                });
+
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching data for ' + urls.length + ' URLs...</span>';
+                await Promise.all(perUrlPromises);
+
+                // Build unique keyword list across URLs
+                const allKeywords = [];
+                urls.forEach(u => {
+                    (resultsByUrl[u].rankingKeywords || []).forEach(k => { if (k?.keyword) allKeywords.push(k.keyword); });
+                });
+                const uniqueKeywords = Array.from(new Set(allKeywords));
+
+                // Fetch intent in batches if needed
+                const titleCase = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Unknown');
+                const normalizeIntent = (val) => {
+                    const t = titleCase(val);
+                    return ['Informational','Transactional','Commercial','Navigational','Unknown'].includes(t) ? t : 'Unknown';
                 };
 
-                // Update progress text
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching page metrics...</span>';
-
-                // Fire Site Metrics, Ranking Keywords, and Anchor Text concurrently
-                const keywordStrings = [];
-                const smPromise = (async () => {
-                    try {
-                        const resp = await fetch(proxyUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ apiKey, method: 'siteMetrics', params: { scope: 'url', targets: [url] } }),
-                            signal: opensignal.signal
-                        });
-                        const data = await resp.json();
-                        if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
-                            result.siteMetrics = data[0];
-                        } else {
-                            result.errors.push('Site Metrics: ' + (data[0]?.reason || 'Failed'));
-                        }
-                    } catch (e) {
-                        result.errors.push('Site Metrics: ' + e.message);
-                    }
-                })();
-                const rkPromise = (async () => {
-                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching ranking keywords...</span>';
-                    try {
-                        const resp = await fetch(proxyUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ apiKey, method: 'rankingKeywords', params: { scope: 'url', locale, targets: [url], limit } }),
-                            signal: opensignal.signal
-                        });
-                        const data = await resp.json();
-                        if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
-                            const kws = data[0]?.data?.ranking_keywords || [];
-                            result.rankingKeywords = kws;
-                            kws.forEach(k => { if (k?.keyword) keywordStrings.push(k.keyword); });
-                        } else {
-                            result.errors.push('Ranking Keywords: ' + (data[0]?.reason || 'Failed'));
-                        }
-                    } catch (e) {
-                        result.errors.push('Ranking Keywords: ' + e.message);
-                    }
-                })();
-                const atPromise = (async () => {
-                    try {
-                        const resp = await fetch(proxyUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ apiKey, method: 'anchorText', params: { scope: 'url', targets: [url], limit: 50 } }),
-                            signal: opensignal.signal
-                        });
-                        const data = await resp.json();
-                        if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
-                            const anchors = data[0]?.data?.anchor_texts || [];
-                            anchors.sort((a, b) => (b.external_root_domains || 0) - (a.external_root_domains || 0));
-                            result.topAnchors = anchors.slice(0, 10);
-                        } else {
-                            result.errors.push('Anchor Text: ' + (data[0]?.reason || 'Failed'));
-                        }
-                    } catch (e) {
-                        result.errors.push('Anchor Text: ' + e.message);
-                    }
-                })();
-                await Promise.all([smPromise, rkPromise, atPromise]);
-
-                // Fetch Search Intent for ranking keywords (default locale same as above)
-                if (keywordStrings.length > 0) {
+                const intentMapGlobal = {};
+                if (uniqueKeywords.length > 0) {
                     allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching search intent...</span>';
                     try {
-                        const siResponse = await fetch(proxyUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                apiKey,
-                                method: 'searchIntent',
-                                params: { locale, keywords: keywordStrings }
-                            }),
-                            signal: opensignal.signal
-                        });
-                        const siData = await siResponse.json();
-                        if (siResponse.ok && Array.isArray(siData)) {
-                            // Map keyword -> primary intent
-                            const intentMap = {};
-                            const counts = { Informational: 0, Transactional: 0, Commercial: 0, Navigational: 0, Unknown: 0 };
+                        const siResp = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey, method: 'searchIntent', params: { locale, keywords: uniqueKeywords } }), signal: opensignal.signal });
+                        const siData = await siResp.json();
+                        if (siResp.ok && Array.isArray(siData)) {
                             siData.forEach(entry => {
                                 if (entry.status === 'success') {
                                     const kw = entry?.data?.serp_query?.keyword;
                                     const primary = (entry?.data?.keyword_intent?.primary_intents || [])[0] || 'Unknown';
-                                    intentMap[kw] = primary;
-                                    if (counts[primary] !== undefined) counts[primary]++; else counts.Unknown++;
+                                    intentMapGlobal[kw] = normalizeIntent(primary);
                                 }
                             });
-                            result.searchIntent = intentMap;
-                            const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
-                            result.intentDistribution = {
-                                Informational: Math.round((counts.Informational / total) * 100),
-                                Transactional: Math.round((counts.Transactional / total) * 100),
-                                Commercial: Math.round((counts.Commercial / total) * 100),
-                                Navigational: Math.round((counts.Navigational / total) * 100),
-                                Unknown: Math.round((counts.Unknown / total) * 100)
-                            };
-                        } else {
-                            result.errors.push('Search Intent: Failed');
                         }
                     } catch (e) {
-                        result.errors.push('Search Intent: ' + e.message);
+                        // Non-fatal; leave intents empty
                     }
                 }
 
-                return result;
+                // Attach per-URL intent maps and distributions
+                urls.forEach(u => {
+                    const map = {};
+                    const counts = { Informational: 0, Transactional: 0, Commercial: 0, Navigational: 0, Unknown: 0 };
+                    (resultsByUrl[u].rankingKeywords || []).forEach(k => {
+                        const intent = intentMapGlobal[k.keyword] || 'Unknown';
+                        map[k.keyword] = intent;
+                        counts[intent]++;
+                    });
+                    const total = Math.max(1, (resultsByUrl[u].rankingKeywords || []).length);
+                    resultsByUrl[u].searchIntent = map;
+                    resultsByUrl[u].intentDistribution = {
+                        Informational: Math.round((counts.Informational / total) * 100),
+                        Transactional: Math.round((counts.Transactional / total) * 100),
+                        Commercial: Math.round((counts.Commercial / total) * 100),
+                        Navigational: Math.round((counts.Navigational / total) * 100),
+                        Unknown: Math.round((counts.Unknown / total) * 100)
+                    };
+                });
+
+                // Compute keyword overlap across URLs
+                const keywordToUrls = {};
+                urls.forEach(u => {
+                    (resultsByUrl[u].rankingKeywords || []).forEach(k => {
+                        const key = (k.keyword || '').toLowerCase();
+                        if (!key) return;
+                        if (!keywordToUrls[key]) keywordToUrls[key] = [];
+                        if (!keywordToUrls[key].includes(u)) keywordToUrls[key].push(u);
+                    });
+                });
+                const overlaps = Object.entries(keywordToUrls)
+                    .filter(([_, arr]) => arr.length > 1)
+                    .map(([kwLower, urlList]) => {
+                        const perUrl = {};
+                        urlList.forEach(u => {
+                            const match = (resultsByUrl[u].rankingKeywords || []).find(k => (k.keyword || '').toLowerCase() === kwLower);
+                            if (match) perUrl[u] = { rank: match.rank_position };
+                        });
+                        return { keyword: kwLower, urls: urlList, data: perUrl };
+                    })
+                    .sort((a, b) => b.urls.length - a.urls.length || a.keyword.localeCompare(b.keyword));
+
+                return { urls, locale, limit, resultsByUrl, overlaps };
             }
 
-            function showKeywordTargetingDashboard(data) {
+            function showKeywordTargetingDashboard(payload) {
                 // Hide regular view elements
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
 
-                const sm = data.siteMetrics?.data?.site_metrics || {};
-                const linkingDomains = sm.root_domains_to_page ?? 'N/A';
-                const inboundLinks = sm.external_pages_to_page ?? 'N/A';
-                const pageAuthority = sm.page_authority ?? 'N/A';
-
+                const { urls, locale, limit, resultsByUrl, overlaps } = payload;
                 const formatNumber = (num) => {
                     if (typeof num !== 'number' || num === 'N/A') return num;
                     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -2005,77 +2003,134 @@
 
                 let html = '<div id="keyword-targeting-dashboard" class="space-y-6">';
                 html += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-2">Keyword Targeting Analysis</h3>';
-                html += `<p class="text-sm text-[var(--text-secondary)]">URL: <span class="text-[var(--text-primary)]">${data.url}</span> • Locale: ${data.locale} • Keywords analyzed: ${data.rankingKeywords.length}</p>`;
+                html += `<p class="text-sm text-[var(--text-secondary)]">URLs: <span class="text-[var(--text-primary)]">${urls.length}</span> • Locale: ${locale}</p>`;
 
-                // Page-level metrics
-                html += '<div class="grid grid-cols-1 md:grid-cols-3 gap-4">';
-                html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4"><div class="text-xs text-[var(--text-secondary)] uppercase font-semibold mb-2">Linking Domains</div><div class="text-2xl font-bold">${typeof linkingDomains === 'number' ? formatNumber(linkingDomains) : linkingDomains}</div></div>`;
-                html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4"><div class="text-xs text-[var(--text-secondary)] uppercase font-semibold mb-2">Inbound Links</div><div class="text-2xl font-bold">${typeof inboundLinks === 'number' ? formatNumber(inboundLinks) : inboundLinks}</div></div>`;
-                html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4"><div class="text-xs text-[var(--text-secondary)] uppercase font-semibold mb-2">Page Authority</div><div class="text-2xl font-bold">${pageAuthority}</div></div>`;
-                html += '</div>';
-
-                // Intent distribution
-                const idist = data.intentDistribution || {};
-                html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
-                html += '<div class="text-sm font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Search Intent Distribution</div>';
-                html += '<div class="grid grid-cols-2 md:grid-cols-5 gap-3">';
-                ['Informational','Transactional','Commercial','Navigational','Unknown'].forEach(k => {
-                    html += `<div><div class="text-xs text-[var(--text-secondary)]">${k}</div><div class="text-lg font-bold text-[var(--text-primary)]">${idist[k] ?? 0}%</div></div>`;
+                // Cards per URL
+                html += '<div class="metrics-grid-container" style="display: grid !important; grid-template-columns: repeat(' + Math.min(urls.length, 4) + ', minmax(0, 1fr)) !important;">';
+                urls.forEach((u, idx) => {
+                    const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
+                    const linkingDomains = sm.root_domains_to_page ?? 'N/A';
+                    const inboundLinks = sm.external_pages_to_page ?? 'N/A';
+                    const pageAuthority = sm.page_authority ?? 'N/A';
+                    html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                    html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1">URL ${idx + 1}</h4>`;
+                    html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3">${u}</p>`;
+                    html += '<div class="grid grid-cols-3 gap-3">';
+                    html += `<div><div class="text-[var(--text-secondary)] text-xs">Linking Domains</div><div class="font-bold">${typeof linkingDomains === 'number' ? formatNumber(linkingDomains) : linkingDomains}</div></div>`;
+                    html += `<div><div class="text-[var(--text-secondary)] text-xs">Inbound Links</div><div class="font-bold">${typeof inboundLinks === 'number' ? formatNumber(inboundLinks) : inboundLinks}</div></div>`;
+                    html += `<div><div class="text-[var(--text-secondary)] text-xs">Page Authority</div><div class="font-bold">${pageAuthority}</div></div>`;
+                    html += '</div>';
+                    html += '</div>';
                 });
-                html += '</div></div>';
+                html += '</div>';
 
-                // Ranking keywords with intent
-                html += '<div class="mt-2">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-2">Ranking Keywords</h4>';
-                html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
-                html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
-                html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Intent</th>';
-                html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Rank</th>';
-                html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Page</th>';
-                html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Difficulty</th>';
-                html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Volume</th>';
-                html += '</tr></thead><tbody>';
-                data.rankingKeywords.slice(0, data.limit).forEach(kw => {
-                    const intent = data.searchIntent[kw.keyword] || 'Unknown';
-                    html += '<tr class="border-b border-[var(--border-primary)]">';
-                    html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.keyword || 'N/A'}</td>`;
-                    html += `<td class="px-4 py-2 text-[var(--text-primary)]">${intent}</td>`;
-                    html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.rank_position ?? 'N/A'}</td>`;
-                    html += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm break-all max-w-xs">${kw.ranking_page || 'N/A'}</td>`;
-                    html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.difficulty ?? 'N/A'}</td>`;
-                    html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.volume ?? 'N/A'}</td>`;
-                    html += '</tr>';
+                // Selector to choose details per URL
+                html += '<div class="flex items-center justify-between mb-2">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Details</h4>';
+                html += '<div><label for="kta-url-selector" class="inline-block text-sm font-medium text-[var(--text-secondary)] mr-2">View Details For:</label>';
+                html += '<select id="kta-url-selector" class="inline-block bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)]">';
+                urls.forEach((u, idx) => { html += `<option value="${idx}">URL ${idx + 1}</option>`; });
+                html += '</select></div></div>';
+
+                // Per-URL panels: intent distribution + keywords + anchors
+                urls.forEach((u, idx) => {
+                    const res = resultsByUrl[u];
+                    const idist = res.intentDistribution || {};
+                    html += `<div id="kta-panel-${idx}" class="${idx === 0 ? '' : 'hidden'} space-y-4">`;
+                    html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                    html += '<div class="text-sm font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Search Intent Distribution</div>';
+                    html += '<div class="grid grid-cols-2 md:grid-cols-5 gap-3">';
+                    ['Informational','Transactional','Commercial','Navigational','Unknown'].forEach(k => {
+                        html += `<div><div class="text-xs text-[var(--text-secondary)]">${k}</div><div class="text-lg font-bold text-[var(--text-primary)]">${idist[k] ?? 0}%</div></div>`;
+                    });
+                    html += '</div></div>';
+
+                    // Ranking keywords
+                    html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Intent</th>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Rank</th>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Page</th>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Difficulty</th>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Volume</th>';
+                    html += '</tr></thead><tbody>';
+                    res.rankingKeywords.slice(0, limit).forEach(kw => {
+                        const intent = res.searchIntent[kw.keyword] || 'Unknown';
+                        html += '<tr class="border-b border-[var(--border-primary)]">';
+                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.keyword || 'N/A'}</td>`;
+                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${intent}</td>`;
+                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.rank_position ?? 'N/A'}</td>`;
+                        html += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm break-all max-w-xs">${kw.ranking_page || 'N/A'}</td>`;
+                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.difficulty ?? 'N/A'}</td>`;
+                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.volume ?? 'N/A'}</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table></div>';
+
+                    // Top anchors
+                    html += '<div class="mt-2">';
+                    html += '<h5 class="font-semibold text-[var(--text-primary)] mb-2">Top Inbound Anchor Texts (by external domains)</h5>';
+                    html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Anchor Text</th>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">External Root Domains</th>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">External Pages</th>';
+                    html += '</tr></thead><tbody>';
+                    (res.topAnchors || []).forEach(a => {
+                        html += '<tr class="border-b border-[var(--border-primary)]">';
+                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.text || 'N/A'}</td>`;
+                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.external_root_domains ?? 'N/A'}</td>`;
+                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.external_pages ?? 'N/A'}</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table></div>';
+                    html += '</div>';
                 });
-                html += '</tbody></table></div>';
+
+                // Overlapping keywords across URLs
+                html += '<div id="url-overlap-section" class="mt-6">';
+                html += '<div class="flex items-center justify-between mb-4">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Keyword Overlap Across URLs</h4>';
+                html += '</div>';
+                if ((overlaps || []).length > 0) {
+                    html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
+                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Shared By</th>';
+                    urls.forEach(u => { html += `<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">URL ${urls.indexOf(u) + 1}</th>`; });
+                    html += '</tr></thead><tbody>';
+                    overlaps.forEach(row => {
+                        html += '<tr class="border-b border-[var(--border-primary)]">';
+                        html += `<td class="px-4 py-2 text-[var(--text-primary)] font-semibold">${row.keyword}</td>`;
+                        html += `<td class="px-4 py-2 text-[var(--text-primary)]">${row.urls.length} URLs</td>`;
+                        urls.forEach(u => {
+                            const data = row.data[u];
+                            html += `<td class="px-4 py-2 text-[var(--text-primary)] text-sm">${data ? (data.rank ?? 'N/A') : 'Not ranking'}</td>`;
+                        });
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table></div>';
+                } else {
+                    html += '<p class="text-[var(--text-secondary)]">No overlapping keywords found across the selected URLs.</p>';
+                }
                 html += '</div>';
 
-                // Top inbound anchors
-                html += '<div class="mt-2">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-2">Top Inbound Anchor Texts (by external domains)</h4>';
-                html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
-                html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Anchor Text</th>';
-                html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">External Root Domains</th>';
-                html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">External Pages</th>';
-                html += '</tr></thead><tbody>';
-                (data.topAnchors || []).forEach(a => {
-                    html += '<tr class="border-b border-[var(--border-primary)]">';
-                    html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.text || 'N/A'}</td>`;
-                    html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.external_root_domains ?? 'N/A'}</td>`;
-                    html += `<td class="px-4 py-2 text-[var(--text-primary)]">${a.external_pages ?? 'N/A'}</td>`;
-                    html += '</tr>';
-                });
-                html += '</tbody></table></div>';
                 html += '</div>';
 
-                html += '</div>';
-
-                allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                allDOMElements.rawCode.textContent = JSON.stringify(payload, null, 2);
                 allDOMElements.rawWrapper.innerHTML = html;
                 allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
-
-                // Keep PDF export hidden for this dashboard for now
                 allDOMElements.exportPdfBtn.classList.add('hidden');
+
+                const selector = document.getElementById('kta-url-selector');
+                if (selector) {
+                    selector.addEventListener('change', (e) => {
+                        const selected = parseInt(e.target.value);
+                        urls.forEach((_, idx) => {
+                            const panel = document.getElementById(`kta-panel-${idx}`);
+                            if (panel) panel.classList.toggle('hidden', idx !== selected);
+                        });
+                    });
+                }
             }
 
             function showCompetitiveDashboard(data) {
