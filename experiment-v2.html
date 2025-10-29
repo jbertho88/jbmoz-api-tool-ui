@@ -1699,7 +1699,7 @@
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
                     const da = sm.domain_authority ?? 'N/A';
-                    const links = sm.pages_to_root_domain ?? 'N/A';
+                    const links = sm.external_pages_to_root_domain ?? 'N/A';
                     const linkingDomains = sm.root_domains_to_root_domain ?? 'N/A';
                     const spam = sm.spam_score ?? 'N/A';
                     
@@ -1747,7 +1747,11 @@
                 
                 // Add overlapping keywords section
                 dashboardHTML += '<div id="overlapping-keywords-section" class="mt-6">';
-                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Overlapping Keywords</h4>';
+                dashboardHTML += '<div class="flex items-center justify-between mb-4">';
+                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Overlapping Keywords</h4>';
+                dashboardHTML += '<button id="toggle-overlapping" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold">Collapse</button>';
+                dashboardHTML += '</div>';
+                dashboardHTML += '<div id="overlapping-keywords-content">';
                 
                 // Extract all keywords for each domain
                 const domainKeywords = {};
@@ -1787,9 +1791,7 @@
                                 const kwData = domainEntry?.rankingKeywords?.data?.ranking_keywords?.find(k => k.keyword?.toLowerCase() === keyword);
                                 if (kwData) {
                                     keywordData[domain] = {
-                                        rank: kwData.rank_position,
-                                        volume: kwData.volume,
-                                        difficulty: kwData.difficulty
+                                        rank: kwData.rank_position
                                     };
                                 }
                             });
@@ -1813,7 +1815,7 @@
                             domainNames.forEach(domain => {
                                 const kwData = overlap.data[domain];
                                 if (kwData) {
-                                    dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)] text-sm">Rank: ${kwData.rank ?? 'N/A'}<br>Vol: ${kwData.volume ? kwData.volume.toLocaleString() : 'N/A'}<br>Diff: ${kwData.difficulty ?? 'N/A'}</td>`;
+                                    dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)] text-sm">${kwData.rank ?? 'N/A'}</td>`;
                                 } else {
                                     dashboardHTML += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm">Not ranking</td>`;
                                 }
@@ -1828,6 +1830,7 @@
                 } else {
                     dashboardHTML += '<p class="text-[var(--text-secondary)]">Add competitors to see overlapping keywords.</p>';
                 }
+                dashboardHTML += '</div>';
                 dashboardHTML += '</div>';
                 
                 // Create keywords section
@@ -1852,7 +1855,7 @@
                             dashboardHTML += '<tr class="border-b border-[var(--border-primary)]">';
                             dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.keyword || 'N/A'}</td>`;
                             dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.rank_position ?? 'N/A'}</td>`;
-                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm">${(kw.ranking_page || 'N/A').substring(0, 50)}${(kw.ranking_page || '').length > 50 ? '...' : ''}</td>`;
+                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm break-all max-w-xs">${kw.ranking_page || 'N/A'}</td>`;
                             dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.difficulty ?? 'N/A'}</td>`;
                             dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.volume ? kw.volume.toLocaleString() : 'N/A'}</td>`;
                             dashboardHTML += '</tr>';
@@ -1882,6 +1885,22 @@
                         document.querySelectorAll('.keywords-panel').forEach((panel, idx) => {
                             panel.classList.toggle('hidden', idx !== selectedIdx);
                         });
+                    });
+                }
+                
+                // Add event listener for overlapping keywords toggle
+                const toggleOverlapping = document.getElementById('toggle-overlapping');
+                const overlappingContent = document.getElementById('overlapping-keywords-content');
+                if (toggleOverlapping && overlappingContent) {
+                    toggleOverlapping.addEventListener('click', () => {
+                        const isHidden = overlappingContent.classList.contains('hidden');
+                        if (isHidden) {
+                            overlappingContent.classList.remove('hidden');
+                            toggleOverlapping.textContent = 'Collapse';
+                        } else {
+                            overlappingContent.classList.add('hidden');
+                            toggleOverlapping.textContent = 'Expand';
+                        }
                     });
                 }
             }
