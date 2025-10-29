@@ -1859,8 +1859,10 @@
                 });
                 dashboardHTML += '</select></div>';
                 
-                // Create metrics grid - ensure all 4 boxes in one row on large screens
-                dashboardHTML += '<div class="metrics-grid-container" style="display: grid !important; grid-template-columns: repeat(1, minmax(0, 1fr)) !important; width: 100% !important; max-width: 100% !important; gap: 1rem !important; margin-bottom: 1.5rem !important; box-sizing: border-box !important;">';
+                // Create metrics grid - ensure all boxes in one row
+                const domainCount = Object.keys(data).length;
+                const initialColumns = domainCount <= 2 ? domainCount : 2; // Start with 2 columns if 2+ domains, else show all
+                dashboardHTML += `<div class="metrics-grid-container" style="display: grid !important; grid-template-columns: repeat(${initialColumns}, minmax(0, 1fr)) !important; width: 100% !important; max-width: 100% !important; gap: 1rem !important; margin-bottom: 1.5rem !important; box-sizing: border-box !important;">`;
                 Object.values(data).forEach((domainData, idx) => {
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
@@ -1938,11 +1940,10 @@
                     }
                     
                     dashboardHTML += `</div>`;
-                    
                     if (domainData.errors && domainData.errors.length > 0) {
                         dashboardHTML += `<div class="mt-2 text-xs text-[var(--text-error)]">Errors: ${domainData.errors.join(', ')}</div>`;
                     }
-                    dashboardHTML += `</div>`;
+                    // Note: Do not close the grid container here; only close the card div above
                 });
                 dashboardHTML += '</div>';
                 
@@ -2145,17 +2146,29 @@
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.remove('hidden');
                 
-                // Force grid layout after DOM insertion
+                // Force grid layout after DOM insertion - always show all domains in one row
                 setTimeout(() => {
                     const gridContainer = document.querySelector('.metrics-grid-container');
                     if (gridContainer) {
                         const updateGrid = () => {
                             const width = window.innerWidth;
+                            const domainCount = Object.keys(data).length;
+                            
+                            // Always try to show all domains in one row
                             if (width >= 1280) {
-                                gridContainer.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
+                                // Large screen: show all domains up to 4 in one row
+                                gridContainer.style.gridTemplateColumns = `repeat(${Math.min(domainCount, 4)}, minmax(0, 1fr))`;
                             } else if (width >= 768) {
-                                gridContainer.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+                                // Tablet: show all domains up to 2 in one row, or 3 if screen is wide enough
+                                if (domainCount <= 3 && width >= 900) {
+                                    gridContainer.style.gridTemplateColumns = `repeat(${domainCount}, minmax(0, 1fr))`;
+                                } else {
+                                    gridContainer.style.gridTemplateColumns = domainCount <= 2 
+                                        ? `repeat(${domainCount}, minmax(0, 1fr))`
+                                        : 'repeat(2, minmax(0, 1fr))';
+                                }
                             } else {
+                                // Mobile: always 1 column
                                 gridContainer.style.gridTemplateColumns = 'repeat(1, minmax(0, 1fr))';
                             }
                             gridContainer.style.display = 'grid';
