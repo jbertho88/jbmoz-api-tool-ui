@@ -2109,6 +2109,9 @@
                         html += '</tr>';
                     });
                     html += '</tbody></table></div>';
+                    // Simple debug list fallback to ensure rows render in some form
+                    const debugList = visibleKeywords.slice(0, 5).map(k => k.keyword || 'N/A').join(', ');
+                    html += `<div class=\"text-xs text-[var(--text-secondary)] mt-1\">Preview: <span class=\"text-[var(--text-primary)]\">${debugList}</span></div>`;
                     html += '</div></div>';
 
                     // Top anchors (collapsible)
