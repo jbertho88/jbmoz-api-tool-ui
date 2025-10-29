@@ -2148,6 +2148,71 @@
                 }
                 html += '</div>';
 
+                // Keyword Gap between URLs (what one URL ranks for that others do not)
+                html += '<div id="url-gap-section" class="mt-6">';
+                html += '<div class="flex items-center justify-between mb-4">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Keyword Gap Between URLs</h4>';
+                html += '</div>';
+                // Build per-URL keyword sets
+                const perUrlKeywords = {};
+                urls.forEach(u => {
+                    const arr = Array.isArray(resultsByUrl[u].rankingKeywords)
+                        ? resultsByUrl[u].rankingKeywords
+                        : (resultsByUrl[u].rankingKeywords && resultsByUrl[u].rankingKeywords.data && Array.isArray(resultsByUrl[u].rankingKeywords.data.ranking_keywords)
+                            ? resultsByUrl[u].rankingKeywords.data.ranking_keywords
+                            : []);
+                    perUrlKeywords[u] = new Set(arr.map(k => (k.keyword || '').toLowerCase()).filter(Boolean));
+                });
+                // Compute gaps for each URL vs others
+                const gapBlocks = [];
+                urls.forEach((u, idx) => {
+                    const allOthers = urls.filter(x => x !== u);
+                    const othersUnion = new Set();
+                    allOthers.forEach(o => { perUrlKeywords[o].forEach(k => othersUnion.add(k)); });
+                    const srcArray = Array.isArray(resultsByUrl[u].rankingKeywords)
+                        ? resultsByUrl[u].rankingKeywords
+                        : (resultsByUrl[u].rankingKeywords && resultsByUrl[u].rankingKeywords.data && Array.isArray(resultsByUrl[u].rankingKeywords.data.ranking_keywords)
+                            ? resultsByUrl[u].rankingKeywords.data.ranking_keywords
+                            : []);
+                    const gaps = srcArray.filter(k => {
+                        const kw = (k.keyword || '').toLowerCase();
+                        return kw && !othersUnion.has(kw);
+                    });
+                    gapBlocks.push({ url: u, idx, gaps });
+                });
+                const totalGapCount = gapBlocks.reduce((s, g) => s + g.gaps.length, 0);
+                if (totalGapCount === 0) {
+                    html += '<p class="text-[var(--text-secondary)]">No keyword gaps found between the selected URLs.</p>';
+                } else {
+                    gapBlocks.forEach(block => {
+                        html += `<div class="mb-4"><div class="text-sm text-[var(--text-secondary)] mb-2">Unique keywords for URL ${block.idx + 1} only</div>`;
+                        html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
+                        html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
+                        html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Rank</th>';
+                        html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Page</th>';
+                        html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Difficulty</th>';
+                        html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Volume</th>';
+                        html += '</tr></thead><tbody>';
+                        const limitGap = Math.max(5, Math.min(limit, 50));
+                        const list = block.gaps.slice(0, limitGap);
+                        if (list.length === 0) {
+                            html += '<tr><td colspan="5" class="px-4 py-2 text-[var(--text-secondary)]">No unique keywords for this URL.</td></tr>';
+                        } else {
+                            list.forEach(kw => {
+                                html += '<tr class="border-b border-[var(--border-primary)]">';
+                                html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.keyword || 'N/A'}</td>`;
+                                html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.rank_position ?? 'N/A'}</td>`;
+                                html += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm break-all max-w-xs">${kw.ranking_page || 'N/A'}</td>`;
+                                html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.difficulty ?? 'N/A'}</td>`;
+                                html += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.volume ?? 'N/A'}</td>`;
+                                html += '</tr>';
+                            });
+                        }
+                        html += '</tbody></table></div></div>';
+                    });
+                }
+                html += '</div>';
+
                 html += '</div>';
 
                 allDOMElements.rawCode.textContent = JSON.stringify(payload, null, 2);
