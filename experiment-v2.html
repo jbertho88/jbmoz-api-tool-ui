@@ -2110,22 +2110,8 @@
                     html += '</div>';
                     
                     html += '<div id="kta-overlap-table-wrapper">';
-                    html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Shared By</th>';
-                    urls.forEach((u, idx) => { html += `<th class=\"px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]\">URL ${idx + 1}</th>`; });
-                    html += '</tr></thead><tbody>';
-                    overlaps.forEach(row => {
-                        html += '<tr class="border-b border-[var(--border-primary)]">';
-                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)] font-semibold\">${row.keyword}</td>`;
-                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${row.urls.length} URLs</td>`;
-                        urls.forEach(u => {
-                            const data = row.data[u];
-                            html += `<td class=\"px-4 py-2 text-[var(--text-primary)] text-sm\">${data ? (data.rank ?? 'N/A') : 'Not ranking'}</td>`;
-                        });
-                        html += '</tr>';
-                    });
-                    html += '</tbody></table></div></div>';
+                    html += '<div id="kta-overlap-table"></div>';
+                    html += '</div>';
                 } else {
                     html += '<p class="text-[var(--text-secondary)]">No overlapping keywords found across the selected URLs.</p>';
                 }
@@ -2146,31 +2132,8 @@
                         : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
                             ? res.rankingKeywords.data.ranking_keywords
                             : []);
-                    const visibleKeywords = rkArray.slice(0, limit);
                     html += `<div id=\"kta-keywords-panel-${idx}\" class=\"${idx === 0 ? '' : 'hidden'}\">`;
-                    html += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Intent</th>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Rank</th>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Page</th>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Difficulty</th>';
-                    html += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Volume</th>';
-                    html += '</tr></thead><tbody>';
-                    if (visibleKeywords.length === 0) {
-                        html += '<tr><td colspan="6" class="px-4 py-2 text-[var(--text-secondary)]">No ranking keywords found.</td></tr>';
-                    }
-                    visibleKeywords.forEach(kw => {
-                        const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || 'Unknown';
-                        html += '<tr class="border-b border-[var(--border-primary)]">';
-                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${kw.keyword || 'N/A'}</td>`;
-                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${intent}</td>`;
-                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${kw.rank_position ?? 'N/A'}</td>`;
-                        html += `<td class=\"px-4 py-2 text-[var(--text-secondary)] text-sm break-all max-w-xs\">${kw.ranking_page || 'N/A'}</td>`;
-                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${kw.difficulty ?? 'N/A'}</td>`;
-                        html += `<td class=\"px-4 py-2 text-[var(--text-primary)]\">${kw.volume ?? 'N/A'}</td>`;
-                        html += '</tr>';
-                    });
-                    html += '</tbody></table></div>';
+                    html += `<div id="kta-keywords-table-${idx}"></div>`;
                     html += '</div>';
                 });
                 html += '</div>';
@@ -2186,6 +2149,51 @@
                 allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.add('hidden');
+
+                // Initialize Tabulator for ranking keywords tables
+                urls.forEach((u, idx) => {
+                    const res = resultsByUrl[u] || {};
+                    const rkArray = Array.isArray(res.rankingKeywords)
+                        ? res.rankingKeywords
+                        : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
+                            ? res.rankingKeywords.data.ranking_keywords
+                            : []);
+                    
+                    if (rkArray.length > 0) {
+                        setTimeout(() => {
+                            if (typeof Tabulator !== 'undefined' && document.getElementById(`kta-keywords-table-${idx}`)) {
+                                const tableData = rkArray.map(kw => {
+                                    const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || 'Unknown';
+                                    return {
+                                        keyword: kw.keyword || 'N/A',
+                                        intent: intent,
+                                        rank: kw.rank_position ?? 'N/A',
+                                        page: kw.ranking_page || 'N/A',
+                                        difficulty: kw.difficulty ?? 'N/A',
+                                        volume: kw.volume ?? 'N/A'
+                                    };
+                                });
+                                
+                                new Tabulator(`#kta-keywords-table-${idx}`, {
+                                    data: tableData,
+                                    columns: [
+                                        { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                        { title: 'Intent', field: 'intent', sorter: 'string' },
+                                        { title: 'Rank', field: 'rank', sorter: 'number' },
+                                        { title: 'Page', field: 'page', sorter: 'string' },
+                                        { title: 'Difficulty', field: 'difficulty', sorter: 'number' },
+                                        { title: 'Volume', field: 'volume', sorter: 'number' }
+                                    ],
+                                    layout: "fitDataStretch",
+                                    pagination: "local",
+                                    paginationSize: 25,
+                                    movableColumns: true,
+                                    resizableColumns: true
+                                });
+                            }
+                        }, 100);
+                    }
+                });
 
                 // Wire URL selector for unified Ranking Keywords panels
                 const ktaSelector = document.getElementById('kta-url-selector');
@@ -2216,6 +2224,43 @@
                         }
                     });
                 });
+
+                // Initialize Tabulator for overlap table
+                if ((overlaps || []).length > 0) {
+                    setTimeout(() => {
+                        if (typeof Tabulator !== 'undefined' && document.getElementById('kta-overlap-table')) {
+                            const tableData = overlaps.map(row => {
+                                const obj = {
+                                    keyword: row.keyword,
+                                    sharedBy: `${row.urls.length} URLs`
+                                };
+                                urls.forEach((u, idx) => {
+                                    const data = row.data[u];
+                                    obj[`url${idx + 1}`] = data ? (data.rank ?? 'N/A') : 'Not ranking';
+                                });
+                                return obj;
+                            });
+                            
+                            const columns = [
+                                { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                { title: 'Shared By', field: 'sharedBy', sorter: 'string' }
+                            ];
+                            urls.forEach((u, idx) => {
+                                columns.push({ title: `URL ${idx + 1}`, field: `url${idx + 1}`, sorter: 'number' });
+                            });
+                            
+                            new Tabulator("#kta-overlap-table", {
+                                data: tableData,
+                                columns: columns,
+                                layout: "fitDataStretch",
+                                pagination: "local",
+                                paginationSize: 25,
+                                movableColumns: true,
+                                resizableColumns: true
+                            });
+                        }
+                    }, 100);
+                }
 
                 // Wire overlap table collapse/expand toggle
                 const overlapToggle = document.getElementById('kta-overlap-toggle');
@@ -2406,26 +2451,7 @@
                     
                     const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                     if (keywords.length > 0) {
-                        dashboardHTML += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg keywords-table" id="keywords-table-' + idx + '"><thead class="bg-[var(--bg-input)]"><tr>';
-                        dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)] sortable-header" data-sort="keyword">Keyword<span class="sort-indicator"></span></th>';
-                        dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)] sortable-header" data-sort="rank">Rank<span class="sort-indicator"></span></th>';
-                        dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Page</th>';
-                        dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)] sortable-header" data-sort="difficulty">Difficulty<span class="sort-indicator"></span></th>';
-                        dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)] sortable-header" data-sort="volume">Volume<span class="sort-indicator"></span></th>';
-                        dashboardHTML += '</tr></thead><tbody>';
-                        
-                        const limit = currentOriginalParams?.limit || 25;
-                        keywords.slice(0, limit).forEach(kw => {
-                            dashboardHTML += '<tr class="border-b border-[var(--border-primary)]" data-keyword="' + (kw.keyword || '').toLowerCase() + '" data-rank="' + (kw.rank_position || 999) + '" data-difficulty="' + (kw.difficulty || 999) + '" data-volume="' + (kw.volume || 0) + '">';
-                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.keyword || 'N/A'}<span class="copy-keyword-btn text-[var(--text-accent)]" data-keyword="${kw.keyword || ''}" title="Copy keyword">📋</span></td>`;
-                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.rank_position ?? 'N/A'}</td>`;
-                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm break-all max-w-xs">${kw.ranking_page || 'N/A'}</td>`;
-                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.difficulty ?? 'N/A'}</td>`;
-                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.volume ? formatNumber(kw.volume) : 'N/A'}</td>`;
-                            dashboardHTML += '</tr>';
-                        });
-                        
-                        dashboardHTML += '</tbody></table></div>';
+                        dashboardHTML += '<div id="comp-keywords-table-' + idx + '"></div>';
                     } else {
                         dashboardHTML += '<p class="text-[var(--text-secondary)]">No ranking keywords found.</p>';
                     }
@@ -2476,23 +2502,7 @@
                 dashboardHTML += '<div id="keyword-gap-content">';
                 
                 if (uniqueGapKeywords.length > 0) {
-                    dashboardHTML += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
-                    dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
-                    dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Volume</th>';
-                    dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Difficulty</th>';
-                    dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Competitor</th>';
-                    dashboardHTML += '</tr></thead><tbody>';
-                    
-                    uniqueGapKeywords.slice(0, 20).forEach(kw => {
-                        dashboardHTML += '<tr class="border-b border-[var(--border-primary)]">';
-                        dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)] font-semibold">${kw.keyword}<span class="copy-keyword-btn text-[var(--text-accent)]" data-keyword="${kw.keyword}" title="Copy keyword">📋</span></td>`;
-                        dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.volume ? formatNumber(kw.volume) : 'N/A'}</td>`;
-                        dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${kw.difficulty ?? 'N/A'}</td>`;
-                        dashboardHTML += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm">${kw.competitor}</td>`;
-                        dashboardHTML += '</tr>';
-                    });
-                    
-                    dashboardHTML += '</tbody></table></div>';
+                    dashboardHTML += '<div id="comp-keyword-gap-table"></div>';
                     if (uniqueGapKeywords.length > 20) {
                         dashboardHTML += `<p class="text-sm text-[var(--text-secondary)] mt-2">Showing top 20 of ${uniqueGapKeywords.length} keyword opportunities</p>`;
                     }
@@ -2557,30 +2567,7 @@
                         .sort((a, b) => b.domains.length - a.domains.length || a.keyword.localeCompare(b.keyword));
                     
                     if (overlappingKeywords.length > 0) {
-                        dashboardHTML += '<div class="overflow-x-auto"><table class="w-full border border-[var(--border-primary)] rounded-lg"><thead class="bg-[var(--bg-input)]"><tr>';
-                        dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Keyword</th>';
-                        dashboardHTML += '<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">Shared By</th>';
-                        domainNames.forEach(domain => {
-                            dashboardHTML += `<th class="px-4 py-2 text-left text-[var(--text-primary)] border-b border-[var(--border-primary)]">${domain}</th>`;
-                        });
-                        dashboardHTML += '</tr></thead><tbody>';
-                        
-                        overlappingKeywords.forEach(overlap => {
-                            dashboardHTML += '<tr class="border-b border-[var(--border-primary)]">';
-                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)] font-semibold">${overlap.keyword}</td>`;
-                            dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)]">${overlap.domains.length} domains</td>`;
-                            domainNames.forEach(domain => {
-                                const kwData = overlap.data[domain];
-                                if (kwData) {
-                                    dashboardHTML += `<td class="px-4 py-2 text-[var(--text-primary)] text-sm">${kwData.rank ?? 'N/A'}</td>`;
-                                } else {
-                                    dashboardHTML += `<td class="px-4 py-2 text-[var(--text-secondary)] text-sm">Not ranking</td>`;
-                                }
-                            });
-                            dashboardHTML += '</tr>';
-                        });
-                        
-                        dashboardHTML += '</tbody></table></div>';
+                        dashboardHTML += '<div id="comp-overlapping-keywords-table"></div>';
                     } else {
                         dashboardHTML += '<div class="bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg p-6 text-center">';
                         dashboardHTML += '<p class="text-[var(--text-secondary)] mb-2">No overlapping keywords found.</p>';
@@ -2601,8 +2588,101 @@
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.remove('hidden');
                 
-                // Force grid layout after DOM insertion - always show all domains in one row
+                // Initialize Tabulator tables for Competitive Analysis
                 setTimeout(() => {
+                    if (typeof Tabulator !== 'undefined') {
+                        // Initialize ranking keywords tables
+                        Object.values(data).forEach((domainData, idx) => {
+                            const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
+                            if (keywords.length > 0 && document.getElementById(`comp-keywords-table-${idx}`)) {
+                                const limit = currentOriginalParams?.limit || 25;
+                                const tableData = keywords.slice(0, limit).map(kw => ({
+                                    keyword: kw.keyword || 'N/A',
+                                    rank: kw.rank_position ?? 'N/A',
+                                    page: kw.ranking_page || 'N/A',
+                                    difficulty: kw.difficulty ?? 'N/A',
+                                    volume: kw.volume ? formatNumber(kw.volume) : 'N/A'
+                                }));
+                                
+                                new Tabulator(`#comp-keywords-table-${idx}`, {
+                                    data: tableData,
+                                    columns: [
+                                        { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                        { title: 'Rank', field: 'rank', sorter: 'number' },
+                                        { title: 'Page', field: 'page', sorter: 'string' },
+                                        { title: 'Difficulty', field: 'difficulty', sorter: 'number' },
+                                        { title: 'Volume', field: 'volume', sorter: 'string' }
+                                    ],
+                                    layout: "fitDataStretch",
+                                    pagination: "local",
+                                    paginationSize: 25,
+                                    movableColumns: true,
+                                    resizableColumns: true
+                                });
+                            }
+                        });
+                        
+                        // Initialize keyword gap table
+                        if (uniqueGapKeywords.length > 0 && document.getElementById('comp-keyword-gap-table')) {
+                            const gapTableData = uniqueGapKeywords.slice(0, 20).map(kw => ({
+                                keyword: kw.keyword,
+                                volume: kw.volume ? formatNumber(kw.volume) : 'N/A',
+                                difficulty: kw.difficulty ?? 'N/A',
+                                competitor: kw.competitor
+                            }));
+                            
+                            new Tabulator('#comp-keyword-gap-table', {
+                                data: gapTableData,
+                                columns: [
+                                    { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                    { title: 'Volume', field: 'volume', sorter: 'string' },
+                                    { title: 'Difficulty', field: 'difficulty', sorter: 'number' },
+                                    { title: 'Competitor', field: 'competitor', sorter: 'string' }
+                                ],
+                                layout: "fitDataStretch",
+                                pagination: "local",
+                                paginationSize: 20,
+                                movableColumns: true,
+                                resizableColumns: true
+                            });
+                        }
+                        
+                        // Initialize overlapping keywords table
+                        if (overlappingKeywords && overlappingKeywords.length > 0 && document.getElementById('comp-overlapping-keywords-table')) {
+                            const domainNames = Object.keys(domainKeywords);
+                            const overlapTableData = overlappingKeywords.map(overlap => {
+                                const obj = {
+                                    keyword: overlap.keyword,
+                                    sharedBy: `${overlap.domains.length} domains`
+                                };
+                                domainNames.forEach(domain => {
+                                    const kwData = overlap.data[domain];
+                                    obj[domain] = kwData ? (kwData.rank ?? 'N/A') : 'Not ranking';
+                                });
+                                return obj;
+                            });
+                            
+                            const columns = [
+                                { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                { title: 'Shared By', field: 'sharedBy', sorter: 'string' }
+                            ];
+                            domainNames.forEach(domain => {
+                                columns.push({ title: domain, field: domain, sorter: 'number' });
+                            });
+                            
+                            new Tabulator('#comp-overlapping-keywords-table', {
+                                data: overlapTableData,
+                                columns: columns,
+                                layout: "fitDataStretch",
+                                pagination: "local",
+                                paginationSize: 25,
+                                movableColumns: true,
+                                resizableColumns: true
+                            });
+                        }
+                    }
+                    
+                    // Force grid layout after DOM insertion - always show all domains in one row
                     const gridContainer = document.querySelector('.metrics-grid-container');
                     if (gridContainer) {
                         const updateGrid = () => {
