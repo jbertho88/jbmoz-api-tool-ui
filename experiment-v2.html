@@ -2257,6 +2257,12 @@
                     selector.addEventListener('input', (e) => showSelectedPanel(e.target.value));
                     // Ensure current selection is applied immediately
                     showSelectedPanel(selector.value);
+
+                    // DEBUG: Force-show all URL panels to validate rendering
+                    urls.forEach((_, idx) => {
+                        const panel = document.getElementById(`kta-panel-${idx}`);
+                        if (panel) panel.classList.remove('hidden');
+                    });
                 }
 
                 // Wire collapsible toggles
