@@ -464,15 +464,29 @@
         }
         
         /* Competitive Analysis Dashboard Grid Constraints */
-        #competitive-dashboard .grid > * {
+        .metrics-grid-container {
+            display: grid;
+            width: 100%;
+            gap: 1rem;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
+        
+        .metrics-grid-container > * {
             min-width: 0;
             max-width: 100%;
             width: 100%;
             box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        @media (min-width: 768px) {
+            .metrics-grid-container {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
         }
         
         @media (min-width: 1280px) {
-            #competitive-dashboard .grid.xl\\:grid-cols-4 {
+            .metrics-grid-container {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
         }
@@ -1807,7 +1821,7 @@
                 dashboardHTML += '</select></div>';
                 
                 // Create metrics grid - ensure all 4 boxes in one row on large screens
-                dashboardHTML += '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">';
+                dashboardHTML += '<div class="metrics-grid-container gap-4 mb-6">';
                 Object.values(data).forEach((domainData, idx) => {
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
@@ -1842,7 +1856,7 @@
                     }
                     
                     // Ensure grid items are properly constrained
-                    dashboardHTML += `<div class="${cardClasses}" style="min-width: 0; max-width: 100%; box-sizing: border-box;">`;
+                    dashboardHTML += `<div class="${cardClasses}">`;
                     dashboardHTML += gradientBar;
                     dashboardHTML += `<h4 class="font-bold text-[var(--text-primary)] mb-1 ${isYourDomain ? 'text-lg' : ''}">${isYourDomain ? 'Your Domain' : domainName}</h4>`;
                     dashboardHTML += `<p class="text-xs text-[var(--text-secondary)] mb-3">${domainData.domain}</p>`;
