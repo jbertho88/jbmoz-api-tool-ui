@@ -496,10 +496,16 @@
             }
         }
         
-        @media (min-width: 1280px) {
+        /* Expand to 4 columns on very wide screens */
+        @media (min-width: 1600px) {
             .metrics-grid-container {
                 grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
             }
+        }
+        
+        /* Manual widescreen toggle */
+        .metrics-grid-container.wide {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
         }
         
         /* Ensure parent containers don't cause overflow */
@@ -2007,11 +2013,14 @@
                 html += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-1">Keyword Targeting Analysis</h3>';
                 html += `<p class="text-sm text-[var(--text-secondary)]">URLs: <span class="text-[var(--text-primary)]">${urls.length}</span> • Locale: ${locale}</p>`;
                 html += '</div>';
+                html += '<div class="shrink-0">';
+                html += '<button type="button" class="compare-all-btn text-xs px-3 py-1 rounded-md border border-[var(--border-primary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" data-target="#keyword-metrics-grid">Compare All</button>';
+                html += '</div>';
                 // Export handled by global "Export to CSV" button
                 html += '</div>';
 
                 // Cards per URL
-                html += '<div class="metrics-grid-container" style="display: grid !important; grid-template-columns: repeat(' + Math.min(urls.length, 4) + ', minmax(0, 1fr)) !important;">';
+                html += '<div id="keyword-metrics-grid" class="metrics-grid-container">';
                 urls.forEach((u, idx) => {
                     const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
                     const linkingDomains = sm.root_domains_to_page ?? 'N/A';
@@ -2146,6 +2155,16 @@
 
                 allDOMElements.rawCode.textContent = JSON.stringify(payload, null, 2);
                 allDOMElements.rawWrapper.innerHTML = html;
+                // Attach compare-all toggle handler
+                const compareBtnKta = allDOMElements.rawWrapper.querySelector('.compare-all-btn[data-target="#keyword-metrics-grid"]');
+                if (compareBtnKta) {
+                    compareBtnKta.addEventListener('click', () => {
+                        const target = allDOMElements.rawWrapper.querySelector('#keyword-metrics-grid');
+                        if (!target) return;
+                        const isWide = target.classList.toggle('wide');
+                        compareBtnKta.textContent = isWide ? 'Collapse' : 'Compare All';
+                    });
+                }
                 allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.add('hidden');
@@ -2342,12 +2361,17 @@
                 
                 // Create dashboard HTML
                 let dashboardHTML = '<div id="competitive-dashboard" class="space-y-6">';
-                dashboardHTML += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-4">Competitive Analysis Dashboard</h3>';
+                dashboardHTML += '<div class="flex items-start justify-between gap-3 mb-4">';
+                dashboardHTML += '<h3 class="text-xl font-bold text-[var(--text-heading)]">Competitive Analysis Dashboard</h3>';
+                dashboardHTML += '<div class="shrink-0">';
+                dashboardHTML += '<button type="button" class="compare-all-btn text-xs px-3 py-1 rounded-md border border-[var(--border-primary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" data-target="#competitive-metrics-grid">Compare All</button>';
+                dashboardHTML += '</div>';
+                dashboardHTML += '</div>';
                 
                 // Create metrics grid - ensure all boxes in one row
                 const domainCount = Object.keys(data).length;
                 const initialColumns = domainCount <= 2 ? domainCount : 2; // Start with 2 columns if 2+ domains, else show all
-                dashboardHTML += `<div class="metrics-grid-container" style="display: grid !important; grid-template-columns: repeat(${initialColumns}, minmax(0, 1fr)) !important; width: 100% !important; max-width: 100% !important; gap: 1rem !important; margin-bottom: 1.5rem !important; box-sizing: border-box !important;">`;
+                dashboardHTML += `<div id=\"competitive-metrics-grid\" class=\"metrics-grid-container\">`;
                 Object.values(data).forEach((domainData, idx) => {
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
@@ -2584,6 +2608,16 @@
                 // Store JSON data and replace raw wrapper with dashboard
                 allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
                 allDOMElements.rawWrapper.innerHTML = dashboardHTML;
+                // Attach compare-all toggle handler
+                const compareBtnComp = allDOMElements.rawWrapper.querySelector('.compare-all-btn[data-target="#competitive-metrics-grid"]');
+                if (compareBtnComp) {
+                    compareBtnComp.addEventListener('click', () => {
+                        const target = allDOMElements.rawWrapper.querySelector('#competitive-metrics-grid');
+                        if (!target) return;
+                        const isWide = target.classList.toggle('wide');
+                        compareBtnComp.textContent = isWide ? 'Collapse' : 'Compare All';
+                    });
+                }
                 allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.remove('hidden');
