@@ -42,6 +42,9 @@
             document.head.appendChild(script);
         })();
     </script>
+    <!-- Load jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* Critical CSS - Prevents FOUC */
         body {
@@ -373,6 +376,165 @@
         .tabulator .tabulator-footer .tabulator-paginator button:hover {
             background: var(--tabulator-pag-button-hover);
         }
+        
+        /* Tooltip styles */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip-icon {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            margin-left: 4px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+            color: var(--bg-body);
+            font-size: 10px;
+            line-height: 14px;
+            text-align: center;
+            cursor: help;
+            vertical-align: middle;
+        }
+        
+        .tooltip-text {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--bg-container);
+            color: var(--text-primary);
+            text-align: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            white-space: nowrap;
+            z-index: 1000;
+            font-size: 12px;
+            max-width: 250px;
+            white-space: normal;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Sortable table headers */
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 20px;
+        }
+        
+        .sortable-header:hover {
+            background-color: var(--bg-input-secondary);
+        }
+        
+        .sort-indicator {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+        
+        .sort-asc .sort-indicator::after { content: '▲'; }
+        .sort-desc .sort-indicator::after { content: '▼'; }
+        
+        /* Copy button in table */
+        .copy-keyword-btn {
+            display: inline-block;
+            margin-left: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        tr:hover .copy-keyword-btn {
+            opacity: 1;
+        }
+        
+        /* Competitive Analysis Dashboard Grid Constraints */
+        .metrics-grid-container {
+            display: grid !important;
+            width: 100% !important;
+            gap: 1rem !important;
+            margin-bottom: 1.5rem !important;
+            grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        .metrics-grid-container > * {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+        }
+        
+        /* Ensure card content doesn't cause expansion */
+        .metrics-grid-container > * > * {
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        @media (min-width: 768px) {
+            .metrics-grid-container {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+        }
+        
+        /* Manual widescreen toggle (Compare All) */
+        .metrics-grid-container.wide {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        }
+        
+        /* Optional: ensure children stretch to equal heights */
+        .metric-card {
+            min-height: 380px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Ensure parent containers don't cause overflow */
+        #competitive-dashboard {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        #raw-wrapper {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            overflow-x: hidden !important;
+        }
+        
+        #results-container {
+            overflow-x: hidden !important;
+        }
+        
+        /* Override any Tailwind classes that might interfere */
+        .metrics-grid-container.grid {
+            display: grid !important;
+        }
+        
+        /* Force grid behavior even if other classes are present */
+        div.metrics-grid-container {
+            display: grid !important;
+        }
     </style>
 </head>
 <body data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData" class="transition-colors duration-300 css-loading">
@@ -417,6 +579,10 @@
                     <option value="keywordCount">Count Ranking Keywords</option>
                     <option value="topPages">List Top Pages</option>
                 </optgroup>
+                <optgroup label="Multi-Endpoint [Beta]">
+                    <option value="competitiveAnalysis">Competitive Analysis</option>
+                    <option value="keywordTargetingAnalysis">Keyword Targeting Analysis</option>
+                </optgroup>
                 <optgroup label="Website Research">
                     <option value="siteMetrics">Fetch Site Metrics</option>
                     <option value="brandAuthority">Fetch Brand Authority</option>
@@ -459,6 +625,8 @@
                 <fieldset id="linkStatusInputs" class="input-section space-y-4"><legend class="sr-only">Link Status Inputs</legend></fieldset>
                 <fieldset id="filterLinksByAnchorInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Anchor Inputs</legend></fieldset>
                 <fieldset id="filterLinksByDomainInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Domain Inputs</legend></fieldset>
+                <fieldset id="competitiveAnalysisInputs" class="input-section space-y-4"><legend class="sr-only">Competitive Analysis Inputs</legend></fieldset>
+                <fieldset id="keywordTargetingAnalysisInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Targeting Analysis Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -483,6 +651,7 @@
                         <button id="filter-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Filter table data">Filter</button>
                         <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Copy JSON data to clipboard">Copy JSON</button>
                         <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Export data as CSV file">Export to CSV</button>
+                        <button id="export-pdf-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Export dashboard as PDF">Export to PDF</button>
                         <button id="clear-data-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Clear results data">Clear Data</button>
                     </div>
                 </div>
@@ -912,7 +1081,8 @@
                 historyList: document.getElementById('history-list'),
                 historyEmpty: document.getElementById('history-empty'),
                 exportHistoryBtn: document.getElementById('export-history-btn'),
-                clearHistoryBtn: document.getElementById('clear-history-btn')
+                clearHistoryBtn: document.getElementById('clear-history-btn'),
+                exportPdfBtn: document.getElementById('export-pdf-btn')
             };
 
             const populateInputs = () => {
@@ -962,6 +1132,14 @@
                 document.getElementById('linkStatusInputs').innerHTML = createDescription('Get the status of a link from a source to a target.') + createLabel('Target Scope') + createSelect('lsTargetScopeSelect', scopeOptions) + createLabel('Target URL') + createTextarea('lsTargetUrl', 'Target URL') + createLabel('Source Scope') + createSelect('lsSourceScopeSelect', scopeOptions) + createLabel('Source URL') + createTextarea('lsSourceUrl', 'Source URL');
                 document.getElementById('filterLinksByAnchorInputs').innerHTML = createDescription('Get a list of links to a target where the anchor text exactly matches a string.') + createLabel('Scope') + createSelect('flaScopeSelect', scopeOptions) + createLabel('Anchor Text') + createTextarea('flaAnchorText', 'Enter exact anchor text...') + createLabel('Sort') + createSelect('flaSortSelect', filterAnchorSortOptions) + createLabel('Filters') + createMultiSelect('flaFilterSelect', filterAnchorFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('flaLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('flaUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('filterLinksByDomainInputs').innerHTML = createDescription('Find links pointing to a target only if they originate from a particular root domain.') + createLabel('Target Scope') + createSelect('fldTargetScopeSelect', scopeOptions) + createLabel('Target URLs') + createTextarea('fldTargetUrls', 'One per line...') + createLabel('Source Domain Scope') + createSelect('fldSourceScopeSelect', scopeOptions) + createLabel('Source Domain URLs') + createTextarea('fldSourceUrls', 'One per line...') + createLabel('Filters') + createMultiSelect('fldFilterSelect', filterDomainFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('fldLimit', 25, 1, 50, limitLabel);
+                document.getElementById('competitiveAnalysisInputs').innerHTML = createDescription('Compare your domain against up to 3 competitors. Analyzes Brand Authority, Domain Authority, Spam Score, Link Metrics HD Ranking Keywords for each domain.') + createLabel('Your Domain') + createTextarea('caYourDomain', 'Enter your domain (e.g., https://example.com)') + createLabel('Competitor Domains (up to 3)') + createTextarea('caCompetitors', 'Enter competitor domains, one per line (e.g., https://competitor1.com)') + createLabel('Locale') + createSelect('caLocaleSelect', localeOptions) + createNumberInput('caLimit', 25, 1, 500, 'Number of Ranking Keywords to Display (Default 25; Choose from 1 to 500)');
+                document.getElementById('keywordTargetingAnalysisInputs').innerHTML = 
+                    createDescription('Analyze a single URL: page-level metrics, ranking keywords with intent, intent mix, and top inbound anchor texts.') +
+                    createLabel('URL (scope: URL only)') +
+                    createTextarea('ktaUrl', 'Enter a single URL (e.g., https://example.com/page)') +
+                    createLabel('Locale') +
+                    createSelect('ktaLocaleSelect', localeOptions) +
+                    createNumberInput('ktaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze (Default 25; 1-500)');
             };
             
             const readmeContent = `
@@ -1096,6 +1274,25 @@
                         <li><strong>Scope:</strong> Choose analysis scope (limited options available)</li>
                         <li><strong>Locale:</strong> Select geographic region/language</li>
                         <li><strong>Domains/URLs:</strong> Enter target domains or URLs</li>
+                    </ul>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Competitive Analysis</u></strong></h4>
+                    <p><strong>Description:</strong> Comprehensive competitive analysis comparing your domain against up to 3 competitors. Automatically fetches and displays Brand Authority, Domain Authority, Spam Score, Link Metrics, and Top Ranking Keywords side-by-side.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Your Domain:</strong> Enter your domain URL (must include http/https)</li>
+                        <li><strong>Competitor Domains:</strong> Enter up to 3 competitor domains, one per line (must include http/https)</li>
+                        <li><strong>Locale:</strong> Select geographic region/language for ranking keywords analysis</li>
+                        <li><strong>Number of Ranking Keywords:</strong> Limit the number of keywords to display (1-500, default 25)</li>
+                    </ul>
+                    <p><strong>Features:</strong></p>
+                    <ul>
+                        <li>Side-by-side comparison dashboard showing all metrics at a glance</li>
+                        <li>Interactive domain selector to view detailed ranking keywords for each domain</li>
+                        <li>Comprehensive metrics including Brand Authority Score, DA, Total Links, Linking Domains, and Spam Score</li>
+                        <li>Toggles between dashboard and JSON view</li>
                     </ul>
                 </div>
                 
@@ -1303,6 +1500,7 @@
                     renderHistoryList();
                 });
                 allDOMElements.clearDataBtn.addEventListener('click', clearResultsData);
+                allDOMElements.exportPdfBtn.addEventListener('click', handleExportPdf);
                 allDOMElements.filterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.remove('hidden'));
                 allDOMElements.closeFilterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.add('hidden'));
                 allDOMElements.cancelFilterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.add('hidden'));
@@ -1465,6 +1663,53 @@
                     resetSubmitButton(); return;
                 }
                 const PROXY_URL = document.body.dataset.proxy;
+                
+                // Special handling for multi-endpoint dashboards
+                if (selectedMethod === 'competitiveAnalysis') {
+                    try {
+                        const competitiveData = await runCompetitiveAnalysis(apiKey, payload.params, PROXY_URL, inFlightRequest);
+                        currentResultsData = competitiveData;
+                        currentOriginalParams = payload.params;
+                        currentMethod = selectedMethod;
+                        showCompetitiveDashboard(competitiveData);
+                        fetchQuota(apiKey);
+                        autoSaveToHistory();
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            displayError(error.message);
+                        }
+                    } finally {
+                        resetSubmitButton();
+                        inFlightRequest = null;
+                    }
+                    return;
+                }
+                if (selectedMethod === 'keywordTargetingAnalysis') {
+                    try {
+                        const ktaData = await runKeywordTargetingAnalysis(apiKey, payload.params, PROXY_URL, inFlightRequest);
+                        currentResultsData = ktaData;
+                        currentOriginalParams = payload.params;
+                        currentMethod = selectedMethod;
+                        showKeywordTargetingDashboard(ktaData);
+                        fetchQuota(apiKey);
+                        autoSaveToHistory();
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            displayError(error.message);
+                        }
+                    } finally {
+                        resetSubmitButton();
+                        inFlightRequest = null;
+                    }
+                    return;
+                }
+                
+                // For non-dashboard methods, ensure dashboards are cleared
+                const existingCompetitive = document.getElementById('competitive-dashboard');
+                if (existingCompetitive) existingCompetitive.remove();
+                const existingKta = document.getElementById('keyword-targeting-dashboard');
+                if (existingKta) existingKta.remove();
+                
                 try {
                     const response = await fetch(PROXY_URL, {
                         method: 'POST',
@@ -1490,6 +1735,1307 @@
                     resetSubmitButton();
                     inFlightRequest = null;
                 }
+            }
+
+            async function runCompetitiveAnalysis(apiKey, params, proxyUrl, opensignal) {
+                const allDomains = [params.yourDomain, ...params.competitors];
+                const results = {};
+                
+                // Update progress
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching data for ' + allDomains.length + ' domains...</span>';
+                
+                // For each domain, make 3 API calls: siteMetrics, brandAuthority, rankingKeywords
+                for (let i = 0; i < allDomains.length; i++) {
+                    const domain = allDomains[i];
+                    const domainLabel = i === 0 ? 'Your Domain' : `Competitor ${i}`;
+                    
+                    allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Processing ${domainLabel} (${i + 1}/${allDomains.length})...</span>`;
+                    
+                    results[domain] = {
+                        domain,
+                        label: domainLabel,
+                        siteMetrics: null,
+                        brandAuthority: null,
+                        rankingKeywords: null,
+                        keywordCount: null,
+                        errors: []
+                    };
+                    
+                    // Fetch Site Metrics
+                    try {
+                        const smResponse = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                apiKey,
+                                method: 'siteMetrics',
+                                params: { scope: 'domain', targets: [domain] }
+                            }),
+                            signal: opensignal.signal
+                        });
+                        const smData = await smResponse.json();
+                        if (smResponse.ok && Array.isArray(smData) && smData[0]?.status === 'success') {
+                            results[domain].siteMetrics = smData[0];
+                        } else {
+                            results[domain].errors.push('Site Metrics: ' + (smData[0]?.reason || 'Failed'));
+                        }
+                    } catch (e) {
+                        results[domain].errors.push('Site Metrics: ' + e.message);
+                    }
+                    
+                    // Fetch Brand Authority
+                    try {
+                        const baResponse = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                apiKey,
+                                method: 'brandAuthority',
+                                params: { targets: [domain] }
+                            }),
+                            signal: opensignal.signal
+                        });
+                        const baData = await baResponse.json();
+                        if (baResponse.ok && Array.isArray(baData) && baData[0]?.status === 'success') {
+                            results[domain].brandAuthority = baData[0];
+                        } else {
+                            results[domain].errors.push('Brand Authority: ' + (baData[0]?.reason || 'Failed'));
+                        }
+                    } catch (e) {
+                        results[domain].errors.push('Brand Authority: ' + e.message);
+                    }
+                    
+                    // Fetch Ranking Keywords
+                    try {
+                        const rkResponse = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                apiKey,
+                                method: 'rankingKeywords',
+                                params: { 
+                                    scope: 'domain', 
+                                    locale: params.locale || 'en-US',
+                                    targets: [domain],
+                                    limit: params.limit || 25
+                                }
+                            }),
+                            signal: opensignal.signal
+                        });
+                        const rkData = await rkResponse.json();
+                        if (rkResponse.ok && Array.isArray(rkData) && rkData[0]?.status === 'success') {
+                            results[domain].rankingKeywords = rkData[0];
+                        } else {
+                            results[domain].errors.push('Ranking Keywords: ' + (rkData[0]?.reason || 'Failed'));
+                        }
+                    } catch (e) {
+                        results[domain].errors.push('Ranking Keywords: ' + e.message);
+                    }
+                    
+                    // Fetch Keyword Count
+                    try {
+                        const kcResponse = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                apiKey,
+                                method: 'keywordCount',
+                                params: { 
+                                    scope: 'domain', 
+                                    locale: params.locale || 'en-US',
+                                    targets: [domain]
+                                }
+                            }),
+                            signal: opensignal.signal
+                        });
+                        const kcData = await kcResponse.json();
+                        if (kcResponse.ok && Array.isArray(kcData) && kcData[0]?.status === 'success') {
+                            results[domain].keywordCount = kcData[0];
+                        } else {
+                            results[domain].errors.push('Keyword Count: ' + (kcData[0]?.reason || 'Failed'));
+                        }
+                    } catch (e) {
+                        results[domain].errors.push('Keyword Count: ' + e.message);
+                    }
+                }
+                
+                return results;
+            }
+
+            async function runKeywordTargetingAnalysis(apiKey, params, proxyUrl, opensignal) {
+                const urls = Array.isArray(params.urls) ? params.urls : [params.url].filter(Boolean);
+                const locale = params.locale || 'en-US';
+                const limit = params.limit || 25;
+                const resultsByUrl = {};
+
+                // Kick off per-URL requests in parallel
+                const perUrlPromises = urls.map(async (u) => {
+                    resultsByUrl[u] = {
+                        url: u,
+                        siteMetrics: null,
+                        rankingKeywords: [],
+                        topAnchors: [],
+                        searchIntent: {},
+                        intentDistribution: {},
+                        errors: []
+                    };
+
+                    // Site Metrics, Ranking Keywords, Anchor Text concurrently per URL
+                    const sm = (async () => {
+                        try {
+                            const resp = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey, method: 'siteMetrics', params: { scope: 'url', targets: [u] } }), signal: opensignal.signal });
+                            const data = await resp.json();
+                            if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') resultsByUrl[u].siteMetrics = data[0];
+                            else resultsByUrl[u].errors.push('Site Metrics: ' + (data[0]?.reason || 'Failed'));
+                        } catch (e) { resultsByUrl[u].errors.push('Site Metrics: ' + e.message); }
+                    })();
+                    const rk = (async () => {
+                        try {
+                            const resp = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey, method: 'rankingKeywords', params: { scope: 'url', locale, targets: [u], limit } }), signal: opensignal.signal });
+                            const data = await resp.json();
+                            if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') resultsByUrl[u].rankingKeywords = data[0]?.data?.ranking_keywords || [];
+                            else resultsByUrl[u].errors.push('Ranking Keywords: ' + (data[0]?.reason || 'Failed'));
+                        } catch (e) { resultsByUrl[u].errors.push('Ranking Keywords: ' + e.message); }
+                    })();
+                    const at = (async () => {
+                        try {
+                            const resp = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey, method: 'anchorText', params: { scope: 'url', targets: [u], limit: 50 } }), signal: opensignal.signal });
+                            const data = await resp.json();
+                            if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
+                                const anchors = data[0]?.data?.anchor_texts || [];
+                                anchors.sort((a, b) => (b.external_root_domains || 0) - (a.external_root_domains || 0));
+                                resultsByUrl[u].topAnchors = anchors.slice(0, 10);
+                            } else resultsByUrl[u].errors.push('Anchor Text: ' + (data[0]?.reason || 'Failed'));
+                        } catch (e) { resultsByUrl[u].errors.push('Anchor Text: ' + e.message); }
+                    })();
+                    await Promise.all([sm, rk, at]);
+                });
+
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching data for ' + urls.length + ' URLs...</span>';
+                await Promise.all(perUrlPromises);
+
+                // Build unique keyword list across URLs
+                const allKeywords = [];
+                urls.forEach(u => {
+                    (resultsByUrl[u].rankingKeywords || []).forEach(k => { if (k?.keyword) allKeywords.push(k.keyword); });
+                });
+                const uniqueKeywords = Array.from(new Set(allKeywords));
+
+                // Fetch intent in batches if needed
+                const titleCase = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Unknown');
+                const normalizeIntent = (val) => {
+                    const t = titleCase(val);
+                    return ['Informational','Transactional','Commercial','Navigational','Unknown'].includes(t) ? t : 'Unknown';
+                };
+
+                const intentMapGlobal = {};
+                if (uniqueKeywords.length > 0) {
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching search intent...</span>';
+                    try {
+                        const siResp = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey, method: 'searchIntent', params: { locale, keywords: uniqueKeywords } }), signal: opensignal.signal });
+                        const siData = await siResp.json();
+                        if (siResp.ok && Array.isArray(siData)) {
+                            siData.forEach(entry => {
+                                if (entry.status === 'success') {
+                                    const kw = entry?.data?.serp_query?.keyword;
+                                    const primary = (entry?.data?.keyword_intent?.primary_intents || [])[0] || 'Unknown';
+                                    intentMapGlobal[kw] = normalizeIntent(primary);
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        // Non-fatal; leave intents empty
+                    }
+                }
+
+                // Attach per-URL intent maps and distributions
+                urls.forEach(u => {
+                    const map = {};
+                    const counts = { Informational: 0, Transactional: 0, Commercial: 0, Navigational: 0, Unknown: 0 };
+                    (resultsByUrl[u].rankingKeywords || []).forEach(k => {
+                        const intent = intentMapGlobal[k.keyword] || 'Unknown';
+                        map[k.keyword] = intent;
+                        counts[intent]++;
+                    });
+                    const total = Math.max(1, (resultsByUrl[u].rankingKeywords || []).length);
+                    resultsByUrl[u].searchIntent = map;
+                    resultsByUrl[u].intentDistribution = {
+                        Informational: Math.round((counts.Informational / total) * 100),
+                        Transactional: Math.round((counts.Transactional / total) * 100),
+                        Commercial: Math.round((counts.Commercial / total) * 100),
+                        Navigational: Math.round((counts.Navigational / total) * 100),
+                        Unknown: Math.round((counts.Unknown / total) * 100)
+                    };
+                });
+
+                // Compute keyword overlap across URLs
+                const keywordToUrls = {};
+                urls.forEach(u => {
+                    (resultsByUrl[u].rankingKeywords || []).forEach(k => {
+                        const key = (k.keyword || '').toLowerCase();
+                        if (!key) return;
+                        if (!keywordToUrls[key]) keywordToUrls[key] = [];
+                        if (!keywordToUrls[key].includes(u)) keywordToUrls[key].push(u);
+                    });
+                });
+                const overlaps = Object.entries(keywordToUrls)
+                    .filter(([_, arr]) => arr.length > 1)
+                    .map(([kwLower, urlList]) => {
+                        const perUrl = {};
+                        urlList.forEach(u => {
+                            const match = (resultsByUrl[u].rankingKeywords || []).find(k => (k.keyword || '').toLowerCase() === kwLower);
+                            if (match) perUrl[u] = { rank: match.rank_position };
+                        });
+                        return { keyword: kwLower, urls: urlList, data: perUrl };
+                    })
+                    .sort((a, b) => b.urls.length - a.urls.length || a.keyword.localeCompare(b.keyword));
+
+                return { urls, locale, limit, resultsByUrl, overlaps };
+            }
+
+            function showKeywordTargetingDashboard(payload) {
+                // Hide regular view elements
+                allDOMElements.tableWrapper.classList.add('hidden');
+                allDOMElements.filterBtn.classList.add('hidden');
+                allDOMElements.resultsContainer.classList.remove('hidden');
+                try {
+                const { urls, locale, limit, resultsByUrl, overlaps } = payload;
+                const formatNumber = (num) => {
+                    if (typeof num !== 'number' || num === 'N/A') return num;
+                    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                    return num.toLocaleString();
+                };
+
+                let html = '<div id="keyword-targeting-dashboard" class="space-y-6">';
+                html += '<div class="flex items-start justify-between gap-3">';
+                html += '<div>';
+                html += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-1">Keyword Targeting Analysis</h3>';
+                html += `<p class="text-sm text-[var(--text-secondary)]">URLs: <span class="text-[var(--text-primary)]">${urls.length}</span> • Locale: ${locale}</p>`;
+                html += '</div>';
+                html += '<div class="shrink-0">';
+                html += '<button type="button" class="compare-all-btn text-xs px-3 py-1 rounded-md border border-[var(--border-primary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" data-target="#keyword-metrics-grid">Compare All</button>';
+                html += '</div>';
+                // Export handled by global "Export to CSV" button
+                html += '</div>';
+
+                // Determine winners for mini-summary badges
+                let __maxInbound = -Infinity, __maxInboundIdx = -1;
+                let __maxPA = -Infinity, __maxPAIdx = -1;
+                urls.forEach((u0, i0) => {
+                    const sm0 = resultsByUrl[u0].siteMetrics?.data?.site_metrics || {};
+                    const inbound0 = (typeof sm0.external_pages_to_page === 'number') ? sm0.external_pages_to_page : -Infinity;
+                    const pa0 = (typeof sm0.page_authority === 'number') ? sm0.page_authority : -Infinity;
+                    if (inbound0 > __maxInbound) { __maxInbound = inbound0; __maxInboundIdx = i0; }
+                    if (pa0 > __maxPA) { __maxPA = pa0; __maxPAIdx = i0; }
+                });
+
+                // Cards per URL
+                html += '<div id="keyword-metrics-grid" class="metrics-grid-container">';
+                urls.forEach((u, idx) => {
+                    const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
+                    const linkingDomains = sm.root_domains_to_page ?? 'N/A';
+                    const inboundLinks = sm.external_pages_to_page ?? 'N/A';
+                    const pageAuthority = sm.page_authority ?? 'N/A';
+                    const idist = resultsByUrl[u].intentDistribution || {};
+                    const anchorsInline = (resultsByUrl[u].topAnchors || []).slice(0, 5);
+                    let cardClasses = '';
+                    let gradientBar = '';
+                    if (idx === 0) {
+                        cardClasses = 'bg-gradient-to-br from-[var(--text-accent)]/10 to-[var(--bg-container)] border-2 border-[var(--text-accent)] rounded-lg p-4 shadow-lg relative';
+                        gradientBar = '<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--text-accent)] to-transparent rounded-t-lg"></div>';
+                    } else {
+                        const competitorBorders = [
+                            'border-2 border-fuchsia-400',
+                            'border-2 border-emerald-400',
+                            'border-2 border-violet-400'
+                        ];
+                        const gradientColors = ['from-fuchsia-400 via-fuchsia-500 to-transparent', 'from-emerald-400 via-emerald-500 to-transparent', 'from-violet-400 via-violet-500 to-transparent'];
+                        const gi = (idx - 1) % competitorBorders.length;
+                        cardClasses = 'bg-[var(--bg-container)] ' + competitorBorders[gi] + ' rounded-lg p-4 shadow-md relative';
+                        gradientBar = `<div class=\"absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradientColors[gi]} rounded-t-lg\"></div>`;
+                    }
+                html += `<div class="${cardClasses} metric-card">`;
+                    html += gradientBar;
+                html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1">URL ${idx + 1}</h4>`;
+                html += `<p class="text-xs text-[var(--text-secondary)] break-all">${u}</p>`;
+                // Mini-summary bar (only on winners)
+                const __summaries = [];
+                if (idx === __maxPAIdx) __summaries.push(`🏆 Highest Page Authority: <span class=\\\"text-[var(--text-primary)]\\\">${pageAuthority}</span>`);
+                if (idx === __maxInboundIdx) __summaries.push(`📈 Most Inbound Links: <span class=\\\"text-[var(--text-primary)]\\\">${typeof inboundLinks === 'number' ? formatNumber(inboundLinks) : inboundLinks}</span>`);
+                if (__summaries.length) {
+                    html += `<div class=\\\"mt-2 mb-3 text-[11px] text-[var(--text-secondary)]\\\">${__summaries.join(' • ')}</div>`;
+                }
+                    // Page Metrics section (vertical, like Competitive Analysis)
+                    html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Page Metrics</div>';
+                    html += '<div class="space-y-1 text-sm">';
+                    html += `<div>Linking Domains: <span class=\"font-bold text-[var(--text-primary)]\">${typeof linkingDomains === 'number' ? formatNumber(linkingDomains) : linkingDomains}</span></div>`;
+                    html += `<div>Inbound Links: <span class=\"font-bold text-[var(--text-primary)]\">${typeof inboundLinks === 'number' ? formatNumber(inboundLinks) : inboundLinks}</span></div>`;
+                    html += `<div>Page Authority: <span class=\"font-bold text-[var(--text-primary)]\">${pageAuthority}</span></div>`;
+                    html += '</div>';
+
+                    // Ranking Keywords Metrics
+                    const __rkList = Array.isArray(resultsByUrl[u].rankingKeywords) ? resultsByUrl[u].rankingKeywords : [];
+                    const __num = __rkList.filter(k => typeof k.volume === 'number' && typeof k.rank_position === 'number');
+                    const __aggVolume = __num.reduce((s, k) => s + (k.volume || 0), 0);
+                    const __avgRank = __num.length ? (__num.reduce((s, k) => s + (k.rank_position || 0), 0) / __num.length) : 0;
+                    const __top3 = [...__rkList].sort((a, b) => (b.volume || 0) - (a.volume || 0)).slice(0, 3);
+                    html += '<div class="mt-3">';
+                    html += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Ranking Keywords Metrics (top ${limit})</div>`;
+                    html += '<div class="space-y-1 text-sm">';
+                    html += `<div>Keyword Volume (aggregate): <span class=\"font-bold text-[var(--text-primary)]\">${formatNumber(__aggVolume)}</span></div>`;
+                    html += `<div>Average Position: <span class=\"font-bold text-[var(--text-primary)]\">${__avgRank ? __avgRank.toFixed(1) : 'N/A'}</span></div>`;
+                    if (__top3.length) {
+                        html += '<div class="text-[var(--text-secondary)] text-xs mt-1">Top Keywords:</div>';
+                        __top3.forEach(k => {
+                            const v = typeof k.volume === 'number' ? formatNumber(k.volume) : (k.volume ?? 'N/A');
+                            html += `<div class=\"text-sm\"><span class=\"text-[var(--text-primary)]\">${k.keyword || 'N/A'}</span> <span class=\"text-[var(--text-secondary)]\">• Vol:</span> <span class=\"text-[var(--text-primary)]\">${v}</span></div>`;
+                        });
+                    }
+                    html += '</div>';
+                    html += '</div>';
+
+                    html += '</div>';
+
+                    // Ranking Keywords Intent section with donut chart
+                    const intents = [
+                        { label: 'Informational', color: '#60a5fa', value: Number(idist.Informational || 0) },
+                        { label: 'Transactional', color: '#34d399', value: Number(idist.Transactional || 0) },
+                        { label: 'Commercial', color: '#fbbf24', value: Number(idist.Commercial || 0) },
+                        { label: 'Navigational', color: '#a78bfa', value: Number(idist.Navigational || 0) },
+                        { label: 'Unknown', color: '#94a3b8', value: Number(idist.Unknown || 0) },
+                    ];
+                    const totalIntent = intents.reduce((s, x) => s + x.value, 0) || 1;
+                    let offset = 0;
+                    const r = 16, c = 2 * Math.PI * r;
+                    const slices = intents.map((seg) => {
+                        const frac = seg.value / totalIntent;
+                        const dash = (c * frac).toFixed(2);
+                        const gap = (c - Number(dash)).toFixed(2);
+                        const rot = ((offset / totalIntent) * 360).toFixed(2);
+                        offset += seg.value;
+                        return `<circle r=\"${r}\" cx=\"20\" cy=\"20\" fill=\"transparent\" stroke=\"${seg.color}\" stroke-width=\"8\" stroke-dasharray=\"${dash} ${gap}\" transform=\"rotate(-90 20 20) rotate(${rot} 20 20)\"></circle>`;
+                    }).join('');
+                    html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Ranking Keywords Intent</div>';
+                    html += '<div class="flex items-center gap-3">';
+                    html += `<svg width=\"40\" height=\"40\" viewBox=\"0 0 40 40\">${slices}</svg>`;
+                    html += '<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">';
+                    intents.forEach(seg => {
+                        html += `<div class=\"flex items-center gap-1\"><span style=\"background:${seg.color};width:8px;height:8px;border-radius:9999px;display:inline-block\"></span><span class=\"text-[var(--text-secondary)]\">${seg.label}:</span><span class=\"text-[var(--text-primary)]\">${seg.value}%</span></div>`;
+                    });
+                    html += '</div>';
+                    html += '</div>';
+                    html += '</div>';
+
+                    // Inbound Anchor Texts section with preview + modal trigger
+                    const __allAnchors = (resultsByUrl[u].topAnchors || []);
+                    const anchorsCount = __allAnchors.length;
+                    const __preview = __allAnchors.slice(0, 3);
+                    html += '<div class="">';
+                    html += '<div class="flex items-center justify-between mb-2">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Inbound Anchor Texts</div>';
+                    html += `<button type=\"button\" class=\"kta-anchors-toggle text-[11px] text-[var(--text-accent)] hover:text-[var(--text-accent-hover)]\" data-url-idx=\"${idx}\">View More (${anchorsCount})</button>`;
+                    html += '</div>';
+                    if (__preview.length === 0) {
+                        html += '<div class="text-[var(--text-secondary)] text-xs">No anchor texts found.</div>';
+                    } else {
+                        html += '<div class="space-y-2">';
+                        __preview.forEach((a) => {
+                            const domainsP = (typeof a.external_root_domains === 'number') ? formatNumber(a.external_root_domains) : (a.external_root_domains ?? 'N/A');
+                            const pagesP = (typeof a.external_pages === 'number') ? formatNumber(a.external_pages) : (a.external_pages ?? 'N/A');
+                            html += '<div class="text-sm">';
+                            html += `<div class=\"font-semibold text-[var(--text-primary)] truncate\">${a.text || 'N/A'}</div>`;
+                            html += `<div class=\"text-[var(--text-secondary)] text-xs\">Linking Domains: <span class=\"text-[var(--text-primary)]\">${domainsP}</span> • Inbound Links: <span class=\"text-[var(--text-primary)]\">${pagesP}</span></div>`;
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+
+                // Overlapping keywords across URLs (moved above Ranking Keywords)
+                html += '<div id="url-overlap-section" class="mt-6">';
+                html += '<div class="flex items-center justify-between mb-4">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Keyword Overlap Across URLs</h4>';
+                html += '</div>';
+                if ((overlaps || []).length > 0) {
+                    // Legend for URL mappings
+                    html += '<div class="mb-3 p-3 bg-[var(--bg-input)] rounded-md border border-[var(--border-primary)]">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">URL Legend</div>';
+                    html += '<div class="flex flex-wrap gap-x-4 gap-y-1">';
+                    urls.forEach((u, idx) => {
+                        html += `<div class="text-sm text-[var(--text-primary)]">URL ${idx + 1}: <span class="text-[var(--text-secondary)] font-mono text-xs">${u}</span></div>`;
+                    });
+                    html += '</div></div>';
+                    
+                    // Collapse/Expand button
+                    html += '<div class="mb-2">';
+                    html += '<button id="kta-overlap-toggle" class="px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">Collapse Table</button>';
+                    html += '</div>';
+                    
+                    html += '<div id="kta-overlap-table-wrapper">';
+                    html += '<div id="kta-overlap-table"></div>';
+                    html += '</div>';
+                } else {
+                    html += '<p class="text-[var(--text-secondary)]">No overlapping keywords found across the selected URLs.</p>';
+                }
+                html += '</div>';
+
+                // Unified Ranking Keywords section with selector
+                html += '<div id="kta-keywords-section" class="mt-6">';
+                html += '<div class="flex items-center justify-between mb-4">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Ranking Keywords</h4>';
+                html += '<div><label for="kta-url-selector" class="inline-block text-sm font-medium text-[var(--text-secondary)] mr-2">View Details For:</label>';
+                html += '<select id="kta-url-selector" class="inline-block bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)]">';
+                urls.forEach((u, idx) => { html += `<option value=\"${idx}\">URL ${idx + 1}: ${u}</option>`; });
+                html += '</select></div></div>';
+                urls.forEach((u, idx) => {
+                    const res = resultsByUrl[u] || {};
+                    const rkArray = Array.isArray(res.rankingKeywords)
+                        ? res.rankingKeywords
+                        : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
+                            ? res.rankingKeywords.data.ranking_keywords
+                            : []);
+                    html += `<div id=\"kta-keywords-panel-${idx}\" class=\"${idx === 0 ? '' : 'hidden'}\">`;
+                    html += `<div id="kta-keywords-table-${idx}"></div>`;
+                    html += '</div>';
+                });
+                html += '</div>';
+
+                // (Overlap section moved above Ranking Keywords)
+
+                // (Keyword Gap removed per request)
+
+                html += '</div>';
+
+                allDOMElements.rawCode.textContent = JSON.stringify(payload, null, 2);
+                allDOMElements.rawWrapper.innerHTML = html;
+                // Ensure a global, body-level modal exists for anchors
+                let bodyModal = document.getElementById('kta-anchor-modal');
+                if (!bodyModal) {
+                    bodyModal = document.createElement('div');
+                    bodyModal.id = 'kta-anchor-modal';
+                    bodyModal.className = 'hidden';
+                    bodyModal.innerHTML = `
+                        <div class="fixed inset-0 z-[9998] bg-black/50" data-overlay></div>
+                        <div class="fixed z-[9999] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--bg-container)] text-[var(--text-primary)] w-[min(92vw,800px)] max-h-[80vh] rounded-lg shadow-xl border border-[var(--border-primary)] p-4 overflow-auto" role="dialog" aria-modal="true">
+                            <div class="flex items-center justify-between mb-3">
+                                <h5 class="font-semibold">Inbound Anchor Texts</h5>
+                                <button type="button" class="kta-modal-close text-sm px-2 py-1 border border-[var(--border-primary)] rounded-md">Close</button>
+                            </div>
+                            <div class="kta-modal-body space-y-2 text-sm"></div>
+                        </div>`;
+                    document.body.appendChild(bodyModal);
+                }
+                // Attach compare-all toggle handler
+                const compareBtnKta = allDOMElements.rawWrapper.querySelector('.compare-all-btn[data-target="#keyword-metrics-grid"]');
+                if (compareBtnKta) {
+                    compareBtnKta.addEventListener('click', () => {
+                        const target = allDOMElements.rawWrapper.querySelector('#keyword-metrics-grid');
+                        if (!target) return;
+                        const isWide = target.classList.toggle('wide');
+                        compareBtnKta.textContent = isWide ? 'Collapse' : 'Compare All';
+                    });
+                }
+                // Modal handlers for anchors
+                const modal = document.getElementById('kta-anchor-modal');
+                const modalBody = modal && modal.querySelector('.kta-modal-body');
+                const closeBtn = modal && modal.querySelector('.kta-modal-close');
+                const overlay = modal && modal.querySelector('[data-overlay]');
+                const hideModal = () => {
+                    modal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                };
+                const showModal = () => {
+                    modal.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                };
+                if (closeBtn) closeBtn.addEventListener('click', hideModal);
+                if (overlay) overlay.addEventListener('click', hideModal);
+                allDOMElements.rawWrapper.querySelectorAll('.kta-anchors-toggle').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = Number(btn.getAttribute('data-url-idx'));
+                        const url = urls[i];
+                        const fullAnchors = (resultsByUrl[url].topAnchors || []);
+                        if (!modal || !modalBody) return;
+                        modalBody.innerHTML = fullAnchors.length === 0 ? '<div class="text-[var(--text-secondary)]">No anchor texts found.</div>' : fullAnchors.map(a => {
+                            const domains = (typeof a.external_root_domains === 'number') ? formatNumber(a.external_root_domains) : (a.external_root_domains ?? 'N/A');
+                            const pages = (typeof a.external_pages === 'number') ? formatNumber(a.external_pages) : (a.external_pages ?? 'N/A');
+                            return `<div class=\"border-b border-[var(--border-primary)] pb-2\">`
+                                + `<div class=\"font-semibold text-[var(--text-primary)]\">${a.text || 'N/A'}</div>`
+                                + `<div class=\"text-[var(--text-secondary)] text-xs\">Linking Domains: <span class=\"text-[var(--text-primary)]\">${domains}</span></div>`
+                                + `<div class=\"text-[var(--text-secondary)] text-xs\">Inbound Links: <span class=\"text-[var(--text-primary)]\">${pages}</span></div>`
+                                + `</div>`;
+                        }).join('');
+                        showModal();
+                    });
+                });
+                allDOMElements.rawWrapper.classList.remove('hidden');
+                allDOMElements.viewDataBtn.textContent = 'View JSON';
+                allDOMElements.exportPdfBtn.classList.add('hidden');
+
+                // Initialize Tabulator for ranking keywords tables
+                urls.forEach((u, idx) => {
+                    const res = resultsByUrl[u] || {};
+                    const rkArray = Array.isArray(res.rankingKeywords)
+                        ? res.rankingKeywords
+                        : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
+                            ? res.rankingKeywords.data.ranking_keywords
+                            : []);
+                    
+                    if (rkArray.length > 0) {
+                        setTimeout(() => {
+                            if (typeof Tabulator !== 'undefined' && document.getElementById(`kta-keywords-table-${idx}`)) {
+                                const tableData = rkArray.map(kw => {
+                                    const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || 'Unknown';
+                                    return {
+                                        keyword: kw.keyword || 'N/A',
+                                        intent: intent,
+                                        rank: kw.rank_position ?? 'N/A',
+                                        page: kw.ranking_page || 'N/A',
+                                        difficulty: kw.difficulty ?? 'N/A',
+                                        volume: kw.volume ?? 'N/A'
+                                    };
+                                });
+                                
+                                new Tabulator(`#kta-keywords-table-${idx}`, {
+                                    data: tableData,
+                                    columns: [
+                                        { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                        { title: 'Intent', field: 'intent', sorter: 'string' },
+                                        { title: 'Rank', field: 'rank', sorter: 'number' },
+                                        { title: 'Page', field: 'page', sorter: 'string' },
+                                        { title: 'Difficulty', field: 'difficulty', sorter: 'number' },
+                                        { title: 'Volume', field: 'volume', sorter: 'number' }
+                                    ],
+                                    layout: "fitDataStretch",
+                                    pagination: "local",
+                                    paginationSize: 25,
+                                    movableColumns: true,
+                                    resizableColumns: true
+                                });
+                            }
+                        }, 100);
+                    }
+                });
+
+                // Wire URL selector for unified Ranking Keywords panels
+                const ktaSelector = document.getElementById('kta-url-selector');
+                if (ktaSelector) {
+                    ktaSelector.addEventListener('change', (e) => {
+                        const selected = parseInt(e.target.value);
+                        urls.forEach((_, idx) => {
+                            const panel = document.getElementById(`kta-keywords-panel-${idx}`);
+                            if (panel) panel.classList.toggle('hidden', idx !== selected);
+                        });
+                    });
+                }
+
+                // Wire anchor text expand/collapse toggles (per card)
+                document.querySelectorAll('.kta-anchors-toggle').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const urlIdx = btn.getAttribute('data-url-idx');
+                        const spans = document.querySelectorAll(`.kta-anchor-text-${urlIdx}`);
+                        if (spans.length > 0) {
+                            const anyTruncated = Array.from(spans).some(s => s.classList.contains('truncate'));
+                            if (anyTruncated) {
+                                spans.forEach(s => s.classList.remove('truncate'));
+                                btn.textContent = 'Collapse Anchors';
+                            } else {
+                                spans.forEach(s => s.classList.add('truncate'));
+                                btn.textContent = 'Expand Anchors';
+                            }
+                        }
+                    });
+                });
+
+                // Initialize Tabulator for overlap table
+                if ((overlaps || []).length > 0) {
+                    setTimeout(() => {
+                        if (typeof Tabulator !== 'undefined' && document.getElementById('kta-overlap-table')) {
+                            const tableData = overlaps.map(row => {
+                                const obj = {
+                                    keyword: row.keyword,
+                                    sharedBy: `${row.urls.length} URLs`
+                                };
+                                urls.forEach((u, idx) => {
+                                    const data = row.data[u];
+                                    obj[`url${idx + 1}`] = data ? (data.rank ?? 'N/A') : 'Not ranking';
+                                });
+                                return obj;
+                            });
+                            
+                            const columns = [
+                                { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                { title: 'Shared By', field: 'sharedBy', sorter: 'string' }
+                            ];
+                            urls.forEach((u, idx) => {
+                                columns.push({ title: `URL ${idx + 1}`, field: `url${idx + 1}`, sorter: 'number' });
+                            });
+                            
+                            new Tabulator("#kta-overlap-table", {
+                                data: tableData,
+                                columns: columns,
+                                layout: "fitDataStretch",
+                                pagination: "local",
+                                paginationSize: 25,
+                                movableColumns: true,
+                                resizableColumns: true
+                            });
+                        }
+                    }, 100);
+                }
+
+                // Wire overlap table collapse/expand toggle
+                const overlapToggle = document.getElementById('kta-overlap-toggle');
+                if (overlapToggle) {
+                    overlapToggle.addEventListener('click', () => {
+                        const wrapper = document.getElementById('kta-overlap-table-wrapper');
+                        if (wrapper) {
+                            if (wrapper.classList.contains('hidden')) {
+                                wrapper.classList.remove('hidden');
+                                overlapToggle.textContent = 'Collapse Table';
+                            } else {
+                                wrapper.classList.add('hidden');
+                                overlapToggle.textContent = 'Expand Table';
+                            }
+                        }
+                    });
+                }
+
+                // (Export handled by global button)
+                } catch (err) {
+                    displayError('Render error in Keyword Targeting Analysis: ' + (err && err.message ? err.message : err));
+                }
+
+                // Post-render validation: ensure both panels exist
+                try {
+                    const missing = urls
+                        .map((_, idx) => ({ idx, el: document.getElementById(`kta-panel-${idx}`) }))
+                        .filter(x => !x.el)
+                        .map(x => x.idx + 1);
+                    if (missing.length > 0) {
+                        displayError('Missing URL panels: ' + missing.join(', '));
+                        // Fallback: create missing panels with a minimal list renderer
+                        const dash = document.getElementById('keyword-targeting-dashboard') || allDOMElements.rawWrapper;
+                        urls.forEach((u, idx) => {
+                            if (!document.getElementById(`kta-panel-${idx}`)) {
+                                const res = resultsByUrl[u] || {};
+                                const rkArray = Array.isArray(res.rankingKeywords)
+                                    ? res.rankingKeywords
+                                    : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
+                                        ? res.rankingKeywords.data.ranking_keywords
+                                        : []);
+                                const container = document.createElement('div');
+                                container.id = `kta-panel-${idx}`;
+                                container.className = 'space-y-4';
+                                container.innerHTML = `
+                                    <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">
+                                        <div class="text-sm font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Fallback Panel (URL ${idx + 1})</div>
+                                        <div class="text-xs text-[var(--text-secondary)] mb-2">Keywords rendered in this panel: <span class="text-[var(--text-primary)]">${rkArray.length}</span></div>
+                                        <ul class="list-disc pl-5 text-sm text-[var(--text-primary)]">${rkArray.slice(0, 25).map(k => `<li>${(k && k.keyword) || 'N/A'}</li>`).join('')}</ul>
+                                    </div>
+                                `;
+                                dash.appendChild(container);
+                            }
+                        });
+                    }
+                } catch (_) {}
+            }
+
+            function showCompetitiveDashboard(data) {
+                // Hide regular view elements
+                allDOMElements.tableWrapper.classList.add('hidden');
+                allDOMElements.filterBtn.classList.add('hidden');
+                
+                // Show results container and raw wrapper (we'll put dashboard in rawWrapper)
+                allDOMElements.resultsContainer.classList.remove('hidden');
+                
+                // Helper function to format numbers with K/M abbreviations
+                const formatNumber = (num) => {
+                    if (typeof num !== 'number' || num === 'N/A') return num;
+                    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                    return num.toLocaleString();
+                };
+                
+                // Helper function to create tooltip
+                const createTooltip = (text, tooltipText) => {
+                    return `<span class="tooltip-container">${text}<span class="tooltip-icon">?</span><span class="tooltip-text">${tooltipText}</span></span>`;
+                };
+                
+                // Create dashboard HTML
+                let dashboardHTML = '<div id="competitive-dashboard" class="space-y-6">';
+                dashboardHTML += '<div class="flex items-start justify-between gap-3 mb-4">';
+                dashboardHTML += '<h3 class="text-xl font-bold text-[var(--text-heading)]">Competitive Analysis Dashboard</h3>';
+                dashboardHTML += '<div class="shrink-0">';
+                dashboardHTML += '<button type="button" class="compare-all-btn text-xs px-3 py-1 rounded-md border border-[var(--border-primary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" data-target="#competitive-metrics-grid">Compare All</button>';
+                dashboardHTML += '</div>';
+                dashboardHTML += '</div>';
+                
+                // Create metrics grid - ensure all boxes in one row
+                const domainCount = Object.keys(data).length;
+                const initialColumns = domainCount <= 2 ? domainCount : 2; // Start with 2 columns if 2+ domains, else show all
+                dashboardHTML += `<div id=\"competitive-metrics-grid\" class=\"metrics-grid-container\">`;
+                Object.values(data).forEach((domainData, idx) => {
+                    const sm = domainData.siteMetrics?.data?.site_metrics || {};
+                    const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
+                    const da = sm.domain_authority ?? 'N/A';
+                    const links = sm.external_pages_to_root_domain ?? 'N/A';
+                    const linkingDomains = sm.root_domains_to_root_domain ?? 'N/A';
+                    const spam = sm.spam_score ?? 'N/A';
+                    
+                    // Extract domain name from URL
+                    const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                    
+                    // Enhanced styling for "Your Domain" and competitor cards with gradients
+                    const isYourDomain = idx === 0;
+                    let cardClasses = '';
+                    let gradientBar = '';
+                    
+                    if (isYourDomain) {
+                        cardClasses = 'bg-gradient-to-br from-[var(--text-accent)]/10 to-[var(--bg-container)] border-2 border-[var(--text-accent)] rounded-lg p-4 shadow-lg relative';
+                        gradientBar = '<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--text-accent)] to-transparent rounded-t-lg"></div>';
+                    } else {
+                        // Competitor outlines: neon pink (idx 1), neon green (idx 2), neon purple (idx 3)
+                        // Only outline/border, no background fill - matching "Your Domain" style
+                        const competitorBorders = [
+                            'border-2 border-fuchsia-400',
+                            'border-2 border-emerald-400',
+                            'border-2 border-violet-400'
+                        ];
+                        const gradientIndex = idx - 1;
+                        cardClasses = 'bg-[var(--bg-container)] ' + competitorBorders[gradientIndex] + ' rounded-lg p-4 shadow-md relative';
+                        const gradientColors = ['from-fuchsia-400 via-fuchsia-500 to-transparent', 'from-emerald-400 via-emerald-500 to-transparent', 'from-violet-400 via-violet-500 to-transparent'];
+                        gradientBar = `<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradientColors[gradientIndex]} rounded-t-lg"></div>`;
+                    }
+                    
+                    // Ensure grid items are properly constrained
+                    dashboardHTML += `<div class="${cardClasses}" style="min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; overflow: hidden;">`;
+                    dashboardHTML += gradientBar;
+                    dashboardHTML += `<h4 class="font-bold text-[var(--text-primary)] mb-1 ${isYourDomain ? 'text-lg' : ''}">${isYourDomain ? 'Your Domain' : domainName}</h4>`;
+                    dashboardHTML += `<p class="text-xs text-[var(--text-secondary)] mb-3">${domainData.domain}</p>`;
+                    
+                    // Authority Metrics Group
+                    dashboardHTML += `<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">`;
+                    dashboardHTML += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Authority Metrics</div>`;
+                    dashboardHTML += `<div class="space-y-2 text-sm">`;
+                    dashboardHTML += `<div>Brand Authority: <span class="font-semibold text-[var(--text-primary)]">${ba}</span></div>`;
+                    dashboardHTML += `<div>Domain Authority: <span class="font-semibold text-[var(--text-primary)]">${da}</span></div>`;
+                    dashboardHTML += `</div></div>`;
+                    
+                    // Link Metrics Group
+                    dashboardHTML += `<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">`;
+                    dashboardHTML += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Link Metrics</div>`;
+                    dashboardHTML += `<div class="space-y-2 text-sm">`;
+                    dashboardHTML += `<div>Total Links: <span class="font-semibold text-[var(--text-primary)]">${typeof links === 'number' ? formatNumber(links) : links}</span></div>`;
+                    dashboardHTML += `<div>Linking Domains: <span class="font-semibold text-[var(--text-primary)]">${typeof linkingDomains === 'number' ? formatNumber(linkingDomains) : linkingDomains}</span></div>`;
+                    dashboardHTML += `<div>Spam Score: <span class="font-semibold text-[var(--text-primary)]">${spam}</span></div>`;
+                    dashboardHTML += `</div></div>`;
+                    
+                    // Add keyword count breakdown
+                    const kc = domainData.keywordCount?.data?.ranking_keyword_count;
+                    if (kc) {
+                        const positions = kc.position || {};
+                        const rank1_3 = (positions.rank_1 || 0) + (positions.rank_2 || 0) + (positions.rank_3 || 0);
+                        const rank4_10 = [4,5,6,7,8,9,10].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                        const rank11_20 = [11,12,13,14,15,16,17,18,19,20].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                        const rank21_50 = [21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                        
+                        dashboardHTML += `<div class="mt-3">`;
+                        dashboardHTML += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Keyword Metrics</div>`;
+                        dashboardHTML += `<div class="space-y-1 text-xs">`;
+                        dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Ranks 1-3:</span> <span class="font-semibold text-[var(--text-primary)]">${formatNumber(rank1_3)}</span></div>`;
+                        dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Ranks 4-10:</span> <span class="font-semibold text-[var(--text-primary)]">${formatNumber(rank4_10)}</span></div>`;
+                        dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Ranks 11-20:</span> <span class="font-semibold text-[var(--text-primary)]">${formatNumber(rank11_20)}</span></div>`;
+                        dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Ranks 21-50:</span> <span class="font-semibold text-[var(--text-primary)]">${formatNumber(rank21_50)}</span></div>`;
+                        dashboardHTML += `<div><span class="text-[var(--text-secondary)]">Total:</span> <span class="font-semibold text-[var(--text-primary)]">${formatNumber(kc.total || 0)}</span></div>`;
+                        dashboardHTML += `</div></div>`;
+                    }
+                    
+                    dashboardHTML += `</div>`;
+                    if (domainData.errors && domainData.errors.length > 0) {
+                        dashboardHTML += `<div class="mt-2 text-xs text-[var(--text-error)]">Errors: ${domainData.errors.join(', ')}</div>`;
+                    }
+                    // Note: Do not close the grid container here; only close the card div above
+                });
+                dashboardHTML += '</div>';
+                
+                // Create keywords section (Top Ranking Keywords) - FIRST
+                dashboardHTML += '<div id="keywords-section" class="mt-6">';
+                dashboardHTML += '<div class="flex items-center justify-between mb-4">';
+                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Top Ranking Keywords</h4>';
+                // Move domain selector here
+                dashboardHTML += '<div><label for="domain-selector" class="inline-block text-sm font-medium text-[var(--text-secondary)] mr-2">View Details For:</label>';
+                dashboardHTML += '<select id="domain-selector" class="inline-block bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)]">';
+                Object.values(data).forEach((domainData, idx) => {
+                    dashboardHTML += `<option value="${idx}">${domainData.label}: ${domainData.domain}</option>`;
+                });
+                dashboardHTML += '</select></div></div>';
+                
+                // Render Top Ranking Keywords tables
+                Object.values(data).forEach((domainData, idx) => {
+                    dashboardHTML += `<div id="keywords-${idx}" class="keywords-panel ${idx === 0 ? '' : 'hidden'}">`;
+                    dashboardHTML += `<h5 class="font-semibold text-[var(--text-heading)] mb-2">${domainData.label}</h5>`;
+                    
+                    const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
+                    if (keywords.length > 0) {
+                        dashboardHTML += '<div id="comp-keywords-table-' + idx + '"></div>';
+                    } else {
+                        dashboardHTML += '<p class="text-[var(--text-secondary)]">No ranking keywords found.</p>';
+                    }
+                    dashboardHTML += '</div>';
+                });
+                dashboardHTML += '</div>';
+                
+                // Add Keyword Gap Snapshot section - SECOND
+                // Get your domain's keywords
+                const yourDomainData = Object.values(data)[0];
+                const yourDomainName = yourDomainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                const yourKeywords = new Set((yourDomainData.rankingKeywords?.data?.ranking_keywords || []).map(kw => kw.keyword?.toLowerCase()).filter(Boolean));
+                
+                // Find keywords competitors rank for that your domain doesn't
+                const gapKeywords = [];
+                Object.values(data).slice(1).forEach((competitorData) => {
+                    const competitorKeywords = competitorData.rankingKeywords?.data?.ranking_keywords || [];
+                    competitorKeywords.forEach(kw => {
+                        const kwLower = kw.keyword?.toLowerCase();
+                        if (kwLower && !yourKeywords.has(kwLower) && kw.volume) {
+                            gapKeywords.push({
+                                keyword: kw.keyword,
+                                volume: kw.volume || 0,
+                                difficulty: kw.difficulty,
+                                competitor: competitorData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0]
+                            });
+                        }
+                    });
+                });
+                
+                // Remove duplicates and sort by volume
+                const uniqueGapKeywords = [];
+                const seenKeywords = new Set();
+                gapKeywords.forEach(kw => {
+                    if (!seenKeywords.has(kw.keyword.toLowerCase())) {
+                        seenKeywords.add(kw.keyword.toLowerCase());
+                        uniqueGapKeywords.push(kw);
+                    }
+                });
+                uniqueGapKeywords.sort((a, b) => (b.volume || 0) - (a.volume || 0));
+                
+                dashboardHTML += '<div id="keyword-gap-section" class="mt-6">';
+                dashboardHTML += '<div class="flex items-center justify-between mb-4">';
+                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Keyword Gap Snapshot</h4>';
+                dashboardHTML += '<button id="toggle-keyword-gap" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold">Collapse</button>';
+                dashboardHTML += '</div>';
+                dashboardHTML += '<p class="text-sm text-[var(--text-secondary)] mb-4">Here\'s a list of keywords your competitors are ranking for that may be fruitful opportunities to target.</p>';
+                dashboardHTML += '<div id="keyword-gap-content">';
+                
+                if (uniqueGapKeywords.length > 0) {
+                    dashboardHTML += '<div id="comp-keyword-gap-table"></div>';
+                    if (uniqueGapKeywords.length > 20) {
+                        dashboardHTML += `<p class="text-sm text-[var(--text-secondary)] mt-2">Showing top 20 of ${uniqueGapKeywords.length} keyword opportunities</p>`;
+                    }
+                } else {
+                    dashboardHTML += '<p class="text-[var(--text-secondary)]">No keyword gaps found — your domain ranks for all competitor keywords.</p>';
+                }
+                dashboardHTML += '</div>';
+                dashboardHTML += '</div>';
+                
+                // Add overlapping keywords section - THIRD
+                dashboardHTML += '<div id="overlapping-keywords-section" class="mt-6">';
+                dashboardHTML += '<div class="flex items-center justify-between mb-4">';
+                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Overlapping Keywords</h4>';
+                dashboardHTML += '<button id="toggle-overlapping" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold">Collapse</button>';
+                dashboardHTML += '</div>';
+                dashboardHTML += '<div id="overlapping-keywords-content">';
+                
+                // Extract all keywords for each domain
+                const domainKeywords = {};
+                Object.values(data).forEach((domainData, idx) => {
+                    const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
+                    const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                    domainKeywords[domainName] = keywords.map(kw => kw.keyword?.toLowerCase()).filter(Boolean);
+                });
+                
+                // Find overlapping keywords
+                const domainNames = Object.keys(domainKeywords);
+                if (domainNames.length > 1) {
+                    // Create a map of keyword to domains that rank for it
+                    const keywordToDomains = {};
+                    domainNames.forEach(domain => {
+                        domainKeywords[domain].forEach(keyword => {
+                            if (!keywordToDomains[keyword]) {
+                                keywordToDomains[keyword] = [];
+                            }
+                            if (!keywordToDomains[keyword].includes(domain)) {
+                                keywordToDomains[keyword].push(domain);
+                            }
+                        });
+                    });
+                    
+                    // Find keywords that appear in 2+ domains
+                    const overlappingKeywords = Object.entries(keywordToDomains)
+                        .filter(([keyword, domains]) => domains.length > 1)
+                        .map(([keyword, domains]) => {
+                            const keywordData = {};
+                            domainNames.forEach(domain => {
+                                // Find the domain data entry that matches this domain name
+                                const domainEntry = Object.values(data).find(d => {
+                                    const dName = d.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                                    return dName === domain;
+                                });
+                                const kwData = domainEntry?.rankingKeywords?.data?.ranking_keywords?.find(k => k.keyword?.toLowerCase() === keyword);
+                                if (kwData) {
+                                    keywordData[domain] = {
+                                        rank: kwData.rank_position
+                                    };
+                                }
+                            });
+                            return { keyword, domains, data: keywordData };
+                        })
+                        .sort((a, b) => b.domains.length - a.domains.length || a.keyword.localeCompare(b.keyword));
+                    
+                    if (overlappingKeywords.length > 0) {
+                        dashboardHTML += '<div id="comp-overlapping-keywords-table"></div>';
+                    } else {
+                        dashboardHTML += '<div class="bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg p-6 text-center">';
+                        dashboardHTML += '<p class="text-[var(--text-secondary)] mb-2">No overlapping keywords found.</p>';
+                        dashboardHTML += '<p class="text-sm text-[var(--text-secondary)]">Try expanding your competitors list or increase ranking keyword counts to get more comparisons.</p>';
+                        dashboardHTML += '</div>';
+                    }
+                } else {
+                    dashboardHTML += '<p class="text-[var(--text-secondary)]">Add competitors to see overlapping keywords.</p>';
+                }
+                dashboardHTML += '</div>';
+                dashboardHTML += '</div>';
+                dashboardHTML += '</div>';
+                
+                // Store JSON data and replace raw wrapper with dashboard
+                allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                allDOMElements.rawWrapper.innerHTML = dashboardHTML;
+                // Attach compare-all toggle handler
+                const compareBtnComp = allDOMElements.rawWrapper.querySelector('.compare-all-btn[data-target="#competitive-metrics-grid"]');
+                if (compareBtnComp) {
+                    compareBtnComp.addEventListener('click', () => {
+                        const target = allDOMElements.rawWrapper.querySelector('#competitive-metrics-grid');
+                        if (!target) return;
+                        const isWide = target.classList.toggle('wide');
+                        compareBtnComp.textContent = isWide ? 'Collapse' : 'Compare All';
+                    });
+                }
+                allDOMElements.rawWrapper.classList.remove('hidden');
+                allDOMElements.viewDataBtn.textContent = 'View JSON';
+                allDOMElements.exportPdfBtn.classList.remove('hidden');
+                
+                // Initialize Tabulator tables for Competitive Analysis
+                setTimeout(() => {
+                    if (typeof Tabulator !== 'undefined') {
+                        // Initialize ranking keywords tables
+                        Object.values(data).forEach((domainData, idx) => {
+                            const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
+                            if (keywords.length > 0 && document.getElementById(`comp-keywords-table-${idx}`)) {
+                                const limit = currentOriginalParams?.limit || 25;
+                                const tableData = keywords.slice(0, limit).map(kw => ({
+                                    keyword: kw.keyword || 'N/A',
+                                    rank: kw.rank_position ?? 'N/A',
+                                    page: kw.ranking_page || 'N/A',
+                                    difficulty: kw.difficulty ?? 'N/A',
+                                    volume: kw.volume ? formatNumber(kw.volume) : 'N/A'
+                                }));
+                                
+                                new Tabulator(`#comp-keywords-table-${idx}`, {
+                                    data: tableData,
+                                    columns: [
+                                        { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                        { title: 'Rank', field: 'rank', sorter: 'number' },
+                                        { title: 'Page', field: 'page', sorter: 'string' },
+                                        { title: 'Difficulty', field: 'difficulty', sorter: 'number' },
+                                        { title: 'Volume', field: 'volume', sorter: 'string' }
+                                    ],
+                                    layout: "fitDataStretch",
+                                    pagination: "local",
+                                    paginationSize: 25,
+                                    movableColumns: true,
+                                    resizableColumns: true
+                                });
+                            }
+                        });
+                        
+                        // Initialize keyword gap table
+                        if (uniqueGapKeywords.length > 0 && document.getElementById('comp-keyword-gap-table')) {
+                            const gapTableData = uniqueGapKeywords.slice(0, 20).map(kw => ({
+                                keyword: kw.keyword,
+                                volume: kw.volume ? formatNumber(kw.volume) : 'N/A',
+                                difficulty: kw.difficulty ?? 'N/A',
+                                competitor: kw.competitor
+                            }));
+                            
+                            new Tabulator('#comp-keyword-gap-table', {
+                                data: gapTableData,
+                                columns: [
+                                    { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                    { title: 'Volume', field: 'volume', sorter: 'string' },
+                                    { title: 'Difficulty', field: 'difficulty', sorter: 'number' },
+                                    { title: 'Competitor', field: 'competitor', sorter: 'string' }
+                                ],
+                                layout: "fitDataStretch",
+                                pagination: "local",
+                                paginationSize: 20,
+                                movableColumns: true,
+                                resizableColumns: true
+                            });
+                        }
+                        
+                        // Initialize overlapping keywords table
+                        if (overlappingKeywords && overlappingKeywords.length > 0 && document.getElementById('comp-overlapping-keywords-table')) {
+                            const domainNames = Object.keys(domainKeywords);
+                            const overlapTableData = overlappingKeywords.map(overlap => {
+                                const obj = {
+                                    keyword: overlap.keyword,
+                                    sharedBy: `${overlap.domains.length} domains`
+                                };
+                                domainNames.forEach(domain => {
+                                    const kwData = overlap.data[domain];
+                                    obj[domain] = kwData ? (kwData.rank ?? 'N/A') : 'Not ranking';
+                                });
+                                return obj;
+                            });
+                            
+                            const columns = [
+                                { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                { title: 'Shared By', field: 'sharedBy', sorter: 'string' }
+                            ];
+                            domainNames.forEach(domain => {
+                                columns.push({ title: domain, field: domain, sorter: 'number' });
+                            });
+                            
+                            new Tabulator('#comp-overlapping-keywords-table', {
+                                data: overlapTableData,
+                                columns: columns,
+                                layout: "fitDataStretch",
+                                pagination: "local",
+                                paginationSize: 25,
+                                movableColumns: true,
+                                resizableColumns: true
+                            });
+                        }
+                    }
+                    
+                    // Force grid layout after DOM insertion - always show all domains in one row
+                    const gridContainer = document.querySelector('.metrics-grid-container');
+                    if (gridContainer) {
+                        const updateGrid = () => {
+                            const width = window.innerWidth;
+                            const domainCount = Object.keys(data).length;
+                            
+                            // Always try to show all domains in one row
+                            if (width >= 1280) {
+                                // Large screen: show all domains up to 4 in one row
+                                gridContainer.style.gridTemplateColumns = `repeat(${Math.min(domainCount, 4)}, minmax(0, 1fr))`;
+                            } else if (width >= 768) {
+                                // Tablet: show all domains up to 2 in one row, or 3 if screen is wide enough
+                                if (domainCount <= 3 && width >= 900) {
+                                    gridContainer.style.gridTemplateColumns = `repeat(${domainCount}, minmax(0, 1fr))`;
+                                } else {
+                                    gridContainer.style.gridTemplateColumns = domainCount <= 2 
+                                        ? `repeat(${domainCount}, minmax(0, 1fr))`
+                                        : 'repeat(2, minmax(0, 1fr))';
+                                }
+                            } else {
+                                // Mobile: always 1 column
+                                gridContainer.style.gridTemplateColumns = 'repeat(1, minmax(0, 1fr))';
+                            }
+                            gridContainer.style.display = 'grid';
+                        };
+                        updateGrid();
+                        window.addEventListener('resize', updateGrid);
+                    }
+                }, 100);
+                
+                // Change "Clear Data" button to "Reset" for competitive analysis
+                const clearBtn = allDOMElements.clearDataBtn;
+                if (clearBtn) {
+                    clearBtn.textContent = 'Reset';
+                    clearBtn.dataset.originalText = 'Clear Data';
+                }
+                
+                // Add event listener for domain selector
+                const selector = document.getElementById('domain-selector');
+                if (selector) {
+                    selector.addEventListener('change', (e) => {
+                        const selectedIdx = parseInt(e.target.value);
+                        document.querySelectorAll('.keywords-panel').forEach((panel, idx) => {
+                            panel.classList.toggle('hidden', idx !== selectedIdx);
+                        });
+                    });
+                }
+                
+                // Add event listener for keyword gap toggle
+                const toggleKeywordGap = document.getElementById('toggle-keyword-gap');
+                const keywordGapContent = document.getElementById('keyword-gap-content');
+                if (toggleKeywordGap && keywordGapContent) {
+                    toggleKeywordGap.addEventListener('click', () => {
+                        const isHidden = keywordGapContent.classList.contains('hidden');
+                        if (isHidden) {
+                            keywordGapContent.classList.remove('hidden');
+                            toggleKeywordGap.textContent = 'Collapse';
+                        } else {
+                            keywordGapContent.classList.add('hidden');
+                            toggleKeywordGap.textContent = 'Expand';
+                        }
+                    });
+                }
+                
+                // Add event listener for overlapping keywords toggle
+                const toggleOverlapping = document.getElementById('toggle-overlapping');
+                const overlappingContent = document.getElementById('overlapping-keywords-content');
+                if (toggleOverlapping && overlappingContent) {
+                    toggleOverlapping.addEventListener('click', () => {
+                        const isHidden = overlappingContent.classList.contains('hidden');
+                        if (isHidden) {
+                            overlappingContent.classList.remove('hidden');
+                            toggleOverlapping.textContent = 'Collapse';
+                        } else {
+                            overlappingContent.classList.add('hidden');
+                            toggleOverlapping.textContent = 'Expand';
+                        }
+                    });
+                }
+                
+                // Add sorting functionality for keywords tables
+                document.querySelectorAll('.sortable-header').forEach(header => {
+                    header.addEventListener('click', function() {
+                        const table = this.closest('table');
+                        const tbody = table.querySelector('tbody');
+                        const rows = Array.from(tbody.querySelectorAll('tr'));
+                        const sortBy = this.dataset.sort;
+                        const isAsc = this.classList.contains('sort-asc');
+                        
+                        // Remove all sort classes
+                        table.querySelectorAll('.sortable-header').forEach(h => {
+                            h.classList.remove('sort-asc', 'sort-desc');
+                        });
+                        
+                        // Add sort class
+                        this.classList.add(isAsc ? 'sort-desc' : 'sort-asc');
+                        
+                        // Sort rows
+                        rows.sort((a, b) => {
+                            let aVal, bVal;
+                            if (sortBy === 'keyword') {
+                                aVal = a.dataset.keyword || '';
+                                bVal = b.dataset.keyword || '';
+                                return isAsc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
+                            } else {
+                                aVal = parseFloat(a.dataset[sortBy]) || 0;
+                                bVal = parseFloat(b.dataset[sortBy]) || 0;
+                                return isAsc ? bVal - aVal : aVal - bVal;
+                            }
+                        });
+                        
+                        // Reorder rows
+                        rows.forEach(row => tbody.appendChild(row));
+                    });
+                });
+                
+                // Add copy keyword functionality
+                document.querySelectorAll('.copy-keyword-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const keyword = this.dataset.keyword;
+                        if (keyword) {
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(keyword).then(() => {
+                                    const originalText = this.textContent;
+                                    this.textContent = '✓';
+                                    setTimeout(() => {
+                                        this.textContent = originalText;
+                                    }, 2000);
+                                }).catch(() => {
+                                    displayError('Failed to copy keyword.');
+                                });
+                            } else {
+                                // Fallback
+                                const textArea = document.createElement('textarea');
+                                textArea.value = keyword;
+                                document.body.appendChild(textArea);
+                                textArea.select();
+                                try {
+                                    document.execCommand('copy');
+                                    const originalText = this.textContent;
+                                    this.textContent = '✓';
+                                    setTimeout(() => {
+                                        this.textContent = originalText;
+                                    }, 2000);
+                                } catch (e) {
+                                    displayError('Failed to copy keyword.');
+                                }
+                                document.body.removeChild(textArea);
+                            }
+                        }
+                    });
+                });
+            }
+
+            function handleExportPdf() {
+                if (currentMethod !== 'competitiveAnalysis' || !currentResultsData) {
+                    displayError('PDF export is only available for competitive analysis results.');
+                    return;
+                }
+                
+                const dashboard = document.getElementById('competitive-dashboard');
+                if (!dashboard) {
+                    displayError('Dashboard not found. Please run the analysis again.');
+                    return;
+                }
+                
+                // Show loading state
+                const originalText = allDOMElements.exportPdfBtn.textContent;
+                allDOMElements.exportPdfBtn.textContent = 'Generating PDF...';
+                allDOMElements.exportPdfBtn.disabled = true;
+                
+                // Use html2canvas to capture the dashboard
+                html2canvas(dashboard, {
+                    backgroundColor: getComputedStyle(document.body).backgroundColor,
+                    scale: 2,
+                    logging: false
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    
+                    const imgWidth = 210; // A4 width in mm
+                    const pageHeight = 297; // A4 height in mm
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 0;
+                    
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                    
+                    while (heightLeft > 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+                    
+                    const dateStr = new Date().toISOString().split('T')[0];
+                    pdf.save(`competitive-analysis-${dateStr}.pdf`);
+                    
+                    // Reset button
+                    allDOMElements.exportPdfBtn.textContent = originalText;
+                    allDOMElements.exportPdfBtn.disabled = false;
+                }).catch(error => {
+                    console.error('PDF export error:', error);
+                    displayError('Failed to export PDF. Please try again.');
+                    allDOMElements.exportPdfBtn.textContent = originalText;
+                    allDOMElements.exportPdfBtn.disabled = false;
+                });
             }
 
             function handleCopyJson() {
@@ -1520,35 +3066,361 @@
             }
             
             function handleExportCsv() {
-                 if (currentResultsData) {
+                if (currentMethod === 'competitiveAnalysis' && currentResultsData) {
+                    exportCompetitiveAnalysisToCsv(currentResultsData, currentOriginalParams);
+    } else if (currentMethod === 'keywordTargetingAnalysis' && currentResultsData) {
+        exportKeywordTargetingToCsv(currentResultsData);
+    } else if (currentResultsData) {
                     exportDataToCsv(currentResultsData, currentMethod, currentOriginalParams);
                 } else {
                     displayError("No data available to export.");
                 }
             }
+            
+            function exportCompetitiveAnalysisToCsv(data, params) {
+                // Load SheetJS library dynamically
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                script.onload = () => {
+                    try {
+                        const workbook = XLSX.utils.book_new();
+                        
+                        // Sheet 1: Domain Metrics Summary
+                        const metricsData = [];
+                        metricsData.push(['Domain', 'Brand Authority', 'Domain Authority', 'Total Links', 'Linking Domains', 'Spam Score', 'Ranks 1-3', 'Ranks 4-10', 'Ranks 11-20', 'Ranks 21-50', 'Total Keywords']);
+                        
+                        Object.values(data).forEach((domainData) => {
+                            const sm = domainData.siteMetrics?.data?.site_metrics || {};
+                            const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
+                            const da = sm.domain_authority ?? 'N/A';
+                            const links = sm.external_pages_to_root_domain ?? 'N/A';
+                            const linkingDomains = sm.root_domains_to_root_domain ?? 'N/A';
+                            const spam = sm.spam_score ?? 'N/A';
+                            
+                            const kc = domainData.keywordCount?.data?.ranking_keyword_count;
+                            const positions = kc?.position || {};
+                            const rank1_3 = (positions.rank_1 || 0) + (positions.rank_2 || 0) + (positions.rank_3 || 0);
+                            const rank4_10 = [4,5,6,7,8,9,10].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                            const rank11_20 = [11,12,13,14,15,16,17,18,19,20].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                            const rank21_50 = [21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50].reduce((sum, r) => sum + (positions[`rank_${r}`] || 0), 0);
+                            
+                            const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                            metricsData.push([
+                                domainName,
+                                ba,
+                                da,
+                                typeof links === 'number' ? links : links,
+                                typeof linkingDomains === 'number' ? linkingDomains : linkingDomains,
+                                spam,
+                                rank1_3,
+                                rank4_10,
+                                rank11_20,
+                                rank21_50,
+                                kc?.total || 0
+                            ]);
+                        });
+                        
+                        const metricsSheet = XLSX.utils.aoa_to_sheet(metricsData);
+                        XLSX.utils.book_append_sheet(workbook, metricsSheet, 'Domain Metrics');
+                        
+                        // Sheet 2: Ranking Keywords (one per domain)
+                        Object.values(data).forEach((domainData, idx) => {
+                            const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
+                            const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                            const sheetName = idx === 0 ? 'Your Domain Keywords' : `${domainName} Keywords`;
+                            
+                            const keywordsData = [['Keyword', 'Rank', 'Page', 'Difficulty', 'Volume']];
+                            keywords.forEach(kw => {
+                                keywordsData.push([
+                                    kw.keyword || 'N/A',
+                                    kw.rank_position ?? 'N/A',
+                                    kw.ranking_page || 'N/A',
+                                    kw.difficulty ?? 'N/A',
+                                    kw.volume || 'N/A'
+                                ]);
+                            });
+                            
+                            const keywordsSheet = XLSX.utils.aoa_to_sheet(keywordsData);
+                            XLSX.utils.book_append_sheet(workbook, keywordsSheet, sheetName.substring(0, 31)); // Excel sheet name limit
+                        });
+                        
+                        // Sheet 3: Overlapping Keywords
+                        const domainKeywords = {};
+                        Object.values(data).forEach((domainData) => {
+                            const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
+                            const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                            domainKeywords[domainName] = keywords.map(kw => kw.keyword?.toLowerCase()).filter(Boolean);
+                        });
+                        
+                        const domainNames = Object.keys(domainKeywords);
+                        if (domainNames.length > 1) {
+                            const keywordToDomains = {};
+                            domainNames.forEach(domain => {
+                                domainKeywords[domain].forEach(keyword => {
+                                    if (!keywordToDomains[keyword]) {
+                                    keywordToDomains[keyword] = [];
+                                }
+                                    if (!keywordToDomains[keyword].includes(domain)) {
+                                        keywordToDomains[keyword].push(domain);
+                                    }
+                                });
+                            });
+                            
+                            const overlappingKeywords = Object.entries(keywordToDomains)
+                                .filter(([keyword, domains]) => domains.length > 1)
+                                .map(([keyword, domains]) => {
+                                    const keywordData = {};
+                                    domainNames.forEach(domain => {
+                                        const domainEntry = Object.values(data).find(d => {
+                                            const dName = d.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                                            return dName === domain;
+                                        });
+                                        const kwData = domainEntry?.rankingKeywords?.data?.ranking_keywords?.find(k => k.keyword?.toLowerCase() === keyword);
+                                        if (kwData) {
+                                            keywordData[domain] = { rank: kwData.rank_position };
+                                        }
+                                    });
+                                    return { keyword, domains, data: keywordData };
+                                })
+                                .sort((a, b) => b.domains.length - a.domains.length || a.keyword.localeCompare(b.keyword));
+                            
+                            if (overlappingKeywords.length > 0) {
+                                const overlapData = [['Keyword', 'Shared By', ...domainNames]];
+                                overlappingKeywords.forEach(overlap => {
+                                    const row = [overlap.keyword, `${overlap.domains.length} domains`];
+                                    domainNames.forEach(domain => {
+                                        const kwData = overlap.data[domain];
+                                        row.push(kwData ? kwData.rank : 'Not ranking');
+                                    });
+                                    overlapData.push(row);
+                                });
+                                
+                                const overlapSheet = XLSX.utils.aoa_to_sheet(overlapData);
+                                XLSX.utils.book_append_sheet(workbook, overlapSheet, 'Overlapping Keywords');
+                            }
+                        }
+                        
+                        // Sheet 4: Keyword Gap Snapshot
+                        const yourDomainData = Object.values(data)[0];
+                        const yourKeywords = new Set((yourDomainData.rankingKeywords?.data?.ranking_keywords || []).map(kw => kw.keyword?.toLowerCase()).filter(Boolean));
+                        
+                        const gapKeywords = [];
+                        Object.values(data).slice(1).forEach((competitorData) => {
+                            const competitorKeywords = competitorData.rankingKeywords?.data?.ranking_keywords || [];
+                            competitorKeywords.forEach(kw => {
+                                const kwLower = kw.keyword?.toLowerCase();
+                                if (kwLower && !yourKeywords.has(kwLower) && kw.volume) {
+                                    gapKeywords.push({
+                                        keyword: kw.keyword,
+                                        volume: kw.volume || 0,
+                                        difficulty: kw.difficulty,
+                                        competitor: competitorData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0]
+                                    });
+                                }
+                            });
+                        });
+                        
+                        const uniqueGapKeywords = [];
+                        const seenKeywords = new Set();
+                        gapKeywords.forEach(kw => {
+                            if (!seenKeywords.has(kw.keyword.toLowerCase())) {
+                                seenKeywords.add(kw.keyword.toLowerCase());
+                                uniqueGapKeywords.push(kw);
+                            }
+                        });
+                        uniqueGapKeywords.sort((a, b) => (b.volume || 0) - (a.volume || 0));
+                        
+                        if (uniqueGapKeywords.length > 0) {
+                            const gapData = [['Keyword', 'Volume', 'Difficulty', 'Competitor']];
+                            uniqueGapKeywords.forEach(kw => {
+                                gapData.push([kw.keyword, kw.volume || 'N/A', kw.difficulty ?? 'N/A', kw.competitor]);
+                            });
+                            
+                            const gapSheet = XLSX.utils.aoa_to_sheet(gapData);
+                            XLSX.utils.book_append_sheet(workbook, gapSheet, 'Keyword Gap Opportunities');
+                        }
+                        
+                        // Export the workbook
+                        const dateStr = new Date().toISOString().split('T')[0];
+                        XLSX.writeFile(workbook, `competitive-analysis-${dateStr}.xlsx`);
+                    } catch (error) {
+                        console.error('Excel export error:', error);
+                        displayError('Failed to export Excel file. Please try again.');
+                    }
+                };
+                script.onerror = () => {
+                    displayError('Failed to load Excel export library. Please try again.');
+                };
+                document.head.appendChild(script);
+            }
+
+            function exportKeywordTargetingToCsv(data) {
+                // Load SheetJS library dynamically
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                script.onload = () => {
+                    try {
+                        const workbook = XLSX.utils.book_new();
+                        const { urls = [], resultsByUrl = {}, overlaps = [] } = data || {};
+
+                        // Sheet 1: Page Metrics
+                        const metrics = [['URL Index','URL','Linking Domains','Inbound Links','Page Authority']];
+                        urls.forEach((u, idx) => {
+                            const sm = resultsByUrl[u]?.siteMetrics?.data?.site_metrics || {};
+                            metrics.push([
+                                idx + 1,
+                                u,
+                                sm.root_domains_to_page ?? 'N/A',
+                                sm.external_pages_to_page ?? 'N/A',
+                                sm.page_authority ?? 'N/A'
+                            ]);
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(metrics), 'Page Metrics');
+
+                        // Sheets: Ranking Keywords per URL
+                        urls.forEach((u, idx) => {
+                            const res = resultsByUrl[u] || {};
+                            const arr = Array.isArray(res.rankingKeywords)
+                                ? res.rankingKeywords
+                                : (res.rankingKeywords && res.rankingKeywords.data && Array.isArray(res.rankingKeywords.data.ranking_keywords)
+                                    ? res.rankingKeywords.data.ranking_keywords
+                                    : []);
+                            const rows = [['Keyword','Intent','Rank','Page','Difficulty','Volume']];
+                            arr.forEach(kw => {
+                                const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || 'Unknown';
+                                rows.push([
+                                    kw.keyword || 'N/A',
+                                    intent,
+                                    kw.rank_position ?? 'N/A',
+                                    kw.ranking_page || 'N/A',
+                                    kw.difficulty ?? 'N/A',
+                                    kw.volume ?? 'N/A'
+                                ]);
+                            });
+                            const sheetName = `URL ${idx + 1} Keywords`.substring(0,31);
+                            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), sheetName);
+                        });
+
+                        // Sheet: Overlapping Keywords
+                        if (overlaps && overlaps.length > 0) {
+                            const header = ['Keyword','Shared By', ...urls.map((_, i) => `URL ${i+1} Rank`)];
+                            const rows = [header];
+                            overlaps.forEach(row => {
+                                const r = [row.keyword, `${row.urls.length} URLs`];
+                                urls.forEach(u => {
+                                    const d = row.data[u];
+                                    r.push(d ? (d.rank ?? 'N/A') : 'Not ranking');
+                                });
+                                rows.push(r);
+                            });
+                            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), 'Overlapping Keywords');
+                        }
+
+                        // Sheet: Anchors
+                        const anchorRows = [['URL Index','URL','Anchor Text','External Root Domains','External Pages']];
+                        urls.forEach((u, idx) => {
+                            const anchors = resultsByUrl[u]?.topAnchors || [];
+                            anchors.forEach(a => {
+                                anchorRows.push([
+                                    idx + 1,
+                                    u,
+                                    a.text || 'N/A',
+                                    a.external_root_domains ?? 'N/A',
+                                    a.external_pages ?? 'N/A'
+                                ]);
+                            });
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(anchorRows), 'Anchors');
+
+                        // Export the workbook
+                        const dateStr = new Date().toISOString().split('T')[0];
+                        XLSX.writeFile(workbook, `keyword-targeting-${dateStr}.xlsx`);
+                    } catch (error) {
+                        console.error('Excel export error:', error);
+                        displayError('Failed to export Excel file. Please try again.');
+                    }
+                };
+                script.onerror = () => {
+                    displayError('Failed to load Excel export library. Please try again.');
+                };
+                document.head.appendChild(script);
+            }
 
             function toggleDataView() {
+                // Handle multi-endpoint dashboards specially
+                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis') {
+                    const dashboard = document.getElementById('competitive-dashboard');
+                    const altDashboard = document.getElementById('keyword-targeting-dashboard');
+                    const activeDash = dashboard || altDashboard;
+                    const isDashboardVisible = activeDash && !activeDash.closest('.hidden');
+                    
+                    if (isDashboardVisible) {
+                        // Switch to JSON view
+                        activeDash.parentElement.innerHTML = '<pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>';
+                        const codeEl = allDOMElements.rawWrapper.querySelector('code');
+                        if (codeEl) codeEl.textContent = JSON.stringify(currentResultsData, null, 2);
+                        allDOMElements.viewDataBtn.textContent = 'View Dashboard';
+                        allDOMElements.rawWrapper.classList.remove('hidden');
+                        allDOMElements.exportPdfBtn.classList.add('hidden');
+                    } else {
+                        // Switch back to dashboard
+                        if (currentMethod === 'competitiveAnalysis') {
+                            showCompetitiveDashboard(currentResultsData);
+                        } else if (currentMethod === 'keywordTargetingAnalysis') {
+                            showKeywordTargetingDashboard(currentResultsData);
+                        }
+                        allDOMElements.viewDataBtn.textContent = 'View JSON';
+                        allDOMElements.exportPdfBtn.classList.remove('hidden');
+                    }
+                    return;
+                }
+                
+                // Regular view toggle
                 const isTableVisible = !allDOMElements.tableWrapper.classList.contains('hidden');
                 if (isTableVisible) {
                     allDOMElements.tableWrapper.classList.add('hidden');
                     allDOMElements.rawWrapper.classList.remove('hidden');
                     allDOMElements.viewDataBtn.textContent = 'View Table';
                     allDOMElements.filterBtn.classList.add('hidden');
+                    allDOMElements.exportPdfBtn.classList.add('hidden');
                 } else {
                     allDOMElements.rawWrapper.classList.add('hidden');
                     allDOMElements.tableWrapper.classList.remove('hidden');
                     allDOMElements.viewDataBtn.textContent = 'View JSON';
                     allDOMElements.filterBtn.classList.remove('hidden');
+                    allDOMElements.exportPdfBtn.classList.add('hidden');
                     renderTable(currentResultsData, currentMethod, currentOriginalParams);
                 }
             }
             
             function showRawJsonResults(data) {
+                // Don't override dashboards for multi-endpoint views
+                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis') {
+                    return;
+                }
+                
+                // Clear any existing dashboard
+                const dashboard = document.getElementById('competitive-dashboard');
+                if (dashboard) {
+                    dashboard.remove();
+                }
+                
+                // Reset "Reset" button back to "Clear Data" if it was changed
+                if (allDOMElements.clearDataBtn && allDOMElements.clearDataBtn.dataset.originalText) {
+                    allDOMElements.clearDataBtn.textContent = allDOMElements.clearDataBtn.dataset.originalText;
+                    delete allDOMElements.clearDataBtn.dataset.originalText;
+                }
+                
+                // Reset to standard JSON view
+                allDOMElements.rawWrapper.innerHTML = '<pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>';
+                allDOMElements.rawCode = document.querySelector('#raw-wrapper code');
+                
                 allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View Table';
+                allDOMElements.exportPdfBtn.classList.add('hidden');
             }
 
             function clearResultsData() {
@@ -1560,11 +3432,29 @@
                     table.destroy();
                     table = null;
                 }
+                
+                // Clear any dashboards
+                const compDash = document.getElementById('competitive-dashboard');
+                if (compDash) compDash.remove();
+                const ktaDash = document.getElementById('keyword-targeting-dashboard');
+                if (ktaDash) ktaDash.remove();
+                
+                // Reset "Reset" button back to "Clear Data" if it was changed
+                if (allDOMElements.clearDataBtn && allDOMElements.clearDataBtn.dataset.originalText) {
+                    allDOMElements.clearDataBtn.textContent = allDOMElements.clearDataBtn.dataset.originalText;
+                    delete allDOMElements.clearDataBtn.dataset.originalText;
+                }
+                
+                // Reset rawWrapper to default structure
+                allDOMElements.rawWrapper.innerHTML = '<pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>';
+                allDOMElements.rawCode = document.querySelector('#raw-wrapper code');
                 allDOMElements.rawCode.textContent = '';
+                
                 allDOMElements.resultsContainer.classList.add('hidden');
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.rawWrapper.classList.add('hidden');
                 allDOMElements.filterBtn.classList.add('hidden');
+                allDOMElements.exportPdfBtn.classList.add('hidden');
                 allDOMElements.activeFiltersContainer.classList.add('hidden');
                 allDOMElements.activeFiltersContainer.innerHTML = '';
             }
@@ -1694,6 +3584,7 @@
                             if (element.type === 'checkbox') {
                                 element.checked = value;
                             } else if (Array.isArray(value)) {
+                                // For competitive analysis competitors array or any array value
                                 element.value = value.join('\n');
                             } else if (element.type === 'select-one' || element.type === 'select-multiple') {
                                 if (Array.isArray(value)) {
@@ -1819,6 +3710,17 @@
                         'domain': 'fldDomain',
                         'limit': 'fldLimit',
                         'urls': 'fldUrlsInput'
+                    },
+                    'competitiveAnalysis': {
+                        'yourDomain': 'caYourDomain',
+                        'competitors': 'caCompetitors',
+                        'locale': 'caLocaleSelect',
+                        'limit': 'caLimit'
+                    },
+                    'keywordTargetingAnalysis': {
+                        'urls': 'ktaUrl',
+                        'locale': 'ktaLocaleSelect',
+                        'limit': 'ktaLimit'
                     }
                 };
 
@@ -1908,6 +3810,32 @@
                     case 'linkStatus': payload.params = { targetScope: getInputValue('lsTargetScopeSelect'), targetQuery: getInputValue('lsTargetUrl'), sourceScope: getInputValue('lsSourceScopeSelect'), sourceQuery: getInputValue('lsSourceUrl') }; break;
                     case 'filterLinksByAnchor': payload.params = { scope: getInputValue('flaScopeSelect'), targets: getCleanedList('flaUrlsInput'), anchorText: getInputValue('flaAnchorText'), limit: parseInt(getInputValue('flaLimit'), 10) || 25, filters: getSelectedOptions('flaFilterSelect'), sort: getInputValue('flaSortSelect') }; break;
                     case 'filterLinksByDomain': payload.params = { targetScope: getInputValue('fldTargetScopeSelect'), targetQueries: getCleanedList('fldTargetUrls'), sourceScope: getInputValue('fldSourceScopeSelect'), sourceQueries: getCleanedList('fldSourceUrls'), limit: parseInt(getInputValue('fldLimit'), 10) || 25, filters: getSelectedOptions('fldFilterSelect')}; break;
+                    case 'competitiveAnalysis': {
+                        const yourDomain = getInputValue('caYourDomain')?.trim();
+                        const competitors = getInputValue('caCompetitors')?.split(/[\n,]/).map(item => item.trim()).filter(Boolean).slice(0, 3);
+                        if (!yourDomain) throw new Error('Please enter your domain.');
+                        if (!competitors || competitors.length === 0) throw new Error('Please enter at least one competitor domain.');
+                        payload.params = { 
+                            yourDomain, 
+                            competitors, 
+                            locale: getInputValue('caLocaleSelect') || 'en-US',
+                            limit: parseInt(getInputValue('caLimit'), 10) || 25
+                        };
+                        break;
+                    }
+                    case 'keywordTargetingAnalysis': {
+                        const urls = getInputValue('ktaUrl')
+                            ?.split(/[\n,]/)
+                            .map(s => s.trim())
+                            .filter(Boolean) || [];
+                        if (urls.length === 0) throw new Error('Please enter at least one URL.');
+                        payload.params = {
+                            urls,
+                            locale: getInputValue('ktaLocaleSelect') || 'en-US',
+                            limit: parseInt(getInputValue('ktaLimit'), 10) || 25
+                        };
+                        break;
+                    }
                     default: throw new Error('Invalid method selected.');
                 }
                 
