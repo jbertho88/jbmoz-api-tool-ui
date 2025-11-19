@@ -593,6 +593,7 @@
                     <option value="recentlyGainedLinks">List Recently Gained Links</option>
                     <option value="recentlyLostLinks">List Recently Lost Links</option>
                     <option value="linkIntersect">Fetch Link Intersects</option>
+                    <option value="linkOpportunity">Link Opportunity Analysis</option>
                     <option value="listLinks">List Links</option>
                     <option value="filterLinksByAnchor">Filter Links by Anchor Text</option>
                     <option value="filterLinksByDomain">Filter Links by Domain</option>
@@ -621,6 +622,7 @@
                 <fieldset id="finalRedirectInputs" class="input-section space-y-4"><legend class="sr-only">Final Redirect Inputs</legend></fieldset>
                 <fieldset id="topPagesInputs" class="input-section space-y-4"><legend class="sr-only">Top Pages Inputs</legend></fieldset>
                 <fieldset id="linkIntersectInputs" class="input-section space-y-4"><legend class="sr-only">Link Intersect Inputs</legend></fieldset>
+                <fieldset id="linkOpportunityInputs" class="input-section space-y-4"><legend class="sr-only">Link Opportunity Inputs</legend></fieldset>
                 <fieldset id="listLinksInputs" class="input-section space-y-4"><legend class="sr-only">List Links Inputs</legend></fieldset>
                 <fieldset id="linkStatusInputs" class="input-section space-y-4"><legend class="sr-only">Link Status Inputs</legend></fieldset>
                 <fieldset id="filterLinksByAnchorInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Anchor Inputs</legend></fieldset>
@@ -1128,6 +1130,7 @@
                 document.getElementById('finalRedirectInputs').innerHTML = createDescription('See the final redirect target of a page.') + createLabel('Scope') + createSelect('frScopeSelect', scopeOptions) + createLabel('Domains / URLs') + createTextarea('frUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('topPagesInputs').innerHTML = createDescription('Return a list of the top pages on a target domain.') + createLabel('Scope') + createSelect('tpScopeSelect', scopeOptions) + createLabel('Filter') + createSelect('tpFilterSelect', topPagesFilterOptions) + createLabel('Sort') + createSelect('tpSortSelect', topPagesSortOptions) + createNumberInput('tpLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('tpUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('linkIntersectInputs').innerHTML = createDescription('Find sites that link to some domains but not others.') + createLabel('Scope') + createSelect('liScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('liSortSelect', linkIntersectSortOptions) + createNumberInput('liMinMatch', 1, 1, 6, 'Minimum Matching Targets') + createNumberInput('liLimit', 25, 1, 50, limitLabel) + createLabel('Linking To') + createTextarea('liIsLinkingTo', 'One per line...') + createLabel('NOT Linking To (Optional)') + createTextarea('liNotLinkingTo', 'One per line...');
+                document.getElementById('linkOpportunityInputs').innerHTML = createDescription('Find link building opportunities by analyzing sites that link to competitors. Shows Domain, Source Page, Source PA, and ranking keywords for each opportunity.') + createLabel('Scope') + createSelect('loScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('loSortSelect', linkIntersectSortOptions) + createNumberInput('loMinMatch', 1, 1, 6, 'Minimum Matching Targets') + createNumberInput('loLimit', 25, 1, 50, limitLabel) + createLabel('Linking To') + createTextarea('loIsLinkingTo', 'One per line...') + createLabel('NOT Linking To (Optional)') + createTextarea('loNotLinkingTo', 'One per line...') + createLabel('Locale') + createSelect('loLocaleSelect', localeOptions) + createNumberInput('loKeywordLimit', 25, 1, 500, 'Number of Ranking Keywords to Display (Default 25; 1-500)');
                 document.getElementById('listLinksInputs').innerHTML = createDescription('Get a list of links to a target.') + createLabel('Scope') + createSelect('llScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('llSortSelect', listLinksSortOptions) + createLabel('Filters') + createMultiSelect('llFilterSelect', listLinksFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('llLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('llUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('linkStatusInputs').innerHTML = createDescription('Get the status of a link from a source to a target.') + createLabel('Target Scope') + createSelect('lsTargetScopeSelect', scopeOptions) + createLabel('Target URL') + createTextarea('lsTargetUrl', 'Target URL') + createLabel('Source Scope') + createSelect('lsSourceScopeSelect', scopeOptions) + createLabel('Source URL') + createTextarea('lsSourceUrl', 'Source URL');
                 document.getElementById('filterLinksByAnchorInputs').innerHTML = createDescription('Get a list of links to a target where the anchor text exactly matches a string.') + createLabel('Scope') + createSelect('flaScopeSelect', scopeOptions) + createLabel('Anchor Text') + createTextarea('flaAnchorText', 'Enter exact anchor text...') + createLabel('Sort') + createSelect('flaSortSelect', filterAnchorSortOptions) + createLabel('Filters') + createMultiSelect('flaFilterSelect', filterAnchorFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('flaLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('flaUrlsInput', 'One per line or comma-separated.');
@@ -1703,12 +1706,33 @@
                     }
                     return;
                 }
+                if (selectedMethod === 'linkOpportunity') {
+                    try {
+                        const loData = await runLinkOpportunityAnalysis(apiKey, payload.params, PROXY_URL, inFlightRequest);
+                        currentResultsData = loData;
+                        currentOriginalParams = payload.params;
+                        currentMethod = selectedMethod;
+                        showLinkOpportunityDashboard(loData);
+                        fetchQuota(apiKey);
+                        autoSaveToHistory();
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            displayError(error.message);
+                        }
+                    } finally {
+                        resetSubmitButton();
+                        inFlightRequest = null;
+                    }
+                    return;
+                }
                 
                 // For non-dashboard methods, ensure dashboards are cleared
                 const existingCompetitive = document.getElementById('competitive-dashboard');
                 if (existingCompetitive) existingCompetitive.remove();
                 const existingKta = document.getElementById('keyword-targeting-dashboard');
                 if (existingKta) existingKta.remove();
+                const existingLo = document.getElementById('link-opportunity-dashboard');
+                if (existingLo) existingLo.remove();
                 
                 try {
                     const response = await fetch(PROXY_URL, {
@@ -1991,6 +2015,94 @@
                     .sort((a, b) => b.urls.length - a.urls.length || a.keyword.localeCompare(b.keyword));
 
                 return { urls, locale, limit, resultsByUrl, overlaps };
+            }
+
+            async function runLinkOpportunityAnalysis(apiKey, params, proxyUrl, opensignal) {
+                // First, fetch linkIntersect data
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching link opportunities...</span>';
+                
+                const intersectScope = params.scope;
+                const linkIntersectPayload = {
+                    apiKey,
+                    method: 'linkIntersect',
+                    params: {
+                        scope: intersectScope,
+                        limit: params.limit || 25,
+                        is_linking_to: params.is_linking_to || [],
+                        not_linking_to: params.not_linking_to || [],
+                        sort: params.sort,
+                        minimum_matching_targets: params.minimum_matching_targets || 1
+                    }
+                };
+
+                const liResponse = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(linkIntersectPayload),
+                    signal: opensignal.signal
+                });
+
+                const liData = await liResponse.json();
+                if (!liResponse.ok || !Array.isArray(liData) || liData[0]?.status !== 'success') {
+                    throw new Error('Link Intersect failed: ' + (liData[0]?.reason || 'Unknown error'));
+                }
+
+                const linkIntersects = liData[0]?.data?.link_intersects || [];
+                const locale = params.locale || 'en-US';
+                const keywordLimit = params.keywordLimit || 25;
+
+                // Extract unique source page URLs
+                const sourcePageUrls = new Set();
+                linkIntersects.forEach(intersect => {
+                    (intersect.matching_source_pages || []).forEach(sourcePage => {
+                        if (sourcePage.page && sourcePage.page !== 'N/A') {
+                            sourcePageUrls.add(sourcePage.page);
+                        }
+                    });
+                });
+
+                const uniqueSourceUrls = Array.from(sourcePageUrls);
+                allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Fetching ranking keywords for ${uniqueSourceUrls.length} source pages...</span>`;
+
+                // Fetch ranking keywords for each source page URL
+                const rankingKeywordsByUrl = {};
+                const keywordPromises = uniqueSourceUrls.map(async (url) => {
+                    try {
+                        const rkResponse = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                apiKey,
+                                method: 'rankingKeywords',
+                                params: {
+                                    scope: 'url',
+                                    locale: locale,
+                                    targets: [url],
+                                    limit: keywordLimit
+                                }
+                            }),
+                            signal: opensignal.signal
+                        });
+                        const rkData = await rkResponse.json();
+                        if (rkResponse.ok && Array.isArray(rkData) && rkData[0]?.status === 'success') {
+                            rankingKeywordsByUrl[url] = rkData[0]?.data?.ranking_keywords || [];
+                        } else {
+                            rankingKeywordsByUrl[url] = [];
+                        }
+                    } catch (e) {
+                        rankingKeywordsByUrl[url] = [];
+                    }
+                });
+
+                await Promise.all(keywordPromises);
+
+                return {
+                    linkIntersects,
+                    rankingKeywordsByUrl,
+                    locale,
+                    keywordLimit,
+                    params
+                };
             }
 
             function showKeywordTargetingDashboard(payload) {
@@ -2445,6 +2557,200 @@
                         });
                     }
                 } catch (_) {}
+            }
+
+            function showLinkOpportunityDashboard(data) {
+                // Hide regular view elements
+                allDOMElements.tableWrapper.classList.add('hidden');
+                allDOMElements.filterBtn.classList.add('hidden');
+                allDOMElements.resultsContainer.classList.remove('hidden');
+
+                const { linkIntersects, rankingKeywordsByUrl, locale, keywordLimit } = data;
+                
+                const formatNumber = (num) => {
+                    if (typeof num !== 'number' || num === 'N/A') return num;
+                    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                    return num.toLocaleString();
+                };
+
+                let html = '<div id="link-opportunity-dashboard" class="space-y-6">';
+                html += '<div class="flex items-start justify-between gap-3">';
+                html += '<div>';
+                html += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-1">Link Opportunity Analysis</h3>';
+                html += `<p class="text-sm text-[var(--text-secondary)]">Opportunities: <span class="text-[var(--text-primary)]">${linkIntersects.length}</span> • Locale: ${locale}</p>`;
+                html += '</div>';
+                html += '<div class="shrink-0">';
+                html += '<button type="button" class="compare-all-btn text-xs px-3 py-1 rounded-md border border-[var(--border-primary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" data-target="#link-opportunity-grid">Compare All</button>';
+                html += '</div>';
+                html += '</div>';
+
+                // Create scorecard grid
+                html += '<div id="link-opportunity-grid" class="metrics-grid-container">';
+                
+                // Flatten linkIntersects to create one card per source page
+                const opportunities = [];
+                linkIntersects.forEach((intersect, intersectIdx) => {
+                    const domain = intersect.page || 'N/A';
+                    const domainName = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                    const title = intersect.title || 'N/A';
+                    const domainAuthority = intersect.domain_authority ?? 'N/A';
+                    const spamScore = intersect.spam_score ?? 'N/A';
+                    
+                    (intersect.matching_source_pages || []).forEach((sourcePage, pageIdx) => {
+                        const sourcePageUrl = sourcePage.page || 'N/A';
+                        const sourcePA = sourcePage.page_authority ?? 'N/A';
+                        const rankingKeywords = rankingKeywordsByUrl[sourcePageUrl] || [];
+                        
+                        opportunities.push({
+                            domain,
+                            domainName,
+                            title,
+                            domainAuthority,
+                            spamScore,
+                            sourcePageUrl,
+                            sourcePA,
+                            rankingKeywords,
+                            uniqueId: `opp-${intersectIdx}-${pageIdx}`
+                        });
+                    });
+                });
+
+                opportunities.forEach((opp, idx) => {
+                    html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4 shadow-md relative" style="min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; overflow: hidden;">`;
+                    html += `<h4 class="font-bold text-[var(--text-primary)] mb-1">${opp.domainName}</h4>`;
+                    html += `<p class="text-xs text-[var(--text-secondary)] mb-1 truncate" title="${opp.title}">${opp.title}</p>`;
+                    html += `<p class="text-xs text-[var(--text-secondary)] mb-3 truncate" title="${opp.domain}">${opp.domain}</p>`;
+                    
+                    // Domain Metrics
+                    html += `<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">`;
+                    html += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Domain Metrics</div>`;
+                    html += `<div class="space-y-2 text-sm">`;
+                    html += `<div>Domain Authority: <span class="font-semibold text-[var(--text-primary)]">${opp.domainAuthority}</span></div>`;
+                    html += `<div>Spam Score: <span class="font-semibold text-[var(--text-primary)]">${opp.spamScore}</span></div>`;
+                    html += `</div></div>`;
+                    
+                    // Source Page Info
+                    html += `<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">`;
+                    html += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Source Page</div>`;
+                    html += `<div class="space-y-2 text-sm">`;
+                    html += `<div class="truncate" title="${opp.sourcePageUrl}">Page: <span class="font-semibold text-[var(--text-primary)]">${opp.sourcePageUrl.length > 50 ? opp.sourcePageUrl.substring(0, 50) + '...' : opp.sourcePageUrl}</span></div>`;
+                    html += `<div>Page Authority: <span class="font-semibold text-[var(--text-primary)]">${opp.sourcePA}</span></div>`;
+                    html += `<div>Ranking Keywords: <span class="font-semibold text-[var(--text-primary)]">${opp.rankingKeywords.length}</span></div>`;
+                    html += `</div></div>`;
+                    
+                    // Top Ranking Keywords Preview
+                    if (opp.rankingKeywords.length > 0) {
+                        html += `<div class="mb-3">`;
+                        html += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Top Ranking Keywords</div>`;
+                        html += `<div class="space-y-1 text-xs max-h-32 overflow-y-auto">`;
+                        opp.rankingKeywords.slice(0, 5).forEach(kw => {
+                            html += `<div class="flex justify-between">`;
+                            html += `<span class="text-[var(--text-primary)] truncate" title="${kw.keyword || 'N/A'}">${kw.keyword || 'N/A'}</span>`;
+                            html += `<span class="text-[var(--text-secondary)] ml-2">Rank ${kw.rank_position ?? 'N/A'}</span>`;
+                            html += `</div>`;
+                        });
+                        if (opp.rankingKeywords.length > 5) {
+                            html += `<div class="text-[var(--text-secondary)] text-xs italic">+${opp.rankingKeywords.length - 5} more</div>`;
+                        }
+                        html += `</div></div>`;
+                    }
+                    
+                    html += `</div>`;
+                });
+
+                html += '</div>';
+
+                // Ranking Keywords Section
+                html += '<div id="lo-keywords-section" class="mt-6">';
+                html += '<div class="flex items-center justify-between mb-4">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Ranking Keywords by Source Page</h4>';
+                html += '<div><label for="lo-page-selector" class="inline-block text-sm font-medium text-[var(--text-secondary)] mr-2">View Keywords For:</label>';
+                html += '<select id="lo-page-selector" class="inline-block bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)]">';
+                opportunities.forEach((opp, idx) => {
+                    const displayText = `${opp.domainName} - ${opp.sourcePageUrl.length > 40 ? opp.sourcePageUrl.substring(0, 40) + '...' : opp.sourcePageUrl}`;
+                    html += `<option value="${idx}">${displayText}</option>`;
+                });
+                html += '</select></div></div>';
+
+                // Render ranking keywords tables for each opportunity
+                opportunities.forEach((opp, idx) => {
+                    html += `<div id="lo-keywords-${idx}" class="lo-keywords-panel ${idx === 0 ? '' : 'hidden'}">`;
+                    html += `<h5 class="font-semibold text-[var(--text-heading)] mb-2">${opp.domainName}</h5>`;
+                    html += `<p class="text-sm text-[var(--text-secondary)] mb-2">${opp.sourcePageUrl}</p>`;
+                    
+                    if (opp.rankingKeywords.length > 0) {
+                        html += `<div id="lo-keywords-table-${idx}"></div>`;
+                    } else {
+                        html += '<p class="text-[var(--text-secondary)]">No ranking keywords found.</p>';
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+
+                html += '</div>';
+
+                allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                allDOMElements.rawWrapper.innerHTML = html;
+                allDOMElements.rawWrapper.classList.remove('hidden');
+                allDOMElements.viewDataBtn.textContent = 'View JSON';
+                allDOMElements.exportPdfBtn.classList.add('hidden');
+
+                // Attach compare-all toggle handler
+                const compareBtn = allDOMElements.rawWrapper.querySelector('.compare-all-btn[data-target="#link-opportunity-grid"]');
+                if (compareBtn) {
+                    compareBtn.addEventListener('click', () => {
+                        const target = allDOMElements.rawWrapper.querySelector('#link-opportunity-grid');
+                        if (!target) return;
+                        const isWide = target.classList.toggle('wide');
+                        compareBtn.textContent = isWide ? 'Collapse' : 'Compare All';
+                    });
+                }
+
+                // Initialize Tabulator for ranking keywords tables
+                opportunities.forEach((opp, idx) => {
+                    if (opp.rankingKeywords.length > 0) {
+                        setTimeout(() => {
+                            if (typeof Tabulator !== 'undefined' && document.getElementById(`lo-keywords-table-${idx}`)) {
+                                const tableData = opp.rankingKeywords.map(kw => ({
+                                    keyword: kw.keyword || 'N/A',
+                                    rank: kw.rank_position ?? 'N/A',
+                                    page: kw.ranking_page || 'N/A',
+                                    difficulty: kw.difficulty ?? 'N/A',
+                                    volume: kw.volume ?? 'N/A'
+                                }));
+                                
+                                new Tabulator(`#lo-keywords-table-${idx}`, {
+                                    data: tableData,
+                                    columns: [
+                                        { title: 'Keyword', field: 'keyword', sorter: 'string' },
+                                        { title: 'Rank', field: 'rank', sorter: 'number' },
+                                        { title: 'Page', field: 'page', sorter: 'string', width: 300 },
+                                        { title: 'Difficulty', field: 'difficulty', sorter: 'number' },
+                                        { title: 'Volume', field: 'volume', sorter: 'number' }
+                                    ],
+                                    layout: "fitDataStretch",
+                                    pagination: "local",
+                                    paginationSize: 25,
+                                    movableColumns: true,
+                                    resizableColumns: true
+                                });
+                            }
+                        }, 100);
+                    }
+                });
+
+                // Wire page selector for ranking keywords panels
+                const pageSelector = document.getElementById('lo-page-selector');
+                if (pageSelector) {
+                    pageSelector.addEventListener('change', (e) => {
+                        const selected = parseInt(e.target.value);
+                        opportunities.forEach((_, idx) => {
+                            const panel = document.getElementById(`lo-keywords-${idx}`);
+                            if (panel) panel.classList.toggle('hidden', idx !== selected);
+                        });
+                    });
+                }
             }
 
             function showCompetitiveDashboard(data) {
@@ -3070,6 +3376,8 @@
                     exportCompetitiveAnalysisToCsv(currentResultsData, currentOriginalParams);
     } else if (currentMethod === 'keywordTargetingAnalysis' && currentResultsData) {
         exportKeywordTargetingToCsv(currentResultsData);
+    } else if (currentMethod === 'linkOpportunity' && currentResultsData) {
+        exportLinkOpportunityToCsv(currentResultsData);
     } else if (currentResultsData) {
                     exportDataToCsv(currentResultsData, currentMethod, currentOriginalParams);
                 } else {
@@ -3346,12 +3654,98 @@
                 document.head.appendChild(script);
             }
 
+            function exportLinkOpportunityToCsv(data) {
+                // Load SheetJS library dynamically
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                script.onload = () => {
+                    try {
+                        const workbook = XLSX.utils.book_new();
+                        const { linkIntersects = [], rankingKeywordsByUrl = {} } = data || {};
+
+                        // Flatten opportunities: one row per source page
+                        const opportunities = [];
+                        linkIntersects.forEach((intersect, intersectIdx) => {
+                            const domain = intersect.page || 'N/A';
+                            const domainName = domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                            const title = intersect.title || 'N/A';
+                            const domainAuthority = intersect.domain_authority ?? 'N/A';
+                            const spamScore = intersect.spam_score ?? 'N/A';
+                            
+                            (intersect.matching_source_pages || []).forEach((sourcePage) => {
+                                const sourcePageUrl = sourcePage.page || 'N/A';
+                                const sourcePA = sourcePage.page_authority ?? 'N/A';
+                                const rankingKeywords = rankingKeywordsByUrl[sourcePageUrl] || [];
+                                
+                                opportunities.push({
+                                    domain,
+                                    domainName,
+                                    title,
+                                    domainAuthority,
+                                    spamScore,
+                                    sourcePageUrl,
+                                    sourcePA,
+                                    rankingKeywordCount: rankingKeywords.length
+                                });
+                            });
+                        });
+
+                        // Sheet 1: Opportunities Summary
+                        const summaryData = [['Domain', 'Domain Name', 'Title', 'Domain Authority', 'Spam Score', 'Source Page', 'Source PA', 'Ranking Keywords Count']];
+                        opportunities.forEach(opp => {
+                            summaryData.push([
+                                opp.domain,
+                                opp.domainName,
+                                opp.title,
+                                opp.domainAuthority,
+                                opp.spamScore,
+                                opp.sourcePageUrl,
+                                opp.sourcePA,
+                                opp.rankingKeywordCount
+                            ]);
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summaryData), 'Opportunities Summary');
+
+                        // Sheets: Ranking Keywords per Source Page
+                        opportunities.forEach((opp, idx) => {
+                            const rankingKeywords = rankingKeywordsByUrl[opp.sourcePageUrl] || [];
+                            if (rankingKeywords.length > 0) {
+                                const rows = [['Keyword', 'Rank', 'Page', 'Difficulty', 'Volume']];
+                                rankingKeywords.forEach(kw => {
+                                    rows.push([
+                                        kw.keyword || 'N/A',
+                                        kw.rank_position ?? 'N/A',
+                                        kw.ranking_page || 'N/A',
+                                        kw.difficulty ?? 'N/A',
+                                        kw.volume ?? 'N/A'
+                                    ]);
+                                });
+                                const sheetName = `Opp ${idx + 1} Keywords`.substring(0, 31);
+                                XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), sheetName);
+                            }
+                        });
+
+                        // Export the workbook
+                        const dateStr = new Date().toISOString().split('T')[0];
+                        XLSX.writeFile(workbook, `link-opportunity-${dateStr}.xlsx`);
+                    } catch (error) {
+                        console.error('Excel export error:', error);
+                        displayError('Failed to export Excel file. Please try again.');
+                    }
+                };
+                script.onerror = () => {
+                    displayError('Failed to load Excel export library. Please try again.');
+                };
+                document.head.appendChild(script);
+            }
+
             function toggleDataView() {
                 // Handle multi-endpoint dashboards specially
-                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis') {
+                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis' || currentMethod === 'linkOpportunity') {
                     const dashboard = document.getElementById('competitive-dashboard');
                     const altDashboard = document.getElementById('keyword-targeting-dashboard');
-                    const activeDash = dashboard || altDashboard;
+                    const loDashboard = document.getElementById('link-opportunity-dashboard');
+                    const activeDash = dashboard || altDashboard || loDashboard;
                     const isDashboardVisible = activeDash && !activeDash.closest('.hidden');
                     
                     if (isDashboardVisible) {
@@ -3395,7 +3789,7 @@
             
             function showRawJsonResults(data) {
                 // Don't override dashboards for multi-endpoint views
-                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis') {
+                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis' || currentMethod === 'linkOpportunity') {
                     return;
                 }
                 
@@ -3463,12 +3857,21 @@
 
             function autoSaveToHistory() {
                 if (currentMethod && currentOriginalParams && currentResultsData) {
+                    let resultCount = 0;
+                    if (currentMethod === 'linkOpportunity' && currentResultsData.linkIntersects) {
+                        resultCount = currentResultsData.linkIntersects.length;
+                    } else if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis') {
+                        resultCount = Object.keys(currentResultsData).length || 0;
+                    } else {
+                        resultCount = currentResultsData.length || 0;
+                    }
+                    
                     const historyEntry = {
                         id: Date.now(),
                         timestamp: new Date().toISOString(),
                         method: currentMethod,
                         params: { ...currentOriginalParams },
-                        resultCount: currentResultsData.length || 0,
+                        resultCount: resultCount,
                         success: true
                     };
 
@@ -3806,6 +4209,20 @@
                         }; 
                         break;
                     }
+                    case 'linkOpportunity': {
+                        const intersectScope = getInputValue('loScopeSelect');
+                        payload.params = { 
+                            scope: intersectScope, 
+                            limit: parseInt(getInputValue('loLimit'), 10) || 25, 
+                            is_linking_to: getCleanedList('loIsLinkingTo').map(q => ({query: q, scope: intersectScope})), 
+                            not_linking_to: getCleanedList('loNotLinkingTo').map(q => ({query: q, scope: intersectScope})), 
+                            sort: getInputValue('loSortSelect'), 
+                            minimum_matching_targets: parseInt(getInputValue('loMinMatch'), 10) || 1,
+                            locale: getInputValue('loLocaleSelect') || 'en-US',
+                            keywordLimit: parseInt(getInputValue('loKeywordLimit'), 10) || 25
+                        }; 
+                        break;
+                    }
                     case 'listLinks': payload.params = { scope: getInputValue('llScopeSelect'), targets: getCleanedList('llUrlsInput'), limit: parseInt(getInputValue('llLimit'), 10) || 25, filters: getSelectedOptions('llFilterSelect'), sort: getInputValue('llSortSelect') }; break;
                     case 'linkStatus': payload.params = { targetScope: getInputValue('lsTargetScopeSelect'), targetQuery: getInputValue('lsTargetUrl'), sourceScope: getInputValue('lsSourceScopeSelect'), sourceQuery: getInputValue('lsSourceUrl') }; break;
                     case 'filterLinksByAnchor': payload.params = { scope: getInputValue('flaScopeSelect'), targets: getCleanedList('flaUrlsInput'), anchorText: getInputValue('flaAnchorText'), limit: parseInt(getInputValue('flaLimit'), 10) || 25, filters: getSelectedOptions('flaFilterSelect'), sort: getInputValue('flaSortSelect') }; break;
@@ -3845,6 +4262,9 @@
                     }
                 }
                  if (selectedMethod === 'linkIntersect' && payload.params.is_linking_to.length === 0) {
+                     throw new Error('Please enter at least one URL for "Linking To".');
+                 }
+                 if (selectedMethod === 'linkOpportunity' && payload.params.is_linking_to.length === 0) {
                      throw new Error('Please enter at least one URL for "Linking To".');
                  }
                  if (selectedMethod === 'linkStatus' && (!payload.params.targetQuery || !payload.params.sourceQuery)) {
