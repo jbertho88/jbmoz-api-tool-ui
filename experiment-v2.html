@@ -565,6 +565,21 @@
             </div>
         </section>
 
+        <section class="mb-6 bg-[var(--bg-input)] p-4 rounded-lg border border-[var(--border-secondary)]" aria-labelledby="openai-api-key-heading">
+            <h2 id="openai-api-key-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">OpenAI API Key</h2>
+            <div id="openaiApiKeyDisplay" class="hidden items-center justify-between" role="status" aria-live="polite">
+                <span id="openaiApiKeyText" class="text-[var(--text-secondary)] font-mono"></span>
+                <button id="editOpenaiApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold" aria-label="Edit OpenAI API key">Edit</button>
+            </div>
+            <div id="openaiApiKeyInputArea" class="flex items-center gap-2">
+                <label for="openaiApiKeyInput" class="sr-only">Enter your OpenAI API key</label>
+                <input type="password" id="openaiApiKeyInput" class="w-full bg-[var(--bg-body)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 ring-[var(--text-accent)]" placeholder="sk-..." autocomplete="off" aria-describedby="openai-api-key-help">
+                <button id="saveOpenaiApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text" aria-label="Save OpenAI API key">Save</button>
+            </div>
+            <div id="openai-api-key-help" class="sr-only">Enter your OpenAI API key for Content Cluster Analysis</div>
+            <p class="text-xs text-[var(--text-secondary)] mt-2">Required for Content Cluster Analysis. Get your key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">OpenAI Platform</a></p>
+        </section>
+
         <section aria-labelledby="method-heading">
             <label for="methodSelector" id="method-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">API Method</label>
             <select id="methodSelector" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 ring-[var(--text-accent)]" aria-describedby="method-help">
@@ -582,6 +597,7 @@
                 <optgroup label="Multi-Endpoint [Beta]">
                     <option value="competitiveAnalysis">Competitive Analysis</option>
                     <option value="keywordTargetingAnalysis">Keyword Targeting Analysis</option>
+                    <option value="contentClusterAnalysis">Content Cluster Analysis</option>
                 </optgroup>
                 <optgroup label="Website Research">
                     <option value="siteMetrics">Fetch Site Metrics</option>
@@ -627,6 +643,7 @@
                 <fieldset id="filterLinksByDomainInputs" class="input-section space-y-4"><legend class="sr-only">Filter Links by Domain Inputs</legend></fieldset>
                 <fieldset id="competitiveAnalysisInputs" class="input-section space-y-4"><legend class="sr-only">Competitive Analysis Inputs</legend></fieldset>
                 <fieldset id="keywordTargetingAnalysisInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Targeting Analysis Inputs</legend></fieldset>
+                <fieldset id="contentClusterAnalysisInputs" class="input-section space-y-4"><legend class="sr-only">Content Cluster Analysis Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -917,7 +934,6 @@
                         
                         listLinks: () => {
                             const links = [];
-                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
                             (res.data.links || []).forEach(link => {
                                 const sourceMetrics = link.source_site_metrics || {};
                                 const targetMetrics = link.target_site_metrics || {};
@@ -925,19 +941,18 @@
                                 delete linkInfo.source_site_metrics;
                                 delete linkInfo.target_site_metrics;
 
-                                const row = { ...baseInfo };
+                                const row = {};
                                 for (const key in sourceMetrics) row[`Source ${DataProcessor.snakeToTitleCase(key)}`] = sourceMetrics[key];
                                 for (const key in targetMetrics) row[`Target ${DataProcessor.snakeToTitleCase(key)}`] = targetMetrics[key];
                                 for (const key in linkInfo) row[DataProcessor.snakeToTitleCase(key)] = linkInfo[key];
                                 links.push(row);
                             });
-                            if (!res.data.links || res.data.links.length === 0) links.push({ ...baseInfo, Status: 'No links found' });
+                            if (!res.data.links || res.data.links.length === 0) links.push({ Query: query, Status: 'No links found' });
                             return links;
                         },
                         
                         filterLinksByAnchor: () => {
                             const links = [];
-                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
                             (res.data.links || []).forEach(link => {
                                 const sourceMetrics = link.source_site_metrics || {};
                                 const targetMetrics = link.target_site_metrics || {};
@@ -945,18 +960,17 @@
                                 delete linkInfo.source_site_metrics;
                                 delete linkInfo.target_site_metrics;
 
-                                const row = { ...baseInfo };
+                                const row = {};
                                 for (const key in sourceMetrics) row[`Source ${DataProcessor.snakeToTitleCase(key)}`] = sourceMetrics[key];
                                 for (const key in targetMetrics) row[`Target ${DataProcessor.snakeToTitleCase(key)}`] = targetMetrics[key];
                                 for (const key in linkInfo) row[DataProcessor.snakeToTitleCase(key)] = linkInfo[key];
                                 links.push(row);
                             });
-                            if (!res.data.links || res.data.links.length === 0) links.push({ ...baseInfo, Status: 'No links found' });
+                            if (!res.data.links || res.data.links.length === 0) links.push({ Query: query, Status: 'No links found' });
                             return links;
                         },
                         filterLinksByDomain: () => {
                             const links = [];
-                            const baseInfo = { 'Query': query, 'Scope': originalParams.scope };
                             (res.data.links || []).forEach(link => {
                                 const sourceMetrics = link.source_site_metrics || {};
                                 const targetMetrics = link.target_site_metrics || {};
@@ -964,13 +978,13 @@
                                 delete linkInfo.source_site_metrics;
                                 delete linkInfo.target_site_metrics;
 
-                                const row = { ...baseInfo };
+                                const row = {};
                                 for (const key in sourceMetrics) row[`Source ${DataProcessor.snakeToTitleCase(key)}`] = sourceMetrics[key];
                                 for (const key in targetMetrics) row[`Target ${DataProcessor.snakeToTitleCase(key)}`] = targetMetrics[key];
                                 for (const key in linkInfo) row[DataProcessor.snakeToTitleCase(key)] = linkInfo[key];
                                 links.push(row);
                             });
-                            if (!res.data.links || res.data.links.length === 0) links.push({ ...baseInfo, Status: 'No links found' });
+                            if (!res.data.links || res.data.links.length === 0) links.push({ Query: query, Status: 'No links found' });
                             return links;
                         },
                         
@@ -1050,6 +1064,12 @@
                 apiKeyInputArea: document.getElementById('apiKeyInputArea'), 
                 apiKeyInput: document.getElementById('apiKeyInput'), 
                 saveApiKeyBtn: document.getElementById('saveApiKeyBtn'),
+                openaiApiKeyDisplay: document.getElementById('openaiApiKeyDisplay'),
+                openaiApiKeyText: document.getElementById('openaiApiKeyText'),
+                editOpenaiApiKeyBtn: document.getElementById('editOpenaiApiKeyBtn'),
+                openaiApiKeyInputArea: document.getElementById('openaiApiKeyInputArea'),
+                openaiApiKeyInput: document.getElementById('openaiApiKeyInput'),
+                saveOpenaiApiKeyBtn: document.getElementById('saveOpenaiApiKeyBtn'),
                 readmeBtn: document.getElementById('readme-btn'), 
                 readmeModal: document.getElementById('readme-modal'),
                 readmeModalContent: document.getElementById('readme-modal-content'), 
@@ -1143,6 +1163,17 @@
                     createLabel('Locale') +
                     createSelect('ktaLocaleSelect', localeOptions) +
                     createNumberInput('ktaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze (Default 25; 1-500)');
+                document.getElementById('contentClusterAnalysisInputs').innerHTML = 
+                    createDescription('Analyze content similarity across multiple URLs using semantic embeddings. Identifies content consolidation opportunities and keyword targeting gaps.') +
+                    createLabel('Seed Topic') +
+                    createTextarea('ccaSeedTopic', 'Enter the main topic/keyword to analyze pages against (e.g., "digital marketing")') +
+                    createLabel('URLs') +
+                    createTextarea('ccaUrls', 'Enter URLs to analyze, one per line (e.g., https://example.com/page1)') +
+                    createLabel('Locale') +
+                    createSelect('ccaLocaleSelect', localeOptions) +
+                    createLabel('Similarity Threshold (Default 0.85; 0-1)') +
+                    '<input type="number" id="ccaSimilarityThreshold" value="0.85" min="0" max="1" step="0.01" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">' +
+                    createNumberInput('ccaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze per URL (Default 25; 1-500)');
             };
             
             const readmeContent = `
@@ -1483,6 +1514,23 @@
                     allDOMElements.apiKeyInputArea.classList.remove('hidden');
                     allDOMElements.apiKeyInput.focus();
                 });
+                allDOMElements.saveOpenaiApiKeyBtn.addEventListener('click', () => {
+                    const key = allDOMElements.openaiApiKeyInput.value.trim();
+                    if (key) {
+                        try {
+                            localStorage.setItem('openaiApiKey', key);
+                            loadOpenaiApiKey();
+                        } catch (e) {
+                            console.warn('Could not save OpenAI API key to localStorage:', e);
+                            displayError('Could not save OpenAI API key. Please try again.');
+                        }
+                    }
+                });
+                allDOMElements.editOpenaiApiKeyBtn.addEventListener('click', () => {
+                    allDOMElements.openaiApiKeyDisplay.classList.add('hidden');
+                    allDOMElements.openaiApiKeyInputArea.classList.remove('hidden');
+                    allDOMElements.openaiApiKeyInput.focus();
+                });
                 allDOMElements.methodSelector.addEventListener('change', () => {
                     document.querySelectorAll('.input-section').forEach(section => section.style.display = 'none');
                     const selectedMethod = allDOMElements.methodSelector.value;
@@ -1636,6 +1684,26 @@
                     allDOMElements.quotaDisplay.classList.add('hidden');
                 }
             };
+
+            const loadOpenaiApiKey = () => {
+                try {
+                    const savedKey = localStorage.getItem('openaiApiKey');
+                    if (savedKey) {
+                        allDOMElements.openaiApiKeyText.textContent = `${savedKey.substring(0, 6)}...${savedKey.substring(savedKey.length - 4)}`;
+                        allDOMElements.openaiApiKeyInput.value = savedKey;
+                        allDOMElements.openaiApiKeyDisplay.classList.remove('hidden');
+                        allDOMElements.openaiApiKeyDisplay.classList.add('flex');
+                        allDOMElements.openaiApiKeyInputArea.classList.add('hidden');
+                    } else {
+                        allDOMElements.openaiApiKeyDisplay.classList.add('hidden');
+                        allDOMElements.openaiApiKeyInputArea.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    console.warn('Could not load OpenAI API key from localStorage:', e);
+                    allDOMElements.openaiApiKeyDisplay.classList.add('hidden');
+                    allDOMElements.openaiApiKeyInputArea.classList.remove('hidden');
+                }
+            };
             
             async function handleFormSubmit(e) {
                 e.preventDefault();
@@ -1706,12 +1774,39 @@
                     }
                     return;
                 }
+                if (selectedMethod === 'contentClusterAnalysis') {
+                    try {
+                        const openaiApiKey = allDOMElements.openaiApiKeyInput.value.trim();
+                        if (!openaiApiKey) {
+                            displayError('Please provide an OpenAI API Key for Content Cluster Analysis.');
+                            resetSubmitButton();
+                            return;
+                        }
+                        const ccaData = await runContentClusterAnalysis(apiKey, openaiApiKey, payload.params, PROXY_URL, inFlightRequest);
+                        currentResultsData = ccaData;
+                        currentOriginalParams = payload.params;
+                        currentMethod = selectedMethod;
+                        showContentClusterDashboard(ccaData);
+                        fetchQuota(apiKey);
+                        autoSaveToHistory();
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            displayError(error.message);
+                        }
+                    } finally {
+                        resetSubmitButton();
+                        inFlightRequest = null;
+                    }
+                    return;
+                }
                 
                 // For non-dashboard methods, ensure dashboards are cleared
                 const existingCompetitive = document.getElementById('competitive-dashboard');
                 if (existingCompetitive) existingCompetitive.remove();
                 const existingKta = document.getElementById('keyword-targeting-dashboard');
                 if (existingKta) existingKta.remove();
+                const existingCca = document.getElementById('content-cluster-dashboard');
+                if (existingCca) existingCca.remove();
                 
                 try {
                     const response = await fetch(PROXY_URL, {
@@ -1994,6 +2089,318 @@
                     .sort((a, b) => b.urls.length - a.urls.length || a.keyword.localeCompare(b.keyword));
 
                 return { urls, locale, limit, resultsByUrl, overlaps };
+            }
+
+            // Content extraction helper function (via proxy)
+            async function extractPageContent(url, proxyUrl) {
+                try {
+                    const response = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            method: 'extractContent',
+                            params: { url }
+                        })
+                    });
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to extract content');
+                    }
+                    const data = await response.json();
+                    return data.content || '';
+                } catch (error) {
+                    console.warn(`Failed to extract content from ${url}:`, error);
+                    return '';
+                }
+            }
+
+            // Get embeddings from OpenAI (via proxy)
+            async function getEmbeddings(text, openaiApiKey, proxyUrl) {
+                try {
+                    const response = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            method: 'getEmbeddings',
+                            openaiApiKey,
+                            params: { text }
+                        })
+                    });
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to get embeddings');
+                    }
+                    const data = await response.json();
+                    return data.embedding;
+                } catch (error) {
+                    console.error('Embeddings error:', error);
+                    throw error;
+                }
+            }
+
+            // Calculate cosine similarity
+            function cosineSimilarity(vecA, vecB) {
+                if (vecA.length !== vecB.length) return 0;
+                let dotProduct = 0;
+                let normA = 0;
+                let normB = 0;
+                for (let i = 0; i < vecA.length; i++) {
+                    dotProduct += vecA[i] * vecB[i];
+                    normA += vecA[i] * vecA[i];
+                    normB += vecB[i] * vecB[i];
+                }
+                return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+            }
+
+            // Analyze with OpenAI GPT (via proxy)
+            async function analyzeWithOpenAI(analysisData, openaiApiKey, proxyUrl) {
+                try {
+                    const response = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            method: 'analyzeWithOpenAI',
+                            openaiApiKey,
+                            params: { analysisData }
+                        })
+                    });
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to analyze with OpenAI');
+                    }
+                    const data = await response.json();
+                    return data.analysis;
+                } catch (error) {
+                    console.error('OpenAI analysis error:', error);
+                    throw error;
+                }
+            }
+
+            async function runContentClusterAnalysis(apiKey, openaiApiKey, params, proxyUrl, opensignal) {
+                const { seedTopic, urls, locale, similarityThreshold, limit } = params;
+                const resultsByUrl = {};
+
+                // Step 1: Get related keywords for seed topic
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching related keywords...</span>';
+                let relatedKeywords = [];
+                try {
+                    const rkResp = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            apiKey,
+                            method: 'relatedKeywords',
+                            params: { locale, keywords: [seedTopic] }
+                        }),
+                        signal: opensignal.signal
+                    });
+                    const rkData = await rkResp.json();
+                    if (rkResp.ok && Array.isArray(rkData)) {
+                        rkData.forEach(entry => {
+                            if (entry.status === 'success' && entry.data?.related_keywords) {
+                                relatedKeywords.push(...entry.data.related_keywords.map(k => k.keyword));
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Failed to fetch related keywords:', e);
+                }
+
+                // Step 2: Fetch Moz data for each URL (similar to Keyword Targeting Analysis)
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching Moz data for ' + urls.length + ' URLs...</span>';
+                const perUrlPromises = urls.map(async (u) => {
+                    resultsByUrl[u] = {
+                        url: u,
+                        siteMetrics: null,
+                        rankingKeywords: [],
+                        topAnchors: [],
+                        searchIntent: {},
+                        intentDistribution: {},
+                        content: '',
+                        embedding: null,
+                        errors: []
+                    };
+
+                    const sm = (async () => {
+                        try {
+                            const resp = await fetch(proxyUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ apiKey, method: 'siteMetrics', params: { scope: 'url', targets: [u] } }),
+                                signal: opensignal.signal
+                            });
+                            const data = await resp.json();
+                            if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
+                                resultsByUrl[u].siteMetrics = data[0];
+                            } else {
+                                resultsByUrl[u].errors.push('Site Metrics: ' + (data[0]?.reason || 'Failed'));
+                            }
+                        } catch (e) {
+                            resultsByUrl[u].errors.push('Site Metrics: ' + e.message);
+                        }
+                    })();
+
+                    const rk = (async () => {
+                        try {
+                            const resp = await fetch(proxyUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ apiKey, method: 'rankingKeywords', params: { scope: 'url', locale, targets: [u], limit } }),
+                                signal: opensignal.signal
+                            });
+                            const data = await resp.json();
+                            if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
+                                resultsByUrl[u].rankingKeywords = data[0]?.data?.ranking_keywords || [];
+                            } else {
+                                resultsByUrl[u].errors.push('Ranking Keywords: ' + (data[0]?.reason || 'Failed'));
+                            }
+                        } catch (e) {
+                            resultsByUrl[u].errors.push('Ranking Keywords: ' + e.message);
+                        }
+                    })();
+
+                    await Promise.all([sm, rk]);
+                });
+
+                await Promise.all(perUrlPromises);
+
+                // Step 3: Extract content and generate embeddings
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Extracting content and generating embeddings...</span>';
+                for (const url of urls) {
+                    try {
+                        resultsByUrl[url].content = await extractPageContent(url, proxyUrl);
+                        if (resultsByUrl[url].content) {
+                            resultsByUrl[url].embedding = await getEmbeddings(resultsByUrl[url].content, openaiApiKey, proxyUrl);
+                        }
+                    } catch (e) {
+                        resultsByUrl[url].errors.push('Content Extraction: ' + e.message);
+                    }
+                }
+
+                // Step 4: Calculate similarity matrix
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Calculating semantic similarity...</span>';
+                const similarityMatrix = {};
+                for (let i = 0; i < urls.length; i++) {
+                    for (let j = i + 1; j < urls.length; j++) {
+                        const url1 = urls[i];
+                        const url2 = urls[j];
+                        if (resultsByUrl[url1].embedding && resultsByUrl[url2].embedding) {
+                            const similarity = cosineSimilarity(resultsByUrl[url1].embedding, resultsByUrl[url2].embedding);
+                            if (!similarityMatrix[url1]) similarityMatrix[url1] = {};
+                            if (!similarityMatrix[url2]) similarityMatrix[url2] = {};
+                            similarityMatrix[url1][url2] = similarity;
+                            similarityMatrix[url2][url1] = similarity;
+                        }
+                    }
+                }
+
+                // Step 5: Identify merge opportunities
+                const mergeOpportunities = [];
+                for (let i = 0; i < urls.length; i++) {
+                    for (let j = i + 1; j < urls.length; j++) {
+                        const url1 = urls[i];
+                        const url2 = urls[j];
+                        const similarity = similarityMatrix[url1]?.[url2];
+                        if (similarity && similarity >= similarityThreshold) {
+                            mergeOpportunities.push({
+                                url1,
+                                url2,
+                                similarity: Math.round(similarity * 100) / 100
+                            });
+                        }
+                    }
+                }
+                mergeOpportunities.sort((a, b) => b.similarity - a.similarity);
+
+                // Step 6: Get search intent for ranking keywords
+                const allKeywords = [];
+                urls.forEach(u => {
+                    (resultsByUrl[u].rankingKeywords || []).forEach(k => {
+                        if (k?.keyword) allKeywords.push(k.keyword);
+                    });
+                });
+                const uniqueKeywords = Array.from(new Set(allKeywords));
+                const intentMapGlobal = {};
+                if (uniqueKeywords.length > 0) {
+                    try {
+                        const siResp = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ apiKey, method: 'searchIntent', params: { locale, keywords: uniqueKeywords } }),
+                            signal: opensignal.signal
+                        });
+                        const siData = await siResp.json();
+                        if (siResp.ok && Array.isArray(siData)) {
+                            siData.forEach(entry => {
+                                if (entry.status === 'success') {
+                                    const kw = entry?.data?.serp_query?.keyword;
+                                    const primary = (entry?.data?.keyword_intent?.primary_intents || [])[0] || 'Unknown';
+                                    intentMapGlobal[kw] = primary.charAt(0).toUpperCase() + primary.slice(1).toLowerCase();
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('Failed to fetch search intent:', e);
+                    }
+                }
+
+                // Attach intent maps
+                urls.forEach(u => {
+                    const map = {};
+                    const counts = { Informational: 0, Transactional: 0, Commercial: 0, Navigational: 0, Unknown: 0 };
+                    (resultsByUrl[u].rankingKeywords || []).forEach(k => {
+                        const intent = intentMapGlobal[k.keyword] || 'Unknown';
+                        map[k.keyword] = intent;
+                        counts[intent]++;
+                    });
+                    const total = Math.max(1, (resultsByUrl[u].rankingKeywords || []).length);
+                    resultsByUrl[u].searchIntent = map;
+                    resultsByUrl[u].intentDistribution = {
+                        Informational: Math.round((counts.Informational / total) * 100),
+                        Transactional: Math.round((counts.Transactional / total) * 100),
+                        Commercial: Math.round((counts.Commercial / total) * 100),
+                        Navigational: Math.round((counts.Navigational / total) * 100),
+                        Unknown: Math.round((counts.Unknown / total) * 100)
+                    };
+                });
+
+                // Step 7: Analyze with OpenAI
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing with AI...</span>';
+                let aiAnalysis = null;
+                try {
+                    const analysisData = {
+                        seedTopic,
+                        relatedKeywords: relatedKeywords.slice(0, 50),
+                        urls: urls.map(u => ({
+                            url: u,
+                            rankingKeywords: (resultsByUrl[u].rankingKeywords || []).slice(0, 20).map(k => k.keyword),
+                            contentPreview: (resultsByUrl[u].content || '').substring(0, 500)
+                        }))
+                    };
+                    const aiResponse = await analyzeWithOpenAI(analysisData, openaiApiKey, proxyUrl);
+                    // Try to parse as JSON, fallback to plain text
+                    try {
+                        aiAnalysis = JSON.parse(aiResponse);
+                    } catch {
+                        aiAnalysis = { analysis: aiResponse };
+                    }
+                } catch (e) {
+                    console.warn('OpenAI analysis failed:', e);
+                    aiAnalysis = { error: e.message };
+                }
+
+                return {
+                    seedTopic,
+                    urls,
+                    locale,
+                    limit,
+                    similarityThreshold,
+                    resultsByUrl,
+                    similarityMatrix,
+                    mergeOpportunities,
+                    relatedKeywords: relatedKeywords.slice(0, 50),
+                    aiAnalysis
+                };
             }
 
             function showKeywordTargetingDashboard(payload) {
@@ -2448,6 +2855,213 @@
                         });
                     }
                 } catch (_) {}
+            }
+
+            function showContentClusterDashboard(payload) {
+                allDOMElements.tableWrapper.classList.add('hidden');
+                allDOMElements.filterBtn.classList.add('hidden');
+                allDOMElements.resultsContainer.classList.remove('hidden');
+                try {
+                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, similarityMatrix, mergeOpportunities, relatedKeywords, aiAnalysis } = payload;
+                const formatNumber = (num) => {
+                    if (typeof num !== 'number' || num === 'N/A') return num;
+                    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                    return num.toLocaleString();
+                };
+
+                let html = '<div id="content-cluster-dashboard" class="space-y-6">';
+                html += '<div class="flex items-start justify-between gap-3">';
+                html += '<div>';
+                html += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-1">Content Cluster Analysis</h3>';
+                html += `<p class="text-sm text-[var(--text-secondary)]">Seed Topic: <span class="text-[var(--text-primary)]">${seedTopic}</span> • URLs: <span class="text-[var(--text-primary)]">${urls.length}</span> • Locale: ${locale} • Threshold: ${similarityThreshold}</p>`;
+                html += '</div>';
+                html += '</div>';
+
+                // Similarity Matrix Heatmap
+                html += '<div id="similarity-matrix-section" class="mt-6">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Semantic Similarity Matrix</h4>';
+                if (Object.keys(similarityMatrix).length > 0) {
+                    html += '<div class="overflow-x-auto">';
+                    html += '<table class="w-full border-collapse border border-[var(--border-primary)]">';
+                    html += '<thead><tr><th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-left text-sm font-semibold">URL</th>';
+                    urls.forEach((_, idx) => {
+                        html += `<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-xs font-semibold">URL ${idx + 1}</th>`;
+                    });
+                    html += '</tr></thead><tbody>';
+                    urls.forEach((u1, idx1) => {
+                        html += `<tr><td class="border border-[var(--border-primary)] p-2 text-xs text-[var(--text-secondary)] break-all">${u1}</td>`;
+                        urls.forEach((u2, idx2) => {
+                            const similarity = similarityMatrix[u1]?.[u2];
+                            if (idx1 === idx2) {
+                                html += '<td class="border border-[var(--border-primary)] p-2 text-center bg-[var(--bg-input)]">-</td>';
+                            } else if (similarity !== undefined) {
+                                const percentage = Math.round(similarity * 100);
+                                const intensity = Math.min(255, Math.round(similarity * 255));
+                                const bgColor = `rgb(${255 - intensity}, ${255}, ${255 - intensity})`;
+                                html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm font-semibold" style="background-color: ${bgColor}">${percentage}%</td>`;
+                            } else {
+                                html += '<td class="border border-[var(--border-primary)] p-2 text-center text-[var(--text-secondary)]">N/A</td>';
+                            }
+                        });
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                    html += '</div>';
+                } else {
+                    html += '<p class="text-[var(--text-secondary)]">No similarity data available.</p>';
+                }
+                html += '</div>';
+
+                // Merge Opportunities
+                html += '<div id="merge-opportunities-section" class="mt-6">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Consolidation Opportunities</h4>';
+                if (mergeOpportunities.length > 0) {
+                    html += '<div class="space-y-3">';
+                    mergeOpportunities.forEach((opp, idx) => {
+                        html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                        html += `<div class="flex items-start justify-between mb-2">`;
+                        html += `<div class="flex-1">`;
+                        html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1">Opportunity ${idx + 1}</div>`;
+                        html += `<div class="text-xs text-[var(--text-secondary)] break-all mb-1">URL 1: ${opp.url1}</div>`;
+                        html += `<div class="text-xs text-[var(--text-secondary)] break-all">URL 2: ${opp.url2}</div>`;
+                        html += `</div>`;
+                        html += `<div class="text-lg font-bold text-[var(--text-accent)]">${(opp.similarity * 100).toFixed(1)}%</div>`;
+                        html += `</div>`;
+                        html += `</div>`;
+                    });
+                    html += '</div>';
+                } else {
+                    html += `<p class="text-[var(--text-secondary)]">No merge opportunities found above threshold (${similarityThreshold}).</p>`;
+                }
+                html += '</div>';
+
+                // Related Keywords
+                if (relatedKeywords.length > 0) {
+                    html += '<div id="related-keywords-section" class="mt-6">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Related Keywords</h4>';
+                    html += '<div class="flex flex-wrap gap-2">';
+                    relatedKeywords.slice(0, 30).forEach(kw => {
+                        html += `<span class="px-3 py-1 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-md text-sm text-[var(--text-primary)]">${kw}</span>`;
+                    });
+                    html += '</div>';
+                    html += '</div>';
+                }
+
+                // AI Analysis
+                if (aiAnalysis && !aiAnalysis.error) {
+                    html += '<div id="ai-analysis-section" class="mt-6">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">AI Analysis & Recommendations</h4>';
+                    html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                    if (typeof aiAnalysis === 'string') {
+                        html += `<div class="text-sm text-[var(--text-primary)] whitespace-pre-wrap">${aiAnalysis}</div>`;
+                    } else if (aiAnalysis.opportunities) {
+                        html += '<div class="mb-4">';
+                        html += '<h5 class="font-semibold text-[var(--text-primary)] mb-2">Content Opportunities</h5>';
+                        if (Array.isArray(aiAnalysis.opportunities)) {
+                            aiAnalysis.opportunities.forEach(opp => {
+                                html += `<div class="mb-2 p-2 bg-[var(--bg-input)] rounded">`;
+                                if (opp.subtopic) {
+                                    html += `<div class="font-semibold text-[var(--text-primary)]">${opp.subtopic}</div>`;
+                                }
+                                if (opp.keywords && Array.isArray(opp.keywords)) {
+                                    html += `<div class="text-sm text-[var(--text-secondary)] mt-1">Keywords: ${opp.keywords.join(', ')}</div>`;
+                                }
+                                html += `</div>`;
+                            });
+                        }
+                        html += '</div>';
+                    }
+                    if (aiAnalysis.recommendations) {
+                        html += '<div>';
+                        html += '<h5 class="font-semibold text-[var(--text-primary)] mb-2">Recommendations</h5>';
+                        html += `<div class="text-sm text-[var(--text-primary)] whitespace-pre-wrap">${typeof aiAnalysis.recommendations === 'string' ? aiAnalysis.recommendations : JSON.stringify(aiAnalysis.recommendations, null, 2)}</div>`;
+                        html += '</div>';
+                    }
+                    if (aiAnalysis.analysis) {
+                        html += `<div class="text-sm text-[var(--text-primary)] whitespace-pre-wrap">${aiAnalysis.analysis}</div>`;
+                    }
+                    html += '</div>';
+                    html += '</div>';
+                }
+
+                // URL Cards (similar to Keyword Targeting Analysis)
+                html += '<div id="url-metrics-grid" class="metrics-grid-container mt-6">';
+                urls.forEach((u, idx) => {
+                    const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
+                    const linkingDomains = sm.root_domains_to_page ?? 'N/A';
+                    const inboundLinks = sm.external_pages_to_page ?? 'N/A';
+                    const pageAuthority = sm.page_authority ?? 'N/A';
+                    const idist = resultsByUrl[u].intentDistribution || {};
+                    
+                    html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                    html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1">URL ${idx + 1}</h4>`;
+                    html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3">${u}</p>`;
+                    
+                    html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Page Metrics</div>';
+                    html += '<div class="space-y-1 text-sm">';
+                    html += `<div>Linking Domains: <span class="font-bold text-[var(--text-primary)]">${typeof linkingDomains === 'number' ? formatNumber(linkingDomains) : linkingDomains}</span></div>`;
+                    html += `<div>Inbound Links: <span class="font-bold text-[var(--text-primary)]">${typeof inboundLinks === 'number' ? formatNumber(inboundLinks) : inboundLinks}</span></div>`;
+                    html += `<div>Page Authority: <span class="font-bold text-[var(--text-primary)]">${pageAuthority}</span></div>`;
+                    html += '</div>';
+                    html += '</div>';
+
+                    const rkList = Array.isArray(resultsByUrl[u].rankingKeywords) ? resultsByUrl[u].rankingKeywords : [];
+                    html += '<div class="mt-3">';
+                    html += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Ranking Keywords (${rkList.length})</div>`;
+                    html += '<div class="text-sm text-[var(--text-secondary)]">Top 5:</div>';
+                    html += '<div class="space-y-1 text-sm mt-1">';
+                    rkList.slice(0, 5).forEach(k => {
+                        html += `<div><span class="text-[var(--text-primary)]">${k.keyword || 'N/A'}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
+                    });
+                    html += '</div>';
+                    html += '</div>';
+
+                    // Intent distribution
+                    const intents = [
+                        { label: 'Informational', color: '#60a5fa', value: Number(idist.Informational || 0) },
+                        { label: 'Transactional', color: '#34d399', value: Number(idist.Transactional || 0) },
+                        { label: 'Commercial', color: '#fbbf24', value: Number(idist.Commercial || 0) },
+                        { label: 'Navigational', color: '#a78bfa', value: Number(idist.Navigational || 0) },
+                        { label: 'Unknown', color: '#94a3b8', value: Number(idist.Unknown || 0) },
+                    ];
+                    const totalIntent = intents.reduce((s, x) => s + x.value, 0) || 1;
+                    let offset = 0;
+                    const r = 16, c = 2 * Math.PI * r;
+                    const slices = intents.map((seg) => {
+                        const frac = seg.value / totalIntent;
+                        const dash = (c * frac).toFixed(2);
+                        const gap = (c - Number(dash)).toFixed(2);
+                        const rot = ((offset / totalIntent) * 360).toFixed(2);
+                        offset += seg.value;
+                        return `<circle r="${r}" cx="20" cy="20" fill="transparent" stroke="${seg.color}" stroke-width="8" stroke-dasharray="${dash} ${gap}" transform="rotate(-90 20 20) rotate(${rot} 20 20)"></circle>`;
+                    }).join('');
+                    html += '<div class="mt-3 pb-3 border-b border-[var(--border-primary)]">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Search Intent</div>';
+                    html += '<div class="flex items-center gap-3">';
+                    html += `<svg width="40" height="40" viewBox="0 0 40 40">${slices}</svg>`;
+                    html += '<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">';
+                    intents.forEach(seg => {
+                        html += `<div class="flex items-center gap-1"><span style="background:${seg.color};width:8px;height:8px;border-radius:9999px;display:inline-block"></span><span class="text-[var(--text-secondary)]">${seg.label}:</span><span class="text-[var(--text-primary)]">${seg.value}%</span></div>`;
+                    });
+                    html += '</div>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+
+                html += '</div>';
+
+                allDOMElements.rawCode.textContent = JSON.stringify(payload, null, 2);
+                allDOMElements.rawWrapper.innerHTML = html;
+                allDOMElements.rawWrapper.classList.remove('hidden');
+                allDOMElements.viewDataBtn.textContent = 'View JSON';
+                allDOMElements.exportPdfBtn.classList.add('hidden');
+                } catch (err) {
+                    displayError('Render error in Content Cluster Analysis: ' + (err && err.message ? err.message : err));
+                }
             }
 
             function showCompetitiveDashboard(data) {
@@ -3073,6 +3687,8 @@
                     exportCompetitiveAnalysisToCsv(currentResultsData, currentOriginalParams);
     } else if (currentMethod === 'keywordTargetingAnalysis' && currentResultsData) {
         exportKeywordTargetingToCsv(currentResultsData);
+    } else if (currentMethod === 'contentClusterAnalysis' && currentResultsData) {
+        exportContentClusterAnalysisToCsv(currentResultsData);
     } else if (currentResultsData) {
                     exportDataToCsv(currentResultsData, currentMethod, currentOriginalParams);
                 } else {
@@ -3349,12 +3965,114 @@
                 document.head.appendChild(script);
             }
 
+            function exportContentClusterAnalysisToCsv(data) {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                script.onload = () => {
+                    try {
+                        const workbook = XLSX.utils.book_new();
+                        const { seedTopic, urls = [], resultsByUrl = {}, similarityMatrix = {}, mergeOpportunities = [], relatedKeywords = [] } = data || {};
+
+                        // Sheet 1: Summary
+                        const summary = [
+                            ['Seed Topic', seedTopic],
+                            ['Similarity Threshold', data.similarityThreshold || 'N/A'],
+                            ['Total URLs', urls.length],
+                            ['Merge Opportunities', mergeOpportunities.length],
+                            ['Related Keywords Found', relatedKeywords.length]
+                        ];
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summary), 'Summary');
+
+                        // Sheet 2: Page Metrics
+                        const metrics = [['URL Index','URL','Linking Domains','Inbound Links','Page Authority']];
+                        urls.forEach((u, idx) => {
+                            const sm = resultsByUrl[u]?.siteMetrics?.data?.site_metrics || {};
+                            metrics.push([
+                                idx + 1,
+                                u,
+                                sm.root_domains_to_page ?? 'N/A',
+                                sm.external_pages_to_page ?? 'N/A',
+                                sm.page_authority ?? 'N/A'
+                            ]);
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(metrics), 'Page Metrics');
+
+                        // Sheet 3: Similarity Matrix
+                        const simHeader = ['URL', ...urls.map((_, i) => `URL ${i + 1}`)];
+                        const simRows = [simHeader];
+                        urls.forEach((u1, idx1) => {
+                            const row = [u1];
+                            urls.forEach((u2, idx2) => {
+                                if (idx1 === idx2) {
+                                    row.push('-');
+                                } else {
+                                    const similarity = similarityMatrix[u1]?.[u2];
+                                    row.push(similarity !== undefined ? (Math.round(similarity * 100) / 100) : 'N/A');
+                                }
+                            });
+                            simRows.push(row);
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(simRows), 'Similarity Matrix');
+
+                        // Sheet 4: Merge Opportunities
+                        const mergeRows = [['URL 1', 'URL 2', 'Similarity Score']];
+                        mergeOpportunities.forEach(opp => {
+                            mergeRows.push([opp.url1, opp.url2, opp.similarity]);
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(mergeRows), 'Merge Opportunities');
+
+                        // Sheet 5: Related Keywords
+                        if (relatedKeywords.length > 0) {
+                            const rkRows = [['Related Keyword']];
+                            relatedKeywords.forEach(kw => {
+                                rkRows.push([kw]);
+                            });
+                            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rkRows), 'Related Keywords');
+                        }
+
+                        // Sheets: Ranking Keywords per URL
+                        urls.forEach((u, idx) => {
+                            const res = resultsByUrl[u] || {};
+                            const arr = Array.isArray(res.rankingKeywords)
+                                ? res.rankingKeywords
+                                : [];
+                            const rows = [['Keyword','Intent','Rank','Page','Difficulty','Volume']];
+                            arr.forEach(kw => {
+                                const intent = (res.searchIntent && (res.searchIntent[kw.keyword] || res.searchIntent[(kw.keyword || '').toLowerCase()])) || 'Unknown';
+                                rows.push([
+                                    kw.keyword || 'N/A',
+                                    intent,
+                                    kw.rank_position ?? 'N/A',
+                                    kw.ranking_page || 'N/A',
+                                    kw.difficulty ?? 'N/A',
+                                    kw.volume ?? 'N/A'
+                                ]);
+                            });
+                            const sheetName = `URL ${idx + 1} Keywords`.substring(0,31);
+                            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), sheetName);
+                        });
+
+                        // Export the workbook
+                        const dateStr = new Date().toISOString().split('T')[0];
+                        XLSX.writeFile(workbook, `content-cluster-analysis-${dateStr}.xlsx`);
+                    } catch (error) {
+                        console.error('Excel export error:', error);
+                        displayError('Failed to export Excel file. Please try again.');
+                    }
+                };
+                script.onerror = () => {
+                    displayError('Failed to load Excel export library. Please try again.');
+                };
+                document.head.appendChild(script);
+            }
+
             function toggleDataView() {
                 // Handle multi-endpoint dashboards specially
-                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis') {
+                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis' || currentMethod === 'contentClusterAnalysis') {
                     const dashboard = document.getElementById('competitive-dashboard');
                     const altDashboard = document.getElementById('keyword-targeting-dashboard');
-                    const activeDash = dashboard || altDashboard;
+                    const ccaDashboard = document.getElementById('content-cluster-dashboard');
+                    const activeDash = dashboard || altDashboard || ccaDashboard;
                     const isDashboardVisible = activeDash && !activeDash.closest('.hidden');
                     
                     if (isDashboardVisible) {
@@ -3371,9 +4089,11 @@
                             showCompetitiveDashboard(currentResultsData);
                         } else if (currentMethod === 'keywordTargetingAnalysis') {
                             showKeywordTargetingDashboard(currentResultsData);
+                        } else if (currentMethod === 'contentClusterAnalysis') {
+                            showContentClusterDashboard(currentResultsData);
                         }
                         allDOMElements.viewDataBtn.textContent = 'View JSON';
-                        allDOMElements.exportPdfBtn.classList.remove('hidden');
+                        allDOMElements.exportPdfBtn.classList.add('hidden');
                     }
                     return;
                 }
@@ -3398,15 +4118,17 @@
             
             function showRawJsonResults(data) {
                 // Don't override dashboards for multi-endpoint views
-                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis') {
+                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis' || currentMethod === 'contentClusterAnalysis') {
                     return;
                 }
                 
                 // Clear any existing dashboard
                 const dashboard = document.getElementById('competitive-dashboard');
-                if (dashboard) {
-                    dashboard.remove();
-                }
+                const ktaDashboard = document.getElementById('keyword-targeting-dashboard');
+                const ccaDashboard = document.getElementById('content-cluster-dashboard');
+                if (dashboard) dashboard.remove();
+                if (ktaDashboard) ktaDashboard.remove();
+                if (ccaDashboard) ccaDashboard.remove();
                 
                 // Reset "Reset" button back to "Clear Data" if it was changed
                 if (allDOMElements.clearDataBtn && allDOMElements.clearDataBtn.dataset.originalText) {
@@ -3839,6 +4561,20 @@
                         };
                         break;
                     }
+                    case 'contentClusterAnalysis': {
+                        const seedTopic = getInputValue('ccaSeedTopic')?.trim();
+                        const urls = getCleanedList('ccaUrls');
+                        if (!seedTopic) throw new Error('Please enter a seed topic.');
+                        if (!urls || urls.length === 0) throw new Error('Please enter at least one URL.');
+                        payload.params = { 
+                            seedTopic,
+                            urls,
+                            locale: getInputValue('ccaLocaleSelect') || 'en-US',
+                            similarityThreshold: parseFloat(getInputValue('ccaSimilarityThreshold')) || 0.85,
+                            limit: parseInt(getInputValue('ccaLimit'), 10) || 25
+                        };
+                        break;
+                    }
                     default: throw new Error('Invalid method selected.');
                 }
                 
@@ -3973,6 +4709,7 @@
             populateInputs();
             setupEventListeners();
             loadApiKey();
+            loadOpenaiApiKey();
             allDOMElements.submitBtn.disabled = true;
             
             // Performance monitoring
