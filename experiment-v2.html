@@ -2368,7 +2368,7 @@
                         Unknown: Math.round((counts.Unknown / total) * 100)
                     };
                     
-                    // Determine primary intent (highest percentage)
+                    // Determine primary intent (highest percentage from ranking keywords)
                     let primaryIntent = 'Other';
                     let maxCount = 0;
                     Object.entries(counts).forEach(([intent, count]) => {
@@ -2379,7 +2379,36 @@
                     });
                     if (maxCount === 0) primaryIntent = 'Other';
                     resultsByUrl[u].primaryIntent = primaryIntent;
+                    resultsByUrl[u].primaryIntentSource = 'ranking_keywords';
                 });
+
+                // Step 6b: Use OpenAI to determine primary intent for URLs without ranking keywords
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing content for intent classification...</span>';
+                const urlsNeedingIntentAnalysis = urls.filter(u => {
+                    const rkCount = (resultsByUrl[u].rankingKeywords || []).length;
+                    return rkCount === 0 && resultsByUrl[u].content && resultsByUrl[u].content.length > 100;
+                });
+
+                if (urlsNeedingIntentAnalysis.length > 0) {
+                    for (const url of urlsNeedingIntentAnalysis) {
+                        try {
+                            const contentPreview = resultsByUrl[url].content.substring(0, 2000);
+                            const analysisPrompt = `Analyze the following webpage content and determine its primary search intent. The content should be classified as one of: Informational, Commercial, Navigational, or Transactional. Return only the intent name, nothing else.
+
+Content: ${contentPreview}`;
+                            
+                            const response = await analyzeWithOpenAI({ analysisData: { prompt: analysisPrompt } }, openaiApiKey, proxyUrl);
+                            const intentFromAI = response.trim().split('\n')[0].trim();
+                            const validIntents = ['Informational', 'Commercial', 'Navigational', 'Transactional'];
+                            if (validIntents.includes(intentFromAI)) {
+                                resultsByUrl[url].primaryIntent = intentFromAI;
+                                resultsByUrl[url].primaryIntentSource = 'openai_content_analysis';
+                            }
+                        } catch (e) {
+                            console.warn(`Failed to analyze intent for ${url}:`, e);
+                        }
+                    }
+                }
 
                 // Step 7: Group URLs by primary intent
                 const intentGroups = {
@@ -2395,6 +2424,9 @@
                 });
 
                 // Step 8: Calculate URL value scores based on Moz metrics
+                // Value Score Formula:
+                // (Ranking Keywords Count × 2.0) + (Linking Domains × 1.5) + (Inbound Links × 0.5) + (Page Authority × 0.1) + (Anchor Text Diversity × 0.3)
+                // This weighted formula prioritizes ranking keywords and linking domains as indicators of page value
                 urls.forEach(u => {
                     const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
                     const rankingKeywordsCount = (resultsByUrl[u].rankingKeywords || []).length;
@@ -2463,6 +2495,69 @@
                     }
                 });
 
+                // Step 9b: Analyze consolidation clusters with OpenAI
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing consolidation opportunities...</span>';
+                if (consolidationClusters.length > 0) {
+                    for (const cluster of consolidationClusters) {
+                        try {
+                            const clusterData = cluster.urls.map(url => ({
+                                url,
+                                contentPreview: (resultsByUrl[url].content || '').substring(0, 500),
+                                rankingKeywords: (resultsByUrl[url].rankingKeywords || []).slice(0, 10).map(k => k.keyword),
+                                valueScore: resultsByUrl[url].valueScore || 0,
+                                linkingDomains: resultsByUrl[url].mozMetrics?.linkingDomains || 0,
+                                rankingKeywordsCount: resultsByUrl[url].mozMetrics?.rankingKeywordsCount || 0
+                            }));
+
+                            const analysisPrompt = `You are an SEO content analysis expert. Analyze the following cluster of URLs that should be consolidated. 
+
+Seed Topic: ${seedTopic}
+Cluster Intent: ${cluster.intent}
+URLs in Cluster: ${cluster.urls.length}
+
+For each URL, provide:
+- URL
+- Content preview
+- Ranking keywords
+- Value metrics (value score, linking domains, ranking keywords count)
+
+Please provide:
+1. Why these URLs should be consolidated (explain the overlap/redundancy)
+2. Which URL should be kept as the main page (the one with best value and content)
+3. What sub-topic/keyword this consolidated page should optimize for
+
+Return your response as JSON with this structure:
+{
+  "consolidationReason": "explanation",
+  "urlToKeep": "url",
+  "subtopicToOptimize": "sub-topic keyword/phrase"
+}
+
+Cluster Data: ${JSON.stringify(clusterData, null, 2)}`;
+
+                            const response = await analyzeWithOpenAI({ analysisData: { prompt: analysisPrompt } }, openaiApiKey, proxyUrl);
+                            try {
+                                const analysis = JSON.parse(response);
+                                cluster.aiAnalysis = analysis;
+                            } catch {
+                                // If not JSON, try to extract info
+                                cluster.aiAnalysis = {
+                                    consolidationReason: response,
+                                    urlToKeep: cluster.urls[0],
+                                    subtopicToOptimize: seedTopic
+                                };
+                            }
+                        } catch (e) {
+                            console.warn(`Failed to analyze cluster:`, e);
+                            cluster.aiAnalysis = {
+                                consolidationReason: 'Analysis unavailable',
+                                urlToKeep: cluster.urls[0],
+                                subtopicToOptimize: seedTopic
+                            };
+                        }
+                    }
+                }
+
                 // Step 10: Identify MAIN topic page
                 // Highest similarity to seed topic + high value score
                 let mainTopicPage = null;
@@ -2492,6 +2587,104 @@
                     };
                 });
 
+                // Step 12: Generate Content Recommendations
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Generating content recommendations...</span>';
+                let contentRecommendations = null;
+                try {
+                    const recommendationsData = {
+                        seedTopic,
+                        urls: urls.map(u => ({
+                            url: u,
+                            rankingKeywords: (resultsByUrl[u].rankingKeywords || []).slice(0, 15).map(k => k.keyword),
+                            primaryIntent: resultsByUrl[u].primaryIntent,
+                            contentPreview: (resultsByUrl[u].content || '').substring(0, 300)
+                        })),
+                        relatedKeywords: relatedKeywords.slice(0, 30)
+                    };
+
+                    const recommendationsPrompt = `You are an SEO content analysis expert. Analyze the following URLs and their ranking keywords for the seed topic "${seedTopic}".
+
+Provide content recommendations for improving these pages. Focus on:
+1. Content gaps (what's missing from current pages)
+2. Optimization opportunities (how to better target the seed topic)
+3. Keyword targeting improvements
+
+Return your response as JSON with this structure:
+{
+  "recommendations": [
+    {
+      "url": "url",
+      "recommendations": ["recommendation 1", "recommendation 2"]
+    }
+  ],
+  "generalRecommendations": ["general recommendation 1", "general recommendation 2"]
+}
+
+Data: ${JSON.stringify(recommendationsData, null, 2)}`;
+
+                    const recommendationsResponse = await analyzeWithOpenAI({ analysisData: { prompt: recommendationsPrompt } }, openaiApiKey, proxyUrl);
+                    try {
+                        contentRecommendations = JSON.parse(recommendationsResponse);
+                    } catch {
+                        contentRecommendations = { generalRecommendations: [recommendationsResponse] };
+                    }
+                } catch (e) {
+                    console.warn('Failed to generate content recommendations:', e);
+                    contentRecommendations = { error: e.message };
+                }
+
+                // Step 13: Generate New Content to Create
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Identifying new content opportunities...</span>';
+                let newContentToCreate = null;
+                try {
+                    const newContentData = {
+                        seedTopic,
+                        existingUrls: urls.map(u => ({
+                            url: u,
+                            rankingKeywords: (resultsByUrl[u].rankingKeywords || []).slice(0, 10).map(k => k.keyword),
+                            primaryIntent: resultsByUrl[u].primaryIntent
+                        })),
+                        relatedKeywords: relatedKeywords.slice(0, 50),
+                        intentGroups: Object.entries(intentGroups).map(([intent, urls]) => ({ intent, count: urls.length }))
+                    };
+
+                    const newContentPrompt = `You are an SEO content strategist. Based on the seed topic "${seedTopic}" and existing content, identify new content opportunities.
+
+Existing Content:
+- ${urls.length} URLs analyzed
+- Intent distribution: ${Object.entries(intentGroups).map(([intent, urls]) => `${intent}: ${urls.length}`).join(', ')}
+- Related keywords: ${relatedKeywords.slice(0, 20).join(', ')}
+
+Identify:
+1. Content gaps (intents or topics not covered)
+2. New content ideas that would complement existing content
+3. Sub-topics that deserve dedicated pages
+
+Return your response as JSON with this structure:
+{
+  "newContentIdeas": [
+    {
+      "title": "Content title/topic",
+      "intent": "Informational|Commercial|Navigational|Transactional",
+      "targetKeywords": ["keyword1", "keyword2"],
+      "rationale": "Why this content should be created"
+    }
+  ]
+}
+
+Data: ${JSON.stringify(newContentData, null, 2)}`;
+
+                    const newContentResponse = await analyzeWithOpenAI({ analysisData: { prompt: newContentPrompt } }, openaiApiKey, proxyUrl);
+                    try {
+                        newContentToCreate = JSON.parse(newContentResponse);
+                    } catch {
+                        newContentToCreate = { newContentIdeas: [{ title: newContentResponse, intent: 'Informational', targetKeywords: [], rationale: 'AI-generated suggestion' }] };
+                    }
+                } catch (e) {
+                    console.warn('Failed to generate new content ideas:', e);
+                    newContentToCreate = { error: e.message };
+                }
+
                 return {
                     seedTopic,
                     urls,
@@ -2504,7 +2697,9 @@
                     consolidationClusters,
                     mainTopicPage,
                     linkingStrategy,
-                    relatedKeywords: relatedKeywords.slice(0, 50)
+                    relatedKeywords: relatedKeywords.slice(0, 50),
+                    contentRecommendations,
+                    newContentToCreate
                 };
             }
 
@@ -2967,7 +3162,7 @@
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 try {
-                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, linkingStrategy, relatedKeywords } = payload;
+                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, linkingStrategy, relatedKeywords, contentRecommendations, newContentToCreate } = payload;
                 const formatNumber = (num) => {
                     if (typeof num !== 'number' || num === 'N/A') return num;
                     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -3010,22 +3205,24 @@
                     html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-left text-sm font-semibold">Rank</th>';
                     html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-left text-sm font-semibold">URL</th>';
                     html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Similarity Score</th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Value Score</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Value Score <span class="text-xs font-normal text-[var(--text-secondary)]" title="Formula: (Ranking Keywords × 2.0) + (Linking Domains × 1.5) + (Inbound Links × 0.5) + (Page Authority × 0.1) + (Anchor Text Diversity × 0.3)">(?)</span></th>';
                     html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Primary Intent</th>';
                     html += '</tr></thead><tbody>';
                     sortedUrls.forEach((u, idx) => {
                         const similarity = seedTopicSimilarities[u] || 0;
                         const valueScore = resultsByUrl[u]?.valueScore || 0;
                         const primaryIntent = resultsByUrl[u]?.primaryIntent || 'Other';
+                        const metrics = resultsByUrl[u]?.mozMetrics || {};
                         const isMain = u === mainTopicPage;
                         const rowClass = isMain ? 'bg-[var(--text-accent)]/10' : '';
                         const intensity = Math.min(255, Math.round(similarity * 255));
                         const bgColor = `rgb(${255 - intensity}, ${255}, ${255 - intensity})`;
+                        const valueFormula = `(${metrics.rankingKeywordsCount || 0}×2) + (${metrics.linkingDomains || 0}×1.5) + (${metrics.inboundLinks || 0}×0.5) + (${metrics.pageAuthority || 0}×0.1) + (${metrics.anchorTextsCount || 0}×0.3) = ${valueScore.toFixed(1)}`;
                         html += `<tr class="${rowClass}">`;
                         html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm">${idx + 1}</td>`;
                         html += `<td class="border border-[var(--border-primary)] p-2 text-xs text-[var(--text-secondary)] break-all">${u}${isMain ? ' <span class="text-[var(--text-accent)] font-semibold">(Main)</span>' : ''}</td>`;
                         html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm font-semibold" style="background-color: ${bgColor}">${(similarity * 100).toFixed(1)}%</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm">${valueScore.toFixed(1)}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm" title="${valueFormula}">${valueScore.toFixed(1)}</td>`;
                         html += `<td class="border border-[var(--border-primary)] p-2 text-center text-xs">${primaryIntent}</td>`;
                         html += '</tr>';
                     });
@@ -3073,6 +3270,8 @@
                 if (consolidationClusters.length > 0) {
                     html += '<div class="space-y-4">';
                     consolidationClusters.forEach((cluster, idx) => {
+                        const aiAnalysis = cluster.aiAnalysis || {};
+                        const urlToKeep = aiAnalysis.urlToKeep || cluster.urls[0];
                         html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
                         html += `<div class="flex items-start justify-between mb-3">`;
                         html += `<div>`;
@@ -3081,11 +3280,26 @@
                         html += `</div>`;
                         html += `<div class="text-lg font-bold text-[var(--text-accent)]">${cluster.urls.length} URLs</div>`;
                         html += `</div>`;
+                        
+                        // AI Analysis
+                        if (aiAnalysis.consolidationReason) {
+                            html += '<div class="mb-3 p-3 bg-[var(--bg-input)] rounded border-l-4 border-[var(--text-accent)]">';
+                            html += '<div class="text-xs font-semibold text-[var(--text-secondary)] uppercase mb-1">AI Analysis</div>';
+                            html += `<div class="text-sm text-[var(--text-primary)] mb-2">${aiAnalysis.consolidationReason}</div>`;
+                            html += `<div class="text-xs text-[var(--text-accent)] font-semibold mb-1">✓ Keep URL: ${urlToKeep}</div>`;
+                            if (aiAnalysis.subtopicToOptimize) {
+                                html += `<div class="text-xs text-[var(--text-primary)]">🎯 Optimize for: <span class="font-semibold">${aiAnalysis.subtopicToOptimize}</span></div>`;
+                            }
+                            html += '</div>';
+                        }
+                        
                         html += '<div class="space-y-2">';
                         cluster.urls.forEach(u => {
                             const metrics = resultsByUrl[u]?.mozMetrics || {};
-                            html += `<div class="text-sm p-2 bg-[var(--bg-input)] rounded">`;
-                            html += `<div class="text-[var(--text-primary)] break-all mb-1">${u}</div>`;
+                            const isKeepUrl = u === urlToKeep;
+                            const bgClass = isKeepUrl ? 'bg-[var(--text-accent)]/10 border-2 border-[var(--text-accent)]' : 'bg-[var(--bg-input)]';
+                            html += `<div class="text-sm p-2 ${bgClass} rounded">`;
+                            html += `<div class="text-[var(--text-primary)] break-all mb-1">${u}${isKeepUrl ? ' <span class="text-[var(--text-accent)] font-semibold">(Keep This URL)</span>' : ' <span class="text-[var(--text-secondary)] text-xs">(Consolidate into above)</span>'}</div>`;
                             html += `<div class="text-xs text-[var(--text-secondary)] grid grid-cols-4 gap-2">`;
                             html += `<span>Keywords: ${metrics.rankingKeywordsCount || 0}</span>`;
                             html += `<span>Links: ${metrics.inboundLinks || 0}</span>`;
@@ -3123,6 +3337,64 @@
                 html += '</div>';
                 html += '</div>';
 
+                // Content Recommendations
+                if (contentRecommendations && !contentRecommendations.error) {
+                    html += '<div id="content-recommendations-section" class="mt-6">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Recommendations</h4>';
+                    html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                    if (contentRecommendations.recommendations && Array.isArray(contentRecommendations.recommendations)) {
+                        contentRecommendations.recommendations.forEach(rec => {
+                            html += `<div class="mb-4 pb-4 border-b border-[var(--border-primary)] last:border-0">`;
+                            html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-2 break-all">${rec.url}</div>`;
+                            if (Array.isArray(rec.recommendations)) {
+                                html += '<ul class="list-disc list-inside space-y-1 text-sm text-[var(--text-secondary)]">';
+                                rec.recommendations.forEach(r => {
+                                    html += `<li>${r}</li>`;
+                                });
+                                html += '</ul>';
+                            }
+                            html += '</div>';
+                        });
+                    }
+                    if (contentRecommendations.generalRecommendations && Array.isArray(contentRecommendations.generalRecommendations)) {
+                        html += '<div class="mt-4 pt-4 border-t border-[var(--border-primary)]">';
+                        html += '<div class="text-sm font-semibold text-[var(--text-primary)] mb-2">General Recommendations</div>';
+                        html += '<ul class="list-disc list-inside space-y-1 text-sm text-[var(--text-secondary)]">';
+                        contentRecommendations.generalRecommendations.forEach(r => {
+                            html += `<li>${r}</li>`;
+                        });
+                        html += '</ul>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                    html += '</div>';
+                }
+
+                // New Content to Create
+                if (newContentToCreate && !newContentToCreate.error && newContentToCreate.newContentIdeas) {
+                    html += '<div id="new-content-section" class="mt-6">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">New Content to Create</h4>';
+                    html += '<div class="space-y-3">';
+                    newContentToCreate.newContentIdeas.forEach((idea, idx) => {
+                        html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                        html += `<div class="flex items-start justify-between mb-2">`;
+                        html += `<div class="flex-1">`;
+                        html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1">${idea.title || `Content Idea ${idx + 1}`}</div>`;
+                        html += `<div class="text-xs text-[var(--text-secondary)] mb-2">Intent: <span class="text-[var(--text-primary)]">${idea.intent || 'Informational'}</span></div>`;
+                        if (idea.targetKeywords && Array.isArray(idea.targetKeywords) && idea.targetKeywords.length > 0) {
+                            html += `<div class="text-xs text-[var(--text-secondary)] mb-2">Target Keywords: <span class="text-[var(--text-primary)]">${idea.targetKeywords.join(', ')}</span></div>`;
+                        }
+                        if (idea.rationale) {
+                            html += `<div class="text-sm text-[var(--text-secondary)]">${idea.rationale}</div>`;
+                        }
+                        html += `</div>`;
+                        html += `</div>`;
+                        html += `</div>`;
+                    });
+                    html += '</div>';
+                    html += '</div>';
+                }
+
                 // Related Keywords
                 if (relatedKeywords && relatedKeywords.length > 0) {
                     html += '<div id="related-keywords-section" class="mt-6">';
@@ -3135,7 +3407,7 @@
                     html += '</div>';
                 }
 
-                // URL Cards Summary
+                // URL Cards Summary with Anchor Text
                 html += '<div id="url-metrics-grid" class="metrics-grid-container mt-6">';
                 urls.forEach((u, idx) => {
                     const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
