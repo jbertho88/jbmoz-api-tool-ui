@@ -3434,25 +3434,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                 }
                 html += '</div>';
 
-                // Internal Linking Strategy
-                html += '<div id="linking-strategy-section" class="mt-6">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Internal Linking Strategy</h4>';
-                html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
-                html += '<div class="space-y-3">';
-                linkingStrategy.forEach((item, idx) => {
-                    html += `<div class="p-3 bg-[var(--bg-input)] rounded">`;
-                    html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1 break-all">${item.url}</div>`;
-                    if (item.linkTo) {
-                        html += `<div class="text-xs text-[var(--text-accent)] font-semibold mb-1">→ Link to: ${item.linkTo}</div>`;
-                        html += `<div class="text-xs text-[var(--text-secondary)]">${item.reason}</div>`;
-                    } else {
-                        html += `<div class="text-xs text-[var(--text-secondary)]">${item.reason}</div>`;
-                    }
-                    html += '</div>';
-                });
-                html += '</div>';
-                html += '</div>';
-                html += '</div>';
+                // Internal Linking Strategy removed per user request
 
                 // Content Recommendations
                 if (contentRecommendations && !contentRecommendations.error) {
