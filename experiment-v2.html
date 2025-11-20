@@ -4636,12 +4636,26 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
 
             function autoSaveToHistory() {
                 if (currentMethod && currentOriginalParams && currentResultsData) {
+                    // Calculate result count based on data type
+                    let resultCount = 0;
+                    if (Array.isArray(currentResultsData)) {
+                        resultCount = currentResultsData.length;
+                    } else if (currentMethod === 'contentClusterAnalysis' && currentResultsData.urls) {
+                        resultCount = currentResultsData.urls.length;
+                    } else if (currentMethod === 'competitiveAnalysis' && typeof currentResultsData === 'object') {
+                        resultCount = Object.keys(currentResultsData).length;
+                    } else if (currentMethod === 'keywordTargetingAnalysis' && currentResultsData.urls) {
+                        resultCount = currentResultsData.urls.length;
+                    } else if (typeof currentResultsData === 'object') {
+                        resultCount = Object.keys(currentResultsData).length;
+                    }
+
                     const historyEntry = {
                         id: Date.now(),
                         timestamp: new Date().toISOString(),
                         method: currentMethod,
                         params: { ...currentOriginalParams },
-                        resultCount: currentResultsData.length || 0,
+                        resultCount: resultCount,
                         success: true
                     };
 
@@ -4705,8 +4719,23 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     const methodName = entry.method.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                     const date = new Date(entry.timestamp).toLocaleString();
                     const paramsSummary = Object.entries(entry.params)
-                        .filter(([key, value]) => value && value.length > 0)
-                        .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+                        .filter(([key, value]) => {
+                            if (value === null || value === undefined) return false;
+                            if (Array.isArray(value)) return value.length > 0;
+                            if (typeof value === 'string') return value.length > 0;
+                            if (typeof value === 'number') return true;
+                            return true;
+                        })
+                        .map(([key, value]) => {
+                            if (Array.isArray(value)) {
+                                // For URLs arrays, show count and first few
+                                if (key === 'urls' && value.length > 3) {
+                                    return `${key}: ${value.length} URLs (${value.slice(0, 2).join(', ')}...)`;
+                                }
+                                return `${key}: ${value.join(', ')}`;
+                            }
+                            return `${key}: ${value}`;
+                        })
                         .join(' | ');
 
                     entryDiv.innerHTML = `
@@ -4757,8 +4786,12 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                             if (element.type === 'checkbox') {
                                 element.checked = value;
                             } else if (Array.isArray(value)) {
-                                // For competitive analysis competitors array or any array value
-                                element.value = value.join('\n');
+                                // For competitive analysis competitors array, content cluster URLs, or any array value
+                                if (entry.method === 'contentClusterAnalysis' && key === 'urls') {
+                                    element.value = value.join('\n');
+                                } else {
+                                    element.value = value.join('\n');
+                                }
                             } else if (element.type === 'select-one' || element.type === 'select-multiple') {
                                 if (Array.isArray(value)) {
                                     // For multi-select
@@ -4773,6 +4806,13 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                             }
                         }
                     });
+                    
+                    // Auto-submit for dashboard methods
+                    if (entry.method === 'contentClusterAnalysis' || entry.method === 'competitiveAnalysis' || entry.method === 'keywordTargetingAnalysis') {
+                        setTimeout(() => {
+                            allDOMElements.form.dispatchEvent(new Event('submit'));
+                        }, 200);
+                    }
                 }, 100);
 
                 allDOMElements.historyModal.classList.add('hidden');
@@ -4894,6 +4934,13 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         'urls': 'ktaUrl',
                         'locale': 'ktaLocaleSelect',
                         'limit': 'ktaLimit'
+                    },
+                    'contentClusterAnalysis': {
+                        'seedTopic': 'ccaSeedTopic',
+                        'urls': 'ccaUrls',
+                        'locale': 'ccaLocaleSelect',
+                        'similarityThreshold': 'ccaSimilarityThreshold',
+                        'limit': 'ccaLimit'
                     }
                 };
 
