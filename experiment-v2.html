@@ -2455,29 +2455,56 @@ Content: ${contentPreview}`;
                 });
 
                 // Step 9: Identify consolidation clusters
-                // Group URLs by: same primary intent + high similarity to seed topic + similar value scores
+                // Only consolidate if: VERY similar to each other (>0.9) AND have keyword overlaps
                 const consolidationClusters = [];
                 const processedUrls = new Set();
+                
+                // Calculate URL-to-URL similarity matrix for consolidation
+                const urlSimilarityMatrix = {};
+                for (let i = 0; i < urls.length; i++) {
+                    for (let j = i + 1; j < urls.length; j++) {
+                        const url1 = urls[i];
+                        const url2 = urls[j];
+                        if (resultsByUrl[url1].embedding && resultsByUrl[url2].embedding) {
+                            const similarity = cosineSimilarity(resultsByUrl[url1].embedding, resultsByUrl[url2].embedding);
+                            if (!urlSimilarityMatrix[url1]) urlSimilarityMatrix[url1] = {};
+                            if (!urlSimilarityMatrix[url2]) urlSimilarityMatrix[url2] = {};
+                            urlSimilarityMatrix[url1][url2] = similarity;
+                            urlSimilarityMatrix[url2][url1] = similarity;
+                        }
+                    }
+                }
+                
+                // Find keyword overlaps between URLs
+                const keywordOverlaps = {};
+                urls.forEach(u1 => {
+                    urls.forEach(u2 => {
+                        if (u1 === u2) return;
+                        const keywords1 = new Set((resultsByUrl[u1].rankingKeywords || []).map(k => k.keyword?.toLowerCase()).filter(Boolean));
+                        const keywords2 = new Set((resultsByUrl[u2].rankingKeywords || []).map(k => k.keyword?.toLowerCase()).filter(Boolean));
+                        const overlap = [...keywords1].filter(k => keywords2.has(k));
+                        if (overlap.length > 0) {
+                            if (!keywordOverlaps[u1]) keywordOverlaps[u1] = {};
+                            keywordOverlaps[u1][u2] = overlap;
+                        }
+                    });
+                });
                 
                 urls.forEach(u => {
                     if (processedUrls.has(u)) return;
                     
                     const cluster = [u];
                     const uIntent = resultsByUrl[u].primaryIntent;
-                    const uSimilarity = seedTopicSimilarities[u] || 0;
-                    const uValue = resultsByUrl[u].valueScore || 0;
                     
                     urls.forEach(v => {
                         if (u === v || processedUrls.has(v)) return;
                         
                         const vIntent = resultsByUrl[v].primaryIntent;
-                        const vSimilarity = seedTopicSimilarities[v] || 0;
-                        const vValue = resultsByUrl[v].valueScore || 0;
+                        const urlToUrlSimilarity = urlSimilarityMatrix[u]?.[v] || 0;
+                        const hasKeywordOverlap = keywordOverlaps[u]?.[v] && keywordOverlaps[u][v].length > 0;
                         
-                        // Same intent + similar similarity to seed + similar value = potential cluster
-                        if (uIntent === vIntent && 
-                            Math.abs(uSimilarity - vSimilarity) < 0.15 && 
-                            Math.abs(uValue - vValue) < (Math.max(uValue, vValue) * 0.5)) {
+                        // VERY similar (>0.9) AND same intent AND have keyword overlaps
+                        if (uIntent === vIntent && urlToUrlSimilarity >= 0.9 && hasKeywordOverlap) {
                             cluster.push(v);
                             processedUrls.add(v);
                         }
@@ -2485,12 +2512,24 @@ Content: ${contentPreview}`;
                     
                     if (cluster.length > 1) {
                         processedUrls.add(u);
+                        // Collect all overlapping keywords for the cluster
+                        const clusterKeywords = new Set();
+                        cluster.forEach(url1 => {
+                            cluster.forEach(url2 => {
+                                if (url1 !== url2 && keywordOverlaps[url1]?.[url2]) {
+                                    keywordOverlaps[url1][url2].forEach(kw => clusterKeywords.add(kw));
+                                }
+                            });
+                        });
+                        
                         consolidationClusters.push({
                             urls: cluster,
                             intent: uIntent,
                             avgSimilarity: cluster.reduce((sum, url) => sum + (seedTopicSimilarities[url] || 0), 0) / cluster.length,
                             avgValue: cluster.reduce((sum, url) => sum + (resultsByUrl[url].valueScore || 0), 0) / cluster.length,
-                            totalValue: cluster.reduce((sum, url) => sum + (resultsByUrl[url].valueScore || 0), 0)
+                            totalValue: cluster.reduce((sum, url) => sum + (resultsByUrl[url].valueScore || 0), 0),
+                            urlToUrlSimilarity: urlSimilarityMatrix[cluster[0]]?.[cluster[1]] || 0,
+                            overlappingKeywords: Array.from(clusterKeywords)
                         });
                     }
                 });
@@ -2509,11 +2548,51 @@ Content: ${contentPreview}`;
                                 rankingKeywordsCount: resultsByUrl[url].mozMetrics?.rankingKeywordsCount || 0
                             }));
 
+                            // Find the best keyword to optimize for based on overlaps and opportunities
+                            const overlappingKeywords = cluster.overlappingKeywords || [];
+                            const allKeywords = new Set();
+                            cluster.urls.forEach(url => {
+                                (resultsByUrl[url].rankingKeywords || []).forEach(k => {
+                                    if (k.keyword) allKeywords.add(k.keyword.toLowerCase());
+                                });
+                            });
+                            
+                            // Find most common overlapping keyword, or highest volume keyword
+                            let optimizeForKeyword = seedTopic;
+                            if (overlappingKeywords.length > 0) {
+                                // Use the most common overlapping keyword
+                                optimizeForKeyword = overlappingKeywords[0];
+                            } else {
+                                // Find highest volume keyword from cluster
+                                let maxVolume = 0;
+                                cluster.urls.forEach(url => {
+                                    (resultsByUrl[url].rankingKeywords || []).forEach(k => {
+                                        if (k.volume && k.volume > maxVolume) {
+                                            maxVolume = k.volume;
+                                            optimizeForKeyword = k.keyword;
+                                        }
+                                    });
+                                });
+                            }
+                            
+                            // Determine which URL to keep (highest value score)
+                            let urlToKeep = cluster.urls[0];
+                            let maxValue = resultsByUrl[cluster.urls[0]].valueScore || 0;
+                            cluster.urls.forEach(url => {
+                                const value = resultsByUrl[url].valueScore || 0;
+                                if (value > maxValue) {
+                                    maxValue = value;
+                                    urlToKeep = url;
+                                }
+                            });
+
                             const analysisPrompt = `You are an SEO content analysis expert. Analyze the following cluster of URLs that should be consolidated. 
 
 Seed Topic: ${seedTopic}
 Cluster Intent: ${cluster.intent}
 URLs in Cluster: ${cluster.urls.length}
+URL-to-URL Similarity: ${(cluster.urlToUrlSimilarity * 100).toFixed(1)}%
+Overlapping Keywords: ${overlappingKeywords.join(', ')}
 
 For each URL, provide:
 - URL
@@ -2522,29 +2601,36 @@ For each URL, provide:
 - Value metrics (value score, linking domains, ranking keywords count)
 
 Please provide:
-1. Why these URLs should be consolidated (explain the overlap/redundancy)
-2. Which URL should be kept as the main page (the one with best value and content)
-3. What sub-topic/keyword this consolidated page should optimize for
+1. Why these URLs should be consolidated (explain the overlap/redundancy based on similarity and keyword overlap)
 
 Return your response as JSON with this structure:
 {
-  "consolidationReason": "explanation",
-  "urlToKeep": "url",
-  "subtopicToOptimize": "sub-topic keyword/phrase"
+  "consolidationReason": "explanation"
 }
 
 Cluster Data: ${JSON.stringify(clusterData, null, 2)}`;
 
                             const response = await analyzeWithOpenAI({ analysisData: { prompt: analysisPrompt } }, openaiApiKey, proxyUrl);
                             try {
-                                const analysis = JSON.parse(response);
-                                cluster.aiAnalysis = analysis;
-                            } catch {
-                                // If not JSON, try to extract info
+                                // Extract JSON from markdown code blocks if present
+                                let jsonStr = response.trim();
+                                if (jsonStr.includes('```json')) {
+                                    jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+                                } else if (jsonStr.includes('```')) {
+                                    jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+                                }
+                                const analysis = JSON.parse(jsonStr);
                                 cluster.aiAnalysis = {
-                                    consolidationReason: response,
-                                    urlToKeep: cluster.urls[0],
-                                    subtopicToOptimize: seedTopic
+                                    ...analysis,
+                                    urlToKeep: urlToKeep,
+                                    subtopicToOptimize: optimizeForKeyword
+                                };
+                            } catch {
+                                // If not JSON, use defaults
+                                cluster.aiAnalysis = {
+                                    consolidationReason: response.substring(0, 500),
+                                    urlToKeep: urlToKeep,
+                                    subtopicToOptimize: optimizeForKeyword
                                 };
                             }
                         } catch (e) {
@@ -2559,33 +2645,27 @@ Cluster Data: ${JSON.stringify(clusterData, null, 2)}`;
                 }
 
                 // Step 10: Identify MAIN topic page
-                // Highest similarity to seed topic + high value score
+                // Prioritize value score first, then use similarity as tiebreaker
+                // Only consider URLs with ranking keywords (value score > 0)
                 let mainTopicPage = null;
                 let mainTopicScore = -1;
                 urls.forEach(u => {
-                    const similarity = seedTopicSimilarities[u] || 0;
                     const value = resultsByUrl[u].valueScore || 0;
-                    // Combined score: 60% similarity, 40% value
-                    const combinedScore = (similarity * 0.6) + (Math.min(value / 100, 1) * 0.4);
+                    const similarity = seedTopicSimilarities[u] || 0;
+                    const rankingKeywordsCount = resultsByUrl[u].mozMetrics?.rankingKeywordsCount || 0;
+                    
+                    // Only consider URLs with ranking keywords
+                    if (rankingKeywordsCount === 0) return;
+                    
+                    // Primary sort: value score, Secondary sort: similarity
+                    const combinedScore = (value * 1000) + similarity; // Value score weighted 1000x more
                     if (combinedScore > mainTopicScore) {
                         mainTopicScore = combinedScore;
                         mainTopicPage = u;
                     }
                 });
 
-                // Step 11: Create internal linking strategy
-                const linkingStrategy = urls.map(u => {
-                    const shouldLinkToMain = u !== mainTopicPage && 
-                                           (seedTopicSimilarities[u] || 0) >= similarityThreshold &&
-                                           (resultsByUrl[u].valueScore || 0) < (resultsByUrl[mainTopicPage]?.valueScore || 0);
-                    return {
-                        url: u,
-                        linkTo: shouldLinkToMain ? mainTopicPage : null,
-                        reason: shouldLinkToMain ? 
-                            `High semantic similarity (${seedTopicSimilarities[u]}%) but lower value score. Should link to main topic page.` :
-                            u === mainTopicPage ? 'Main topic page - receives links' : 'Keep separate or link contextually'
-                    };
-                });
+                // Internal linking strategy removed per user request
 
                 // Step 12: Generate Content Recommendations
                 allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Generating content recommendations...</span>';
@@ -2624,9 +2704,20 @@ Data: ${JSON.stringify(recommendationsData, null, 2)}`;
 
                     const recommendationsResponse = await analyzeWithOpenAI({ analysisData: { prompt: recommendationsPrompt } }, openaiApiKey, proxyUrl);
                     try {
-                        contentRecommendations = JSON.parse(recommendationsResponse);
+                        // Extract JSON from markdown code blocks if present
+                        let jsonStr = recommendationsResponse.trim();
+                        if (jsonStr.includes('```json')) {
+                            jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+                        } else if (jsonStr.includes('```')) {
+                            jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+                        }
+                        contentRecommendations = JSON.parse(jsonStr);
                     } catch {
-                        contentRecommendations = { generalRecommendations: [recommendationsResponse] };
+                        // If parsing fails, try to extract recommendations from text
+                        const lines = recommendationsResponse.split('\n').filter(l => l.trim());
+                        contentRecommendations = { 
+                            generalRecommendations: lines.length > 0 ? lines : [recommendationsResponse] 
+                        };
                     }
                 } catch (e) {
                     console.warn('Failed to generate content recommendations:', e);
@@ -2676,9 +2767,24 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
 
                     const newContentResponse = await analyzeWithOpenAI({ analysisData: { prompt: newContentPrompt } }, openaiApiKey, proxyUrl);
                     try {
-                        newContentToCreate = JSON.parse(newContentResponse);
+                        // Extract JSON from markdown code blocks if present
+                        let jsonStr = newContentResponse.trim();
+                        if (jsonStr.includes('```json')) {
+                            jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+                        } else if (jsonStr.includes('```')) {
+                            jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+                        }
+                        newContentToCreate = JSON.parse(jsonStr);
                     } catch {
-                        newContentToCreate = { newContentIdeas: [{ title: newContentResponse, intent: 'Informational', targetKeywords: [], rationale: 'AI-generated suggestion' }] };
+                        // If parsing fails, create a single idea from the response
+                        newContentToCreate = { 
+                            newContentIdeas: [{ 
+                                title: newContentResponse.substring(0, 100), 
+                                intent: 'Informational', 
+                                targetKeywords: [], 
+                                rationale: newContentResponse 
+                            }] 
+                        };
                     }
                 } catch (e) {
                     console.warn('Failed to generate new content ideas:', e);
@@ -2696,7 +2802,6 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     intentGroups,
                     consolidationClusters,
                     mainTopicPage,
-                    linkingStrategy,
                     relatedKeywords: relatedKeywords.slice(0, 50),
                     contentRecommendations,
                     newContentToCreate
@@ -3162,7 +3267,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 try {
-                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, linkingStrategy, relatedKeywords, contentRecommendations, newContentToCreate } = payload;
+                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, relatedKeywords, contentRecommendations, newContentToCreate } = payload;
                 const formatNumber = (num) => {
                     if (typeof num !== 'number' || num === 'N/A') return num;
                     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -3185,7 +3290,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += `<div class="text-sm text-[var(--text-primary)] break-all mb-2">${mainTopicPage}</div>`;
                     const mainMetrics = resultsByUrl[mainTopicPage]?.mozMetrics || {};
                     html += '<div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">';
-                    html += `<div>Similarity: <span class="font-bold">${seedTopicSimilarities[mainTopicPage] || 0}%</span></div>`;
+                    html += `<div>Similarity: <span class="font-bold">${((seedTopicSimilarities[mainTopicPage] || 0) * 100).toFixed(1)}%</span></div>`;
                     html += `<div>Value Score: <span class="font-bold">${resultsByUrl[mainTopicPage]?.valueScore || 0}</span></div>`;
                     html += `<div>Ranking Keywords: <span class="font-bold">${mainMetrics.rankingKeywordsCount || 0}</span></div>`;
                     html += `<div>Linking Domains: <span class="font-bold">${mainMetrics.linkingDomains || 0}</span></div>`;
@@ -3208,6 +3313,13 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Value Score <span class="text-xs font-normal text-[var(--text-secondary)]" title="Formula: (Ranking Keywords × 2.0) + (Linking Domains × 1.5) + (Inbound Links × 0.5) + (Page Authority × 0.1) + (Anchor Text Diversity × 0.3)">(?)</span></th>';
                     html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Primary Intent</th>';
                     html += '</tr></thead><tbody>';
+                    const intentColors = {
+                        Informational: '#60a5fa',
+                        Commercial: '#fbbf24',
+                        Navigational: '#a78bfa',
+                        Transactional: '#34d399',
+                        Other: '#94a3b8'
+                    };
                     sortedUrls.forEach((u, idx) => {
                         const similarity = seedTopicSimilarities[u] || 0;
                         const valueScore = resultsByUrl[u]?.valueScore || 0;
@@ -3217,13 +3329,15 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         const rowClass = isMain ? 'bg-[var(--text-accent)]/10' : '';
                         const intensity = Math.min(255, Math.round(similarity * 255));
                         const bgColor = `rgb(${255 - intensity}, ${255}, ${255 - intensity})`;
+                        const intentColor = intentColors[primaryIntent] || intentColors.Other;
                         const valueFormula = `(${metrics.rankingKeywordsCount || 0}×2) + (${metrics.linkingDomains || 0}×1.5) + (${metrics.inboundLinks || 0}×0.5) + (${metrics.pageAuthority || 0}×0.1) + (${metrics.anchorTextsCount || 0}×0.3) = ${valueScore.toFixed(1)}`;
                         html += `<tr class="${rowClass}">`;
                         html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm">${idx + 1}</td>`;
                         html += `<td class="border border-[var(--border-primary)] p-2 text-xs text-[var(--text-secondary)] break-all">${u}${isMain ? ' <span class="text-[var(--text-accent)] font-semibold">(Main)</span>' : ''}</td>`;
                         html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm font-semibold" style="background-color: ${bgColor}">${(similarity * 100).toFixed(1)}%</td>`;
                         html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm" title="${valueFormula}">${valueScore.toFixed(1)}</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-xs">${primaryIntent}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-xs" style="background-color: ${intentColor}20; color: ${intentColor}; font-weight: 600;">`;
+                        html += `<span style="background:${intentColor};width:8px;height:8px;border-radius:9999px;display:inline-block;margin-right:4px;"></span>${primaryIntent}</td>`;
                         html += '</tr>';
                     });
                     html += '</tbody></table>';
@@ -3276,7 +3390,10 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         html += `<div class="flex items-start justify-between mb-3">`;
                         html += `<div>`;
                         html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1">Cluster ${idx + 1} - ${cluster.intent} Intent</div>`;
-                        html += `<div class="text-xs text-[var(--text-secondary)]">Avg Similarity: ${(cluster.avgSimilarity * 100).toFixed(1)}% • Avg Value: ${cluster.avgValue.toFixed(1)} • Total Value: ${cluster.totalValue.toFixed(1)}</div>`;
+                        html += `<div class="text-xs text-[var(--text-secondary)]">URL-to-URL Similarity: ${((cluster.urlToUrlSimilarity || 0) * 100).toFixed(1)}% • Avg Value: ${cluster.avgValue.toFixed(1)} • Total Value: ${cluster.totalValue.toFixed(1)}</div>`;
+                        if (cluster.overlappingKeywords && cluster.overlappingKeywords.length > 0) {
+                            html += `<div class="text-xs text-[var(--text-secondary)] mt-1">Overlapping Keywords: <span class="text-[var(--text-primary)] font-semibold">${cluster.overlappingKeywords.slice(0, 5).join(', ')}${cluster.overlappingKeywords.length > 5 ? ` (+${cluster.overlappingKeywords.length - 5} more)` : ''}</span></div>`;
+                        }
                         html += `</div>`;
                         html += `<div class="text-lg font-bold text-[var(--text-accent)]">${cluster.urls.length} URLs</div>`;
                         html += `</div>`;
@@ -4393,7 +4510,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                 script.onload = () => {
                     try {
                         const workbook = XLSX.utils.book_new();
-                        const { seedTopic, urls = [], resultsByUrl = {}, seedTopicSimilarities = {}, intentGroups = {}, consolidationClusters = [], mainTopicPage, linkingStrategy = [], relatedKeywords = [] } = data || {};
+                        const { seedTopic, urls = [], resultsByUrl = {}, seedTopicSimilarities = {}, intentGroups = {}, consolidationClusters = [], mainTopicPage, relatedKeywords = [] } = data || {};
 
                         // Sheet 1: Summary
                         const summary = [
@@ -4458,18 +4575,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         });
                         XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(clusterRows), 'Consolidation Clusters');
 
-                        // Sheet 5: Internal Linking Strategy
-                        const linkingRows = [['URL', 'Link To', 'Reason']];
-                        linkingStrategy.forEach(item => {
-                            linkingRows.push([
-                                item.url,
-                                item.linkTo || 'N/A',
-                                item.reason
-                            ]);
-                        });
-                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(linkingRows), 'Linking Strategy');
-
-                        // Sheet 6: Related Keywords
+                        // Sheet 5: Related Keywords
                         if (relatedKeywords.length > 0) {
                             const rkRows = [['Related Keyword']];
                             relatedKeywords.forEach(kw => {
