@@ -2264,7 +2264,27 @@
 
                 await Promise.all(perUrlPromises);
 
-                // Step 3: Extract content and generate embeddings
+                // Step 3: Fetch anchor text data for value calculation
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching anchor text data...</span>';
+                const anchorPromises = urls.map(async (u) => {
+                    try {
+                        const resp = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ apiKey, method: 'anchorText', params: { scope: 'url', targets: [u], limit: 50 } }),
+                            signal: opensignal.signal
+                        });
+                        const data = await resp.json();
+                        if (resp.ok && Array.isArray(data) && data[0]?.status === 'success') {
+                            resultsByUrl[u].topAnchors = data[0]?.data?.anchor_texts || [];
+                        }
+                    } catch (e) {
+                        // Non-fatal
+                    }
+                });
+                await Promise.all(anchorPromises);
+
+                // Step 4: Extract content and generate embeddings
                 allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Extracting content and generating embeddings...</span>';
                 for (const url of urls) {
                     try {
@@ -2277,40 +2297,25 @@
                     }
                 }
 
-                // Step 4: Calculate similarity matrix
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Calculating semantic similarity...</span>';
-                const similarityMatrix = {};
-                for (let i = 0; i < urls.length; i++) {
-                    for (let j = i + 1; j < urls.length; j++) {
-                        const url1 = urls[i];
-                        const url2 = urls[j];
-                        if (resultsByUrl[url1].embedding && resultsByUrl[url2].embedding) {
-                            const similarity = cosineSimilarity(resultsByUrl[url1].embedding, resultsByUrl[url2].embedding);
-                            if (!similarityMatrix[url1]) similarityMatrix[url1] = {};
-                            if (!similarityMatrix[url2]) similarityMatrix[url2] = {};
-                            similarityMatrix[url1][url2] = similarity;
-                            similarityMatrix[url2][url1] = similarity;
-                        }
-                    }
+                // Step 5: Get embedding for seed topic and calculate similarity to each URL
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Calculating semantic similarity to seed topic...</span>';
+                let seedTopicEmbedding = null;
+                try {
+                    seedTopicEmbedding = await getEmbeddings(seedTopic, openaiApiKey, proxyUrl);
+                } catch (e) {
+                    console.warn('Failed to get seed topic embedding:', e);
                 }
 
-                // Step 5: Identify merge opportunities
-                const mergeOpportunities = [];
-                for (let i = 0; i < urls.length; i++) {
-                    for (let j = i + 1; j < urls.length; j++) {
-                        const url1 = urls[i];
-                        const url2 = urls[j];
-                        const similarity = similarityMatrix[url1]?.[url2];
-                        if (similarity && similarity >= similarityThreshold) {
-                            mergeOpportunities.push({
-                                url1,
-                                url2,
-                                similarity: Math.round(similarity * 100) / 100
-                            });
+                const seedTopicSimilarities = {};
+                if (seedTopicEmbedding) {
+                    urls.forEach(url => {
+                        if (resultsByUrl[url].embedding) {
+                            const similarity = cosineSimilarity(seedTopicEmbedding, resultsByUrl[url].embedding);
+                            seedTopicSimilarities[url] = Math.round(similarity * 100) / 100;
+                            resultsByUrl[url].seedTopicSimilarity = seedTopicSimilarities[url];
                         }
-                    }
+                    });
                 }
-                mergeOpportunities.sort((a, b) => b.similarity - a.similarity);
 
                 // Step 6: Get search intent for ranking keywords
                 const allKeywords = [];
@@ -2344,7 +2349,7 @@
                     }
                 }
 
-                // Attach intent maps
+                // Attach intent maps and determine primary intent
                 urls.forEach(u => {
                     const map = {};
                     const counts = { Informational: 0, Transactional: 0, Commercial: 0, Navigational: 0, Unknown: 0 };
@@ -2362,32 +2367,130 @@
                         Navigational: Math.round((counts.Navigational / total) * 100),
                         Unknown: Math.round((counts.Unknown / total) * 100)
                     };
+                    
+                    // Determine primary intent (highest percentage)
+                    let primaryIntent = 'Other';
+                    let maxCount = 0;
+                    Object.entries(counts).forEach(([intent, count]) => {
+                        if (count > maxCount && intent !== 'Unknown') {
+                            maxCount = count;
+                            primaryIntent = intent;
+                        }
+                    });
+                    if (maxCount === 0) primaryIntent = 'Other';
+                    resultsByUrl[u].primaryIntent = primaryIntent;
                 });
 
-                // Step 7: Analyze with OpenAI
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing with AI...</span>';
-                let aiAnalysis = null;
-                try {
-                    const analysisData = {
-                        seedTopic,
-                        relatedKeywords: relatedKeywords.slice(0, 50),
-                        urls: urls.map(u => ({
-                            url: u,
-                            rankingKeywords: (resultsByUrl[u].rankingKeywords || []).slice(0, 20).map(k => k.keyword),
-                            contentPreview: (resultsByUrl[u].content || '').substring(0, 500)
-                        }))
+                // Step 7: Group URLs by primary intent
+                const intentGroups = {
+                    Informational: [],
+                    Commercial: [],
+                    Navigational: [],
+                    Transactional: [],
+                    Other: []
+                };
+                urls.forEach(u => {
+                    const intent = resultsByUrl[u].primaryIntent || 'Other';
+                    intentGroups[intent].push(u);
+                });
+
+                // Step 8: Calculate URL value scores based on Moz metrics
+                urls.forEach(u => {
+                    const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
+                    const rankingKeywordsCount = (resultsByUrl[u].rankingKeywords || []).length;
+                    const inboundLinks = typeof sm.external_pages_to_page === 'number' ? sm.external_pages_to_page : 0;
+                    const linkingDomains = typeof sm.root_domains_to_page === 'number' ? sm.root_domains_to_page : 0;
+                    const pageAuthority = typeof sm.page_authority === 'number' ? sm.page_authority : 0;
+                    const anchorTextsCount = (resultsByUrl[u].topAnchors || []).length;
+                    
+                    // Calculate value score (weighted)
+                    const valueScore = (
+                        (rankingKeywordsCount * 2) +           // Ranking keywords are most important
+                        (linkingDomains * 1.5) +               // Linking domains
+                        (inboundLinks * 0.5) +                  // Total links
+                        (pageAuthority * 0.1) +                 // Page authority
+                        (anchorTextsCount * 0.3)                // Anchor text diversity
+                    );
+                    
+                    resultsByUrl[u].valueScore = Math.round(valueScore * 10) / 10;
+                    resultsByUrl[u].mozMetrics = {
+                        rankingKeywordsCount,
+                        inboundLinks,
+                        linkingDomains,
+                        pageAuthority,
+                        anchorTextsCount
                     };
-                    const aiResponse = await analyzeWithOpenAI(analysisData, openaiApiKey, proxyUrl);
-                    // Try to parse as JSON, fallback to plain text
-                    try {
-                        aiAnalysis = JSON.parse(aiResponse);
-                    } catch {
-                        aiAnalysis = { analysis: aiResponse };
+                });
+
+                // Step 9: Identify consolidation clusters
+                // Group URLs by: same primary intent + high similarity to seed topic + similar value scores
+                const consolidationClusters = [];
+                const processedUrls = new Set();
+                
+                urls.forEach(u => {
+                    if (processedUrls.has(u)) return;
+                    
+                    const cluster = [u];
+                    const uIntent = resultsByUrl[u].primaryIntent;
+                    const uSimilarity = seedTopicSimilarities[u] || 0;
+                    const uValue = resultsByUrl[u].valueScore || 0;
+                    
+                    urls.forEach(v => {
+                        if (u === v || processedUrls.has(v)) return;
+                        
+                        const vIntent = resultsByUrl[v].primaryIntent;
+                        const vSimilarity = seedTopicSimilarities[v] || 0;
+                        const vValue = resultsByUrl[v].valueScore || 0;
+                        
+                        // Same intent + similar similarity to seed + similar value = potential cluster
+                        if (uIntent === vIntent && 
+                            Math.abs(uSimilarity - vSimilarity) < 0.15 && 
+                            Math.abs(uValue - vValue) < (Math.max(uValue, vValue) * 0.5)) {
+                            cluster.push(v);
+                            processedUrls.add(v);
+                        }
+                    });
+                    
+                    if (cluster.length > 1) {
+                        processedUrls.add(u);
+                        consolidationClusters.push({
+                            urls: cluster,
+                            intent: uIntent,
+                            avgSimilarity: cluster.reduce((sum, url) => sum + (seedTopicSimilarities[url] || 0), 0) / cluster.length,
+                            avgValue: cluster.reduce((sum, url) => sum + (resultsByUrl[url].valueScore || 0), 0) / cluster.length,
+                            totalValue: cluster.reduce((sum, url) => sum + (resultsByUrl[url].valueScore || 0), 0)
+                        });
                     }
-                } catch (e) {
-                    console.warn('OpenAI analysis failed:', e);
-                    aiAnalysis = { error: e.message };
-                }
+                });
+
+                // Step 10: Identify MAIN topic page
+                // Highest similarity to seed topic + high value score
+                let mainTopicPage = null;
+                let mainTopicScore = -1;
+                urls.forEach(u => {
+                    const similarity = seedTopicSimilarities[u] || 0;
+                    const value = resultsByUrl[u].valueScore || 0;
+                    // Combined score: 60% similarity, 40% value
+                    const combinedScore = (similarity * 0.6) + (Math.min(value / 100, 1) * 0.4);
+                    if (combinedScore > mainTopicScore) {
+                        mainTopicScore = combinedScore;
+                        mainTopicPage = u;
+                    }
+                });
+
+                // Step 11: Create internal linking strategy
+                const linkingStrategy = urls.map(u => {
+                    const shouldLinkToMain = u !== mainTopicPage && 
+                                           (seedTopicSimilarities[u] || 0) >= similarityThreshold &&
+                                           (resultsByUrl[u].valueScore || 0) < (resultsByUrl[mainTopicPage]?.valueScore || 0);
+                    return {
+                        url: u,
+                        linkTo: shouldLinkToMain ? mainTopicPage : null,
+                        reason: shouldLinkToMain ? 
+                            `High semantic similarity (${seedTopicSimilarities[u]}%) but lower value score. Should link to main topic page.` :
+                            u === mainTopicPage ? 'Main topic page - receives links' : 'Keep separate or link contextually'
+                    };
+                });
 
                 return {
                     seedTopic,
@@ -2396,10 +2499,12 @@
                     limit,
                     similarityThreshold,
                     resultsByUrl,
-                    similarityMatrix,
-                    mergeOpportunities,
-                    relatedKeywords: relatedKeywords.slice(0, 50),
-                    aiAnalysis
+                    seedTopicSimilarities,
+                    intentGroups,
+                    consolidationClusters,
+                    mainTopicPage,
+                    linkingStrategy,
+                    relatedKeywords: relatedKeywords.slice(0, 50)
                 };
             }
 
@@ -2862,7 +2967,7 @@
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 try {
-                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, similarityMatrix, mergeOpportunities, relatedKeywords, aiAnalysis } = payload;
+                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, linkingStrategy, relatedKeywords } = payload;
                 const formatNumber = (num) => {
                     if (typeof num !== 'number' || num === 'N/A') return num;
                     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -2874,36 +2979,54 @@
                 html += '<div class="flex items-start justify-between gap-3">';
                 html += '<div>';
                 html += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-1">Content Cluster Analysis</h3>';
-                html += `<p class="text-sm text-[var(--text-secondary)]">Seed Topic: <span class="text-[var(--text-primary)]">${seedTopic}</span> • URLs: <span class="text-[var(--text-primary)]">${urls.length}</span> • Locale: ${locale} • Threshold: ${similarityThreshold}</p>`;
+                html += `<p class="text-sm text-[var(--text-secondary)]">Seed Topic: <span class="text-[var(--text-primary)] font-semibold">${seedTopic}</span> • URLs: <span class="text-[var(--text-primary)]">${urls.length}</span> • Locale: ${locale} • Threshold: ${similarityThreshold}</p>`;
                 html += '</div>';
                 html += '</div>';
 
-                // Similarity Matrix Heatmap
-                html += '<div id="similarity-matrix-section" class="mt-6">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Semantic Similarity Matrix</h4>';
-                if (Object.keys(similarityMatrix).length > 0) {
+                // Main Topic Page
+                if (mainTopicPage) {
+                    html += '<div id="main-topic-section" class="mt-6 bg-gradient-to-r from-[var(--text-accent)]/20 to-[var(--bg-container)] border-2 border-[var(--text-accent)] rounded-lg p-4">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-2">🏆 Main Topic Page</h4>';
+                    html += `<div class="text-sm text-[var(--text-primary)] break-all mb-2">${mainTopicPage}</div>`;
+                    const mainMetrics = resultsByUrl[mainTopicPage]?.mozMetrics || {};
+                    html += '<div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">';
+                    html += `<div>Similarity: <span class="font-bold">${seedTopicSimilarities[mainTopicPage] || 0}%</span></div>`;
+                    html += `<div>Value Score: <span class="font-bold">${resultsByUrl[mainTopicPage]?.valueScore || 0}</span></div>`;
+                    html += `<div>Ranking Keywords: <span class="font-bold">${mainMetrics.rankingKeywordsCount || 0}</span></div>`;
+                    html += `<div>Linking Domains: <span class="font-bold">${mainMetrics.linkingDomains || 0}</span></div>`;
+                    html += `<div>Page Authority: <span class="font-bold">${mainMetrics.pageAuthority || 0}</span></div>`;
+                    html += '</div>';
+                    html += '</div>';
+                }
+
+                // Seed Topic Similarity Table
+                html += '<div id="similarity-table-section" class="mt-6">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Semantic Similarity to Seed Topic</h4>';
+                if (Object.keys(seedTopicSimilarities).length > 0) {
+                    const sortedUrls = [...urls].sort((a, b) => (seedTopicSimilarities[b] || 0) - (seedTopicSimilarities[a] || 0));
                     html += '<div class="overflow-x-auto">';
                     html += '<table class="w-full border-collapse border border-[var(--border-primary)]">';
-                    html += '<thead><tr><th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-left text-sm font-semibold">URL</th>';
-                    urls.forEach((_, idx) => {
-                        html += `<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-xs font-semibold">URL ${idx + 1}</th>`;
-                    });
+                    html += '<thead><tr>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-left text-sm font-semibold">Rank</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-left text-sm font-semibold">URL</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Similarity Score</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Value Score</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Primary Intent</th>';
                     html += '</tr></thead><tbody>';
-                    urls.forEach((u1, idx1) => {
-                        html += `<tr><td class="border border-[var(--border-primary)] p-2 text-xs text-[var(--text-secondary)] break-all">${u1}</td>`;
-                        urls.forEach((u2, idx2) => {
-                            const similarity = similarityMatrix[u1]?.[u2];
-                            if (idx1 === idx2) {
-                                html += '<td class="border border-[var(--border-primary)] p-2 text-center bg-[var(--bg-input)]">-</td>';
-                            } else if (similarity !== undefined) {
-                                const percentage = Math.round(similarity * 100);
-                                const intensity = Math.min(255, Math.round(similarity * 255));
-                                const bgColor = `rgb(${255 - intensity}, ${255}, ${255 - intensity})`;
-                                html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm font-semibold" style="background-color: ${bgColor}">${percentage}%</td>`;
-                            } else {
-                                html += '<td class="border border-[var(--border-primary)] p-2 text-center text-[var(--text-secondary)]">N/A</td>';
-                            }
-                        });
+                    sortedUrls.forEach((u, idx) => {
+                        const similarity = seedTopicSimilarities[u] || 0;
+                        const valueScore = resultsByUrl[u]?.valueScore || 0;
+                        const primaryIntent = resultsByUrl[u]?.primaryIntent || 'Other';
+                        const isMain = u === mainTopicPage;
+                        const rowClass = isMain ? 'bg-[var(--text-accent)]/10' : '';
+                        const intensity = Math.min(255, Math.round(similarity * 255));
+                        const bgColor = `rgb(${255 - intensity}, ${255}, ${255 - intensity})`;
+                        html += `<tr class="${rowClass}">`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm">${idx + 1}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-xs text-[var(--text-secondary)] break-all">${u}${isMain ? ' <span class="text-[var(--text-accent)] font-semibold">(Main)</span>' : ''}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm font-semibold" style="background-color: ${bgColor}">${(similarity * 100).toFixed(1)}%</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm">${valueScore.toFixed(1)}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-xs">${primaryIntent}</td>`;
                         html += '</tr>';
                     });
                     html += '</tbody></table>';
@@ -2913,31 +3036,95 @@
                 }
                 html += '</div>';
 
-                // Merge Opportunities
-                html += '<div id="merge-opportunities-section" class="mt-6">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Consolidation Opportunities</h4>';
-                if (mergeOpportunities.length > 0) {
-                    html += '<div class="space-y-3">';
-                    mergeOpportunities.forEach((opp, idx) => {
+                // Intent Groups
+                html += '<div id="intent-groups-section" class="mt-6">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Segments by Search Intent</h4>';
+                const intentColors = {
+                    Informational: '#60a5fa',
+                    Commercial: '#fbbf24',
+                    Navigational: '#a78bfa',
+                    Transactional: '#34d399',
+                    Other: '#94a3b8'
+                };
+                Object.entries(intentGroups).forEach(([intent, groupUrls]) => {
+                    if (groupUrls.length === 0) return;
+                    html += `<div class="mb-4 bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                    html += `<div class="flex items-center gap-2 mb-3">`;
+                    html += `<span style="background:${intentColors[intent]};width:16px;height:16px;border-radius:9999px;display:inline-block"></span>`;
+                    html += `<h5 class="font-semibold text-[var(--text-primary)]">${intent} (${groupUrls.length} URLs)</h5>`;
+                    html += '</div>';
+                    html += '<div class="space-y-2">';
+                    groupUrls.forEach(u => {
+                        const similarity = seedTopicSimilarities[u] || 0;
+                        const valueScore = resultsByUrl[u]?.valueScore || 0;
+                        html += `<div class="text-sm p-2 bg-[var(--bg-input)] rounded">`;
+                        html += `<div class="text-[var(--text-primary)] break-all mb-1">${u}</div>`;
+                        html += `<div class="text-xs text-[var(--text-secondary)]">Similarity: ${(similarity * 100).toFixed(1)}% • Value: ${valueScore.toFixed(1)}</div>`;
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+
+                // Consolidation Clusters
+                html += '<div id="consolidation-clusters-section" class="mt-6">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Consolidation Clusters</h4>';
+                if (consolidationClusters.length > 0) {
+                    html += '<div class="space-y-4">';
+                    consolidationClusters.forEach((cluster, idx) => {
                         html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
-                        html += `<div class="flex items-start justify-between mb-2">`;
-                        html += `<div class="flex-1">`;
-                        html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1">Opportunity ${idx + 1}</div>`;
-                        html += `<div class="text-xs text-[var(--text-secondary)] break-all mb-1">URL 1: ${opp.url1}</div>`;
-                        html += `<div class="text-xs text-[var(--text-secondary)] break-all">URL 2: ${opp.url2}</div>`;
+                        html += `<div class="flex items-start justify-between mb-3">`;
+                        html += `<div>`;
+                        html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1">Cluster ${idx + 1} - ${cluster.intent} Intent</div>`;
+                        html += `<div class="text-xs text-[var(--text-secondary)]">Avg Similarity: ${(cluster.avgSimilarity * 100).toFixed(1)}% • Avg Value: ${cluster.avgValue.toFixed(1)} • Total Value: ${cluster.totalValue.toFixed(1)}</div>`;
                         html += `</div>`;
-                        html += `<div class="text-lg font-bold text-[var(--text-accent)]">${(opp.similarity * 100).toFixed(1)}%</div>`;
+                        html += `<div class="text-lg font-bold text-[var(--text-accent)]">${cluster.urls.length} URLs</div>`;
                         html += `</div>`;
-                        html += `</div>`;
+                        html += '<div class="space-y-2">';
+                        cluster.urls.forEach(u => {
+                            const metrics = resultsByUrl[u]?.mozMetrics || {};
+                            html += `<div class="text-sm p-2 bg-[var(--bg-input)] rounded">`;
+                            html += `<div class="text-[var(--text-primary)] break-all mb-1">${u}</div>`;
+                            html += `<div class="text-xs text-[var(--text-secondary)] grid grid-cols-4 gap-2">`;
+                            html += `<span>Keywords: ${metrics.rankingKeywordsCount || 0}</span>`;
+                            html += `<span>Links: ${metrics.inboundLinks || 0}</span>`;
+                            html += `<span>Domains: ${metrics.linkingDomains || 0}</span>`;
+                            html += `<span>PA: ${metrics.pageAuthority || 0}</span>`;
+                            html += '</div>';
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                        html += '</div>';
                     });
                     html += '</div>';
                 } else {
-                    html += `<p class="text-[var(--text-secondary)]">No merge opportunities found above threshold (${similarityThreshold}).</p>`;
+                    html += `<p class="text-[var(--text-secondary)]">No consolidation clusters identified. URLs are sufficiently distinct.</p>`;
                 }
                 html += '</div>';
 
+                // Internal Linking Strategy
+                html += '<div id="linking-strategy-section" class="mt-6">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Internal Linking Strategy</h4>';
+                html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                html += '<div class="space-y-3">';
+                linkingStrategy.forEach((item, idx) => {
+                    html += `<div class="p-3 bg-[var(--bg-input)] rounded">`;
+                    html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1 break-all">${item.url}</div>`;
+                    if (item.linkTo) {
+                        html += `<div class="text-xs text-[var(--text-accent)] font-semibold mb-1">→ Link to: ${item.linkTo}</div>`;
+                        html += `<div class="text-xs text-[var(--text-secondary)]">${item.reason}</div>`;
+                    } else {
+                        html += `<div class="text-xs text-[var(--text-secondary)]">${item.reason}</div>`;
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+
                 // Related Keywords
-                if (relatedKeywords.length > 0) {
+                if (relatedKeywords && relatedKeywords.length > 0) {
                     html += '<div id="related-keywords-section" class="mt-6">';
                     html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Related Keywords</h4>';
                     html += '<div class="flex flex-wrap gap-2">';
@@ -2948,44 +3135,7 @@
                     html += '</div>';
                 }
 
-                // AI Analysis
-                if (aiAnalysis && !aiAnalysis.error) {
-                    html += '<div id="ai-analysis-section" class="mt-6">';
-                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">AI Analysis & Recommendations</h4>';
-                    html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
-                    if (typeof aiAnalysis === 'string') {
-                        html += `<div class="text-sm text-[var(--text-primary)] whitespace-pre-wrap">${aiAnalysis}</div>`;
-                    } else if (aiAnalysis.opportunities) {
-                        html += '<div class="mb-4">';
-                        html += '<h5 class="font-semibold text-[var(--text-primary)] mb-2">Content Opportunities</h5>';
-                        if (Array.isArray(aiAnalysis.opportunities)) {
-                            aiAnalysis.opportunities.forEach(opp => {
-                                html += `<div class="mb-2 p-2 bg-[var(--bg-input)] rounded">`;
-                                if (opp.subtopic) {
-                                    html += `<div class="font-semibold text-[var(--text-primary)]">${opp.subtopic}</div>`;
-                                }
-                                if (opp.keywords && Array.isArray(opp.keywords)) {
-                                    html += `<div class="text-sm text-[var(--text-secondary)] mt-1">Keywords: ${opp.keywords.join(', ')}</div>`;
-                                }
-                                html += `</div>`;
-                            });
-                        }
-                        html += '</div>';
-                    }
-                    if (aiAnalysis.recommendations) {
-                        html += '<div>';
-                        html += '<h5 class="font-semibold text-[var(--text-primary)] mb-2">Recommendations</h5>';
-                        html += `<div class="text-sm text-[var(--text-primary)] whitespace-pre-wrap">${typeof aiAnalysis.recommendations === 'string' ? aiAnalysis.recommendations : JSON.stringify(aiAnalysis.recommendations, null, 2)}</div>`;
-                        html += '</div>';
-                    }
-                    if (aiAnalysis.analysis) {
-                        html += `<div class="text-sm text-[var(--text-primary)] whitespace-pre-wrap">${aiAnalysis.analysis}</div>`;
-                    }
-                    html += '</div>';
-                    html += '</div>';
-                }
-
-                // URL Cards (similar to Keyword Targeting Analysis)
+                // URL Cards Summary
                 html += '<div id="url-metrics-grid" class="metrics-grid-container mt-6">';
                 urls.forEach((u, idx) => {
                     const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
@@ -3971,57 +4121,83 @@
                 script.onload = () => {
                     try {
                         const workbook = XLSX.utils.book_new();
-                        const { seedTopic, urls = [], resultsByUrl = {}, similarityMatrix = {}, mergeOpportunities = [], relatedKeywords = [] } = data || {};
+                        const { seedTopic, urls = [], resultsByUrl = {}, seedTopicSimilarities = {}, intentGroups = {}, consolidationClusters = [], mainTopicPage, linkingStrategy = [], relatedKeywords = [] } = data || {};
 
                         // Sheet 1: Summary
                         const summary = [
                             ['Seed Topic', seedTopic],
                             ['Similarity Threshold', data.similarityThreshold || 'N/A'],
                             ['Total URLs', urls.length],
-                            ['Merge Opportunities', mergeOpportunities.length],
+                            ['Main Topic Page', mainTopicPage || 'N/A'],
+                            ['Consolidation Clusters', consolidationClusters.length],
                             ['Related Keywords Found', relatedKeywords.length]
                         ];
                         XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summary), 'Summary');
 
-                        // Sheet 2: Page Metrics
-                        const metrics = [['URL Index','URL','Linking Domains','Inbound Links','Page Authority']];
-                        urls.forEach((u, idx) => {
-                            const sm = resultsByUrl[u]?.siteMetrics?.data?.site_metrics || {};
-                            metrics.push([
+                        // Sheet 2: Seed Topic Similarity
+                        const simRows = [['Rank', 'URL', 'Similarity Score', 'Value Score', 'Primary Intent', 'Ranking Keywords', 'Linking Domains', 'Inbound Links', 'Page Authority']];
+                        const sortedUrls = [...urls].sort((a, b) => (seedTopicSimilarities[b] || 0) - (seedTopicSimilarities[a] || 0));
+                        sortedUrls.forEach((u, idx) => {
+                            const metrics = resultsByUrl[u]?.mozMetrics || {};
+                            simRows.push([
                                 idx + 1,
                                 u,
-                                sm.root_domains_to_page ?? 'N/A',
-                                sm.external_pages_to_page ?? 'N/A',
-                                sm.page_authority ?? 'N/A'
+                                seedTopicSimilarities[u] || 0,
+                                resultsByUrl[u]?.valueScore || 0,
+                                resultsByUrl[u]?.primaryIntent || 'Other',
+                                metrics.rankingKeywordsCount || 0,
+                                metrics.linkingDomains || 0,
+                                metrics.inboundLinks || 0,
+                                metrics.pageAuthority || 0
                             ]);
                         });
-                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(metrics), 'Page Metrics');
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(simRows), 'Seed Topic Similarity');
 
-                        // Sheet 3: Similarity Matrix
-                        const simHeader = ['URL', ...urls.map((_, i) => `URL ${i + 1}`)];
-                        const simRows = [simHeader];
-                        urls.forEach((u1, idx1) => {
-                            const row = [u1];
-                            urls.forEach((u2, idx2) => {
-                                if (idx1 === idx2) {
-                                    row.push('-');
-                                } else {
-                                    const similarity = similarityMatrix[u1]?.[u2];
-                                    row.push(similarity !== undefined ? (Math.round(similarity * 100) / 100) : 'N/A');
-                                }
+                        // Sheet 3: Intent Groups
+                        const intentRows = [['Intent', 'URL', 'Similarity Score', 'Value Score']];
+                        Object.entries(intentGroups).forEach(([intent, groupUrls]) => {
+                            groupUrls.forEach(u => {
+                                intentRows.push([
+                                    intent,
+                                    u,
+                                    seedTopicSimilarities[u] || 0,
+                                    resultsByUrl[u]?.valueScore || 0
+                                ]);
                             });
-                            simRows.push(row);
                         });
-                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(simRows), 'Similarity Matrix');
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(intentRows), 'Intent Groups');
 
-                        // Sheet 4: Merge Opportunities
-                        const mergeRows = [['URL 1', 'URL 2', 'Similarity Score']];
-                        mergeOpportunities.forEach(opp => {
-                            mergeRows.push([opp.url1, opp.url2, opp.similarity]);
+                        // Sheet 4: Consolidation Clusters
+                        const clusterRows = [['Cluster', 'Intent', 'URL', 'Ranking Keywords', 'Linking Domains', 'Inbound Links', 'Page Authority', 'Value Score']];
+                        consolidationClusters.forEach((cluster, idx) => {
+                            cluster.urls.forEach(u => {
+                                const metrics = resultsByUrl[u]?.mozMetrics || {};
+                                clusterRows.push([
+                                    `Cluster ${idx + 1}`,
+                                    cluster.intent,
+                                    u,
+                                    metrics.rankingKeywordsCount || 0,
+                                    metrics.linkingDomains || 0,
+                                    metrics.inboundLinks || 0,
+                                    metrics.pageAuthority || 0,
+                                    resultsByUrl[u]?.valueScore || 0
+                                ]);
+                            });
                         });
-                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(mergeRows), 'Merge Opportunities');
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(clusterRows), 'Consolidation Clusters');
 
-                        // Sheet 5: Related Keywords
+                        // Sheet 5: Internal Linking Strategy
+                        const linkingRows = [['URL', 'Link To', 'Reason']];
+                        linkingStrategy.forEach(item => {
+                            linkingRows.push([
+                                item.url,
+                                item.linkTo || 'N/A',
+                                item.reason
+                            ]);
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(linkingRows), 'Linking Strategy');
+
+                        // Sheet 6: Related Keywords
                         if (relatedKeywords.length > 0) {
                             const rkRows = [['Related Keyword']];
                             relatedKeywords.forEach(kw => {
