@@ -2962,9 +2962,9 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                                         c.score = (c.relevance * 0.4) + (normalizedVolume * 0.6);
                                     });
                                     
-                                    // Sort by score (descending) and take top 8 keywords
+                                    // Sort by score (descending) and take top 5 keywords
                                     candidatesArray.sort((a, b) => b.score - a.score);
-                                    const bestKeywords = candidatesArray.slice(0, 8).map(c => c.keyword);
+                                    const bestKeywords = candidatesArray.slice(0, 5).map(c => c.keyword);
                                     
                                     // Update idea with enhanced keywords
                                     idea.targetKeywords = bestKeywords;
@@ -3804,11 +3804,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
 
                 // Individual URL Summaries with Anchor Text
                 html += '<div id="url-metrics-grid" class="metrics-grid-container mt-6">';
-                html += '<div class="flex items-center justify-between mb-4 w-full col-span-full">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Individual URL Summaries</h4>';
-                html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="url-metrics-content">Collapse</button>';
-                html += '</div>';
-                html += '<div id="url-metrics-content">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4 w-full col-span-full">Individual URL Summaries</h4>';
                 urls.forEach((u, idx) => {
                     const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
                     const linkingDomains = sm.root_domains_to_page ?? 'N/A';
@@ -3914,7 +3910,6 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += '</div>';
                     html += '</div>';
                 });
-                html += '</div>';
                 html += '</div>';
 
                 html += '</div>';
