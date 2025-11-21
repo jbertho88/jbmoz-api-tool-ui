@@ -547,29 +547,7 @@
             display: grid !important;
         }
         
-        /* Specific fix for Individual URL Summaries grid */
-        #url-metrics-grid {
-            display: grid !important;
-            grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
-        }
-        
-        @media (min-width: 768px) {
-            #url-metrics-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            }
-        }
-        
-        #url-metrics-grid > h4 {
-            grid-column: 1 / -1 !important;
-        }
-        
-        #url-metrics-grid > div {
-            grid-column: span 1 !important;
-            min-width: 0 !important;
-            max-width: 100% !important;
-        }
-        
-        /* Specific fix for Keyword Targeting Analysis grid - must override general .metrics-grid-container */
+        /* Specific fix for Keyword Targeting Analysis grid - 2 columns max */
         #keyword-metrics-grid.metrics-grid-container {
             display: grid !important;
             grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
@@ -580,12 +558,6 @@
         @media (min-width: 768px) {
             #keyword-metrics-grid.metrics-grid-container {
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            }
-        }
-        
-        @media (min-width: 1024px) {
-            #keyword-metrics-grid.metrics-grid-container {
-                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
             }
         }
         
@@ -603,6 +575,33 @@
         #keyword-metrics-grid .metric-card {
             width: 100% !important;
             max-width: 100% !important;
+        }
+        
+        /* Specific fix for Individual URL Summaries grid - same as Keyword Targeting Analysis (2 columns) */
+        #url-metrics-grid {
+            display: grid !important;
+            grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+            width: 100% !important;
+            gap: 1rem !important;
+        }
+        
+        @media (min-width: 768px) {
+            #url-metrics-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+        }
+        
+        #url-metrics-grid > h4 {
+            grid-column: 1 / -1 !important;
+        }
+        
+        #url-metrics-grid > div {
+            grid-column: span 1 !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
         }
     </style>
 </head>
@@ -1256,7 +1255,7 @@
                     createLabel('Locale') +
                     createSelect('ktaLocaleSelect', localeOptions) +
                     createNumberInput('ktaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze (Default 25; 1-500)');
-                const modelOptions = `<option value="gpt-3.5-turbo">GPT-3.5 Turbo (Recommended - ~90% cheaper, good quality)</option><option value="gpt-4o-mini">GPT-4o mini (Fast, affordable, better quality)</option><option value="gpt-4o">GPT-4o (Best quality, more expensive)</option><option value="gpt-5-mini">GPT-5 mini (Faster, cost-efficient GPT-5)</option><option value="gpt-5">GPT-5 (Best model for coding and agentic tasks)</option><option value="gpt-5.1">GPT-5.1 (Latest - Best for content analysis)</option><option value="o3-deep-research">o3-deep-research (Most powerful deep research model)</option><option value="o4-mini-deep-research">o4-mini-deep-research (Faster, affordable deep research)</option><option value="gpt-4.1">GPT-4.1 (Smartest non-reasoning model)</option>`;
+                const modelOptions = `<option value="gpt-3.5-turbo">GPT-3.5 Turbo (Recommended - ~90% cheaper, good quality)</option><option value="gpt-4o-mini">GPT-4o mini (Fast, affordable, better quality)</option><option value="gpt-4o">GPT-4o (Best quality, more expensive)</option>`;
                 document.getElementById('contentClusterAnalysisInputs').innerHTML = 
                     '<div class="mb-4 p-3 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
@@ -1268,7 +1267,7 @@
                     createDescription('Analyze content similarity across multiple URLs using semantic embeddings. Identifies content consolidation opportunities and keyword targeting gaps.') +
                     createLabel('OpenAI Model') +
                     createSelect('ccaModelSelect', modelOptions) +
-                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive. GPT-5 mini is a faster, cost-efficient version of GPT-5. GPT-5 is the best model for coding and agentic tasks. GPT-5.1 is the latest and best for content analysis. o3-deep-research and o4-mini-deep-research excel at deep content research. GPT-4.1 is the smartest non-reasoning model. See the Read Me section for detailed pricing and recommendations.') +
+                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive.') +
                     createLabel('Seed Topic') +
                     createTextarea('ccaSeedTopic', 'Enter the main topic/keyword to analyze pages against (e.g., "digital marketing")') +
                     createLabel('URLs') +
@@ -1289,7 +1288,7 @@
                     createDescription('Scan a list of URLs and automatically segment them into topic clusters using OpenAI. Returns LLM-defined topics and maps them to your content clusters.') +
                     createLabel('OpenAI Model') +
                     createSelect('cciModelSelect', modelOptions) +
-                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive. GPT-5 mini is a faster, cost-efficient version of GPT-5. GPT-5 is the best model for coding and agentic tasks. GPT-5.1 is the latest and best for content analysis. o3-deep-research and o4-mini-deep-research excel at deep content research. GPT-4.1 is the smartest non-reasoning model. See the Read Me section for detailed pricing and recommendations.') +
+                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive.') +
                     createLabel('URLs (10-1000)') +
                     createTextarea('cciUrls', 'Enter URLs to analyze, one per line (e.g., https://example.com/page1). Minimum 10, maximum 1000 URLs.') +
                     createLabel('Scope (Default: URL)') +
