@@ -2638,7 +2638,7 @@ Content: ${contentPreview}`;
 Seed Topic: ${seedTopic}
 Cluster Intent: ${cluster.intent}
 URLs in Cluster: ${cluster.urls.length}
-URL-to-URL Similarity: ${(cluster.urlToUrlSimilarity * 100).toFixed(1)}%
+URL-to-URL Similarity: ${((cluster.urlToUrlSimilarity || 0) * 100).toFixed(1)}%
 Overlapping Keywords: ${overlappingKeywords.join(', ')}
 
 For each URL, provide:
@@ -3376,9 +3376,11 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-2">🏆 Main Topic Page</h4>';
                     html += `<div class="text-sm text-[var(--text-primary)] break-all mb-2">${mainTopicPage}</div>`;
                     const mainMetrics = resultsByUrl[mainTopicPage]?.mozMetrics || {};
+                    const mainSimilarity = typeof seedTopicSimilarities[mainTopicPage] === 'number' && !isNaN(seedTopicSimilarities[mainTopicPage]) ? seedTopicSimilarities[mainTopicPage] : 0;
+                    const mainValueScore = typeof resultsByUrl[mainTopicPage]?.valueScore === 'number' && !isNaN(resultsByUrl[mainTopicPage]?.valueScore) ? resultsByUrl[mainTopicPage].valueScore : 0;
                     html += '<div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">';
-                    html += `<div>Similarity: <span class="font-bold">${((seedTopicSimilarities[mainTopicPage] || 0) * 100).toFixed(1)}%</span></div>`;
-                    html += `<div>Value Score: <span class="font-bold">${resultsByUrl[mainTopicPage]?.valueScore || 0}</span></div>`;
+                    html += `<div>Similarity: <span class="font-bold">${(mainSimilarity * 100).toFixed(1)}%</span></div>`;
+                    html += `<div>Value Score: <span class="font-bold">${mainValueScore}</span></div>`;
                     html += `<div>Ranking Keywords: <span class="font-bold">${mainMetrics.rankingKeywordsCount || 0}</span></div>`;
                     html += `<div>Linking Domains: <span class="font-bold">${mainMetrics.linkingDomains || 0}</span></div>`;
                     html += `<div>Page Authority: <span class="font-bold">${mainMetrics.pageAuthority || 0}</span></div>`;
@@ -3480,7 +3482,10 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         html += `<div class="flex items-start justify-between mb-3">`;
                         html += `<div>`;
                         html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1">Cluster ${idx + 1} - ${cluster.intent} Intent</div>`;
-                        html += `<div class="text-xs text-[var(--text-secondary)]">URL-to-URL Similarity: ${((cluster.urlToUrlSimilarity || 0) * 100).toFixed(1)}% • Avg Value: ${(cluster.avgValue || 0).toFixed(1)} • Total Value: ${(cluster.totalValue || 0).toFixed(1)}</div>`;
+                        const clusterUrlSimilarity = typeof cluster.urlToUrlSimilarity === 'number' && !isNaN(cluster.urlToUrlSimilarity) ? cluster.urlToUrlSimilarity : 0;
+                        const clusterAvgValue = typeof cluster.avgValue === 'number' && !isNaN(cluster.avgValue) ? cluster.avgValue : 0;
+                        const clusterTotalValue = typeof cluster.totalValue === 'number' && !isNaN(cluster.totalValue) ? cluster.totalValue : 0;
+                        html += `<div class="text-xs text-[var(--text-secondary)]">URL-to-URL Similarity: ${(clusterUrlSimilarity * 100).toFixed(1)}% • Avg Value: ${clusterAvgValue.toFixed(1)} • Total Value: ${clusterTotalValue.toFixed(1)}</div>`;
                         if (cluster.overlappingKeywords && cluster.overlappingKeywords.length > 0) {
                             html += `<div class="text-xs text-[var(--text-secondary)] mt-1">Overlapping Keywords: <span class="text-[var(--text-primary)] font-semibold">${cluster.overlappingKeywords.slice(0, 5).join(', ')}${cluster.overlappingKeywords.length > 5 ? ` (+${cluster.overlappingKeywords.length - 5} more)` : ''}</span></div>`;
                         }
