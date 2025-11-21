@@ -2783,15 +2783,50 @@
 
             // Analyze with OpenAI GPT (via proxy) with rate limiting
             // model: 'gpt-3.5-turbo' (default, cheaper), 'gpt-4o-mini' (affordable, better quality), or 'gpt-4o' (best quality, more expensive)
-            async function analyzeWithOpenAI(analysisData, openaiApiKey, proxyUrl, model = 'gpt-3.5-turbo') {
+            // Master system prompt for all SEO/cluster analysis tasks
+            function getSEOSystemPrompt() {
+                const currentYear = new Date().getFullYear();
+                return `You are an expert in SEO strategy, information architecture, content clustering, and keyword intent classification.
+
+Follow these universal rules for EVERY task:
+- Base all reasoning strictly on the provided data.
+- Never hallucinate URLs, keywords, competitors, or topical details.
+- If data is missing, state clearly what is missing instead of inventing it.
+- Prefer concise, factual analysis over vague generalizations.
+- Return JSON EXACTLY as requested when a schema is provided.
+- Never include extra fields, comments, or explanations outside JSON.
+- All year references must use the current year: ${currentYear}.
+- All cluster names must be 2–5 words and human-readable.
+- All topic tags must be canonical SEO topics (not branded, not duplicated).
+- Use only the following search intents: Informational, Commercial, Navigational, Transactional, Local.
+- When summarizing content, do NOT add any information not present in the text.
+
+Refer to these definitions (use strictly):
+- Informational: user seeks knowledge or education.
+- Commercial: user compares solutions or research options.
+- Navigational: user wants a specific brand or page.
+- Transactional: user intends to act (buy, sign up, download).
+- Local: tied to geographic/near-me queries.
+
+If outputting natural language (not JSON), keep it under 3 sentences unless otherwise stated.`;
+            }
+
+            async function analyzeWithOpenAI(analysisData, openaiApiKey, proxyUrl, model = 'gpt-3.5-turbo', systemPrompt = null) {
                 return rateLimitedOpenAICall(async () => {
                     // Debug: Log the model being sent
                     console.log('[OpenAI API] Requesting model:', model);
+                    
+                    // Use provided system prompt or default SEO system prompt
+                    const finalSystemPrompt = systemPrompt || getSEOSystemPrompt();
+                    
                     const requestBody = {
                         method: 'analyzeWithOpenAI',
                         openaiApiKey,
                         params: { 
-                            analysisData,
+                            analysisData: {
+                                ...analysisData,
+                                systemPrompt: finalSystemPrompt
+                            },
                             model: model // Specify model for cost control
                         }
                     };
@@ -3071,15 +3106,11 @@
                     for (const url of urlsNeedingIntentAnalysis) {
                         try {
                             const contentPreview = resultsByUrl[url].content.substring(0, 2000);
-                            const analysisPrompt = `You are an SEO search-intent classifier. Classify the primary search intent of the webpage content below.
+                            const analysisPrompt = `Classify the PRIMARY search intent of the content below.
 
-Valid intents (choose exactly ONE):
-- Informational: user seeking knowledge or education.
-- Commercial: user comparing options, evaluating solutions, or researching before purchase.
-- Navigational: user trying to reach a specific brand, page, or product.
-- Transactional: user ready to take an action such as buying, signing up, downloading, or requesting a quote.
+Choose exactly ONE intent: Informational, Commercial, Navigational, Transactional.
 
-Return ONLY the intent name with no explanation, no punctuation, and no extra text.
+Return ONLY the intent name.
 
 Content:
 ${contentPreview}`;
@@ -3275,20 +3306,11 @@ ${contentPreview}`;
                                 }
                             });
 
-                            const analysisPrompt = `You are an expert in SEO content consolidation and content pruning.
+                            const analysisPrompt = `Explain why the pages in this cluster should be consolidated into a single page. Base your reasoning strictly on overlap in topics, keywords, search intent, or user value.
 
-Analyze the provided cluster data and explain WHY these URLs should be consolidated into a single page. Base your reasoning strictly on:
-- Overlapping topics
-- Keyword similarity
-- Redundant content
-- Search intent alignment
-- Thin or duplicative value signals
-
-Do NOT repeat the cluster data. Do NOT list the URLs individually. Summarize the justification at a high but accurate level.
-
-Return ONLY JSON in this structure:
+Return ONLY this JSON:
 {
-  "consolidationReason": "explanation"
+  "consolidationReason": "text"
 }
 
 Cluster Data:
@@ -3366,25 +3388,24 @@ ${JSON.stringify(clusterData, null, 2)}`;
                         relatedKeywords: relatedKeywords.slice(0, 30)
                     };
 
-                    const currentYear = new Date().getFullYear();
-                    const recommendationsPrompt = `You are an SEO content strategist. Analyze the URLs and their ranking keywords for the seed topic "${seedTopic}".
+                    const recommendationsPrompt = `Provide SEO content improvement recommendations for each URL related to the seed topic "${seedTopic}".
 
-Provide recommendations focusing ONLY on:
-1. Content gaps (missing information, subtopics, or depth)
-2. Optimization improvements (structure, clarity, depth, on-page SEO)
-3. Keyword targeting enhancements (internal linking, alignment with search intent, semantically related terms)
+Focus on:
+1. Missing subtopics / content gaps
+2. On-page optimization opportunities
+3. Keyword alignment improvements
 
-When referencing years, ALWAYS use: ${currentYear}.
+Use ${new Date().getFullYear()} for all year references.
 
-Return ONLY JSON in this structure:
+Return ONLY this JSON:
 {
   "recommendations": [
     {
       "url": "url",
-      "recommendations": ["rec 1", "rec 2"]
+      "recommendations": ["item1", "item2"]
     }
   ],
-  "generalRecommendations": ["rec 1", "rec 2"]
+  "generalRecommendations": ["item1", "item2"]
 }
 
 Data:
@@ -3427,30 +3448,25 @@ ${JSON.stringify(recommendationsData, null, 2)}`;
                         intentGroups: Object.entries(intentGroups).map(([intent, urls]) => ({ intent, count: urls.length }))
                     };
 
-                    const newContentPrompt = `You are an SEO content strategist. Based on the seed topic "${seedTopic}" and the existing content below, identify NEW content opportunities that fill demonstrable gaps.
+                    const newContentPrompt = `Identify NEW content opportunities based on the seed topic "${seedTopic}" and the existing content set.
 
-Focus ONLY on:
-1. Missing intents (e.g., commercial pages missing, or lack of transactional pages)
-2. Sub-topics with significant search demand or user value
-3. Complementary pages that expand topical authority
-4. Ideas that do NOT duplicate existing content
+Focus only on:
+- Missing intents
+- Uncovered subtopics
+- Complementary pages that expand topical depth
+- Areas with strong thematic or keyword gaps
 
-Return ONLY JSON in this structure:
+Return ONLY this JSON:
 {
   "newContentIdeas": [
     {
-      "title": "Content title/topic",
-      "intent": "Informational|Commercial|Navigational|Transactional",
-      "targetKeywords": ["keyword1", "keyword2"],
-      "rationale": "Why this content should be created"
+      "title": "Content title",
+      "intent": "Informational | Commercial | Navigational | Transactional",
+      "targetKeywords": ["kw1", "kw2"],
+      "rationale": "text"
     }
   ]
 }
-
-Existing Content Summary:
-- URLs analyzed: ${urls.length}
-- Intent distribution: ${Object.entries(intentGroups).map(([intent, urls]) => `${intent}: ${urls.length}`).join(', ')}
-- Related keywords: ${relatedKeywords.slice(0, 20).join(', ')}
 
 Data:
 ${JSON.stringify(newContentData, null, 2)}`;
@@ -3778,12 +3794,12 @@ ${JSON.stringify(newContentData, null, 2)}`;
                     async (url, index) => {
                         try {
                             allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Summarizing pages... ${index + 1}/${urls.length}</span>`;
-                            const summaryPrompt = `Summarize the main topic and content of this webpage in 2–3 concise sentences. Focus ONLY on the primary subject matter and the core points discussed. Do NOT include assumptions or information not present in the text.
+                            const summaryPrompt = `Summarize the webpage in 2–3 concise sentences focusing only on the main subject and core points. Do not include assumptions.
 
 Content:
 ${resultsByUrl[url].rawContent.substring(0, 4000)}
 
-Return the summary only:`;
+Return summary only.`;
                             // Use selected model for summaries
                             const summary = await analyzeWithOpenAI({ analysisData: { prompt: summaryPrompt } }, openaiApiKey, proxyUrl, model);
                             resultsByUrl[url].summary = summary.trim();
@@ -3849,25 +3865,18 @@ Return the summary only:`;
                     }));
 
                     try {
-                        const clusterPrompt = `You are an SEO and information-architecture strategist.
-
-Analyze the pages in this cluster. Infer the unifying concept and produce structured metadata for the cluster. Follow these rules:
-- Cluster name: 2–5 words, human-readable, suitable for navigation.
-- Description: 1–2 clear sentences describing what the cluster covers.
-- Topic tags: 3–8 canonical SEO-friendly tags (no duplicates, no brand names).
-- Dominant intent: choose ONE (Informational, Commercial, Transactional, Navigational, Local).
-- Funnel stages: choose 1–2 (Awareness, Consideration, Decision, Retention).
+                        const clusterPrompt = `Analyze the pages in this cluster and produce content cluster metadata.
 
 Return ONLY this JSON:
 {
-  "clusterName": "Cluster Name",
-  "description": "1-2 sentence description",
+  "clusterName": "short name (2-5 words)",
+  "description": "1–2 sentence description",
   "topicTags": ["tag1", "tag2", "tag3"],
-  "dominantIntent": "Informational|Commercial|Transactional|Navigational|Local",
+  "dominantIntent": "Informational | Commercial | Transactional | Navigational | Local",
   "funnelStages": ["Awareness", "Consideration"]
 }
 
-Pages in cluster:
+Pages:
 ${JSON.stringify(clusterPages, null, 2)}`;
 
                         // Use selected model for cluster labeling
@@ -3928,22 +3937,22 @@ ${JSON.stringify(clusterPages, null, 2)}`;
                         try {
                             allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Analyzing pages... ${index + 1}/${urls.length}</span>`;
                             
-                            const topicPrompt = `Analyze the webpage summary and extract the following:
+                            const topicPrompt = `Analyze the page summary and extract:
 
-1. Primary topic (1–3 words; e.g., "Email Automation", "Local SEO", "Mortgage Rates")
-2. Primary intent (Informational, Commercial, Transactional, Navigational, Local)
-3. Target audience (e.g., "Content Marketers", "Small Business Owners", "Developers")
-4. Expertise level (Beginner, Intermediate, Advanced)
+1. Topic (1–3 words)
+2. Primary intent
+3. Audience
+4. Expertise level
 
 Return ONLY this JSON:
 {
-  "topic": "Main Topic",
-  "primaryIntent": "Informational|Commercial|Transactional|Navigational|Local",
-  "audience": "Target Audience",
-  "expertiseLevel": "Beginner|Intermediate|Advanced"
+  "topic": "text",
+  "primaryIntent": "Informational | Commercial | Transactional | Navigational | Local",
+  "audience": "text",
+  "expertiseLevel": "Beginner | Intermediate | Advanced"
 }
 
-Page Summary:
+Summary:
 ${resultsByUrl[url].summary}`;
 
                             // Use selected model for page analysis
