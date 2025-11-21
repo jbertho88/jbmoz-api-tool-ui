@@ -2567,12 +2567,14 @@ Content: ${contentPreview}`;
                             });
                         });
                         
+                        const clusterLength = cluster.length || 1; // Prevent division by zero
+                        const totalVal = cluster.reduce((sum, url) => sum + (resultsByUrl[url]?.valueScore || 0), 0);
                         consolidationClusters.push({
                             urls: cluster,
                             intent: uIntent,
-                            avgSimilarity: cluster.reduce((sum, url) => sum + (seedTopicSimilarities[url] || 0), 0) / cluster.length,
-                            avgValue: cluster.reduce((sum, url) => sum + (resultsByUrl[url].valueScore || 0), 0) / cluster.length,
-                            totalValue: cluster.reduce((sum, url) => sum + (resultsByUrl[url].valueScore || 0), 0),
+                            avgSimilarity: cluster.reduce((sum, url) => sum + (seedTopicSimilarities[url] || 0), 0) / clusterLength,
+                            avgValue: totalVal / clusterLength,
+                            totalValue: totalVal,
                             urlToUrlSimilarity: urlSimilarityMatrix[cluster[0]]?.[cluster[1]] || 0,
                             overlappingKeywords: Array.from(clusterKeywords)
                         });
@@ -3478,7 +3480,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         html += `<div class="flex items-start justify-between mb-3">`;
                         html += `<div>`;
                         html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1">Cluster ${idx + 1} - ${cluster.intent} Intent</div>`;
-                        html += `<div class="text-xs text-[var(--text-secondary)]">URL-to-URL Similarity: ${((cluster.urlToUrlSimilarity || 0) * 100).toFixed(1)}% • Avg Value: ${cluster.avgValue.toFixed(1)} • Total Value: ${cluster.totalValue.toFixed(1)}</div>`;
+                        html += `<div class="text-xs text-[var(--text-secondary)]">URL-to-URL Similarity: ${((cluster.urlToUrlSimilarity || 0) * 100).toFixed(1)}% • Avg Value: ${(cluster.avgValue || 0).toFixed(1)} • Total Value: ${(cluster.totalValue || 0).toFixed(1)}</div>`;
                         if (cluster.overlappingKeywords && cluster.overlappingKeywords.length > 0) {
                             html += `<div class="text-xs text-[var(--text-secondary)] mt-1">Overlapping Keywords: <span class="text-[var(--text-primary)] font-semibold">${cluster.overlappingKeywords.slice(0, 5).join(', ')}${cluster.overlappingKeywords.length > 5 ? ` (+${cluster.overlappingKeywords.length - 5} more)` : ''}</span></div>`;
                         }
