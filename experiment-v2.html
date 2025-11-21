@@ -3408,8 +3408,8 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         Other: '#94a3b8'
                     };
                     sortedUrls.forEach((u, idx) => {
-                        const similarity = seedTopicSimilarities[u] || 0;
-                        const valueScore = resultsByUrl[u]?.valueScore || 0;
+                        const similarity = typeof seedTopicSimilarities[u] === 'number' && !isNaN(seedTopicSimilarities[u]) ? seedTopicSimilarities[u] : 0;
+                        const valueScore = typeof resultsByUrl[u]?.valueScore === 'number' && !isNaN(resultsByUrl[u]?.valueScore) ? resultsByUrl[u].valueScore : 0;
                         const primaryIntent = resultsByUrl[u]?.primaryIntent || 'Other';
                         const metrics = resultsByUrl[u]?.mozMetrics || {};
                         const isMain = u === mainTopicPage;
@@ -3455,8 +3455,8 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += '</div>';
                     html += '<div class="space-y-1 max-h-64 overflow-y-auto">';
                     groupUrls.forEach(u => {
-                        const similarity = seedTopicSimilarities[u] || 0;
-                        const valueScore = resultsByUrl[u]?.valueScore || 0;
+                        const similarity = typeof seedTopicSimilarities[u] === 'number' && !isNaN(seedTopicSimilarities[u]) ? seedTopicSimilarities[u] : 0;
+                        const valueScore = typeof resultsByUrl[u]?.valueScore === 'number' && !isNaN(resultsByUrl[u]?.valueScore) ? resultsByUrl[u].valueScore : 0;
                         html += `<div class="text-xs p-1.5 bg-[var(--bg-input)] rounded">`;
                         html += `<div class="text-[var(--text-primary)] break-all text-xs">${u}</div>`;
                         html += `<div class="text-[10px] text-[var(--text-secondary)] mt-0.5">Similarity: ${(similarity * 100).toFixed(1)}% • Value: ${valueScore.toFixed(1)}</div>`;
@@ -3599,12 +3599,14 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                                 const metrics = idea.keywordMetrics?.[kw] || {};
                                 html += `<div class="text-xs">`;
                                 html += `<span class="text-[var(--text-primary)] font-semibold">${kw}</span>`;
-                                if (metrics.volume !== null || metrics.difficulty !== null || metrics.opportunity_ctr !== null) {
+                                if (metrics.volume !== null || metrics.difficulty !== null || (metrics.opportunity_ctr !== null && metrics.opportunity_ctr !== undefined)) {
                                     html += `<span class="text-[var(--text-secondary)] ml-2">• `;
                                     const metricsParts = [];
                                     if (metrics.volume !== null) metricsParts.push(`Volume: ${typeof metrics.volume === 'number' ? metrics.volume.toLocaleString() : metrics.volume}`);
                                     if (metrics.difficulty !== null) metricsParts.push(`Difficulty: ${metrics.difficulty}`);
-                                    if (metrics.opportunity_ctr !== null) metricsParts.push(`Organic CTR: ${metrics.opportunity_ctr.toFixed(1)}%`);
+                                    if (metrics.opportunity_ctr !== null && metrics.opportunity_ctr !== undefined && typeof metrics.opportunity_ctr === 'number' && !isNaN(metrics.opportunity_ctr)) {
+                                        metricsParts.push(`Organic CTR: ${metrics.opportunity_ctr.toFixed(1)}%`);
+                                    }
                                     html += metricsParts.join(' • ');
                                     html += `</span>`;
                                 }
@@ -3645,8 +3647,8 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     const inboundLinks = sm.external_pages_to_page ?? 'N/A';
                     const pageAuthority = sm.page_authority ?? 'N/A';
                     const idist = resultsByUrl[u].intentDistribution || {};
-                    const similarity = seedTopicSimilarities[u] || 0;
-                    const valueScore = resultsByUrl[u]?.valueScore || 0;
+                    const similarity = typeof seedTopicSimilarities[u] === 'number' && !isNaN(seedTopicSimilarities[u]) ? seedTopicSimilarities[u] : 0;
+                    const valueScore = typeof resultsByUrl[u]?.valueScore === 'number' && !isNaN(resultsByUrl[u]?.valueScore) ? resultsByUrl[u].valueScore : 0;
                     const topAnchors = resultsByUrl[u].topAnchors || [];
                     
                     html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
