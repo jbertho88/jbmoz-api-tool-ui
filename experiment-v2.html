@@ -3600,9 +3600,9 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                                 if (metrics.volume !== null || metrics.difficulty !== null || metrics.opportunity_ctr !== null) {
                                     html += `<span class="text-[var(--text-secondary)] ml-2">• `;
                                     const metricsParts = [];
-                                    if (metrics.volume !== null) metricsParts.push(`Vol: ${typeof metrics.volume === 'number' ? metrics.volume.toLocaleString() : metrics.volume}`);
-                                    if (metrics.difficulty !== null) metricsParts.push(`Diff: ${metrics.difficulty}`);
-                                    if (metrics.opportunity_ctr !== null) metricsParts.push(`CTR: ${(metrics.opportunity_ctr * 100).toFixed(1)}%`);
+                                    if (metrics.volume !== null) metricsParts.push(`Volume: ${typeof metrics.volume === 'number' ? metrics.volume.toLocaleString() : metrics.volume}`);
+                                    if (metrics.difficulty !== null) metricsParts.push(`Difficulty: ${metrics.difficulty}`);
+                                    if (metrics.opportunity_ctr !== null) metricsParts.push(`Organic CTR: ${metrics.opportunity_ctr.toFixed(1)}%`);
                                     html += metricsParts.join(' • ');
                                     html += `</span>`;
                                 }
@@ -3668,15 +3668,25 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += '</div>';
                     html += '</div>';
                     
-                    // Top Anchor Texts
-                    if (topAnchors.length > 0) {
+                    // Inbound Anchor Texts (matching Keyword Targeting Analysis style)
+                    const allAnchors = topAnchors || [];
+                    const anchorsCount = allAnchors.length;
+                    const previewAnchors = allAnchors.slice(0, 3);
+                    if (anchorsCount > 0) {
                         html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
-                        html += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Top Anchor Texts (${topAnchors.length})</div>`;
-                        html += '<div class="space-y-1 text-sm">';
-                        topAnchors.slice(0, 5).forEach(anchor => {
-                            html += `<div class="text-xs">`;
-                            html += `<span class="text-[var(--text-primary)]">${anchor.text || 'N/A'}</span>`;
-                            html += `<span class="text-[var(--text-secondary)] ml-2">• Domains: ${anchor.external_root_domains || 0} • Pages: ${anchor.external_pages || 0}</span>`;
+                        html += '<div class="flex items-center justify-between mb-2">';
+                        html += '<div class="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Inbound Anchor Texts</div>';
+                        if (anchorsCount > 3) {
+                            html += `<span class="text-[11px] text-[var(--text-secondary)]">(${anchorsCount} total)</span>`;
+                        }
+                        html += '</div>';
+                        html += '<div class="space-y-2">';
+                        previewAnchors.forEach((anchor) => {
+                            const domainsP = (typeof anchor.external_root_domains === 'number') ? formatNumber(anchor.external_root_domains) : (anchor.external_root_domains ?? 'N/A');
+                            const pagesP = (typeof anchor.external_pages === 'number') ? formatNumber(anchor.external_pages) : (anchor.external_pages ?? 'N/A');
+                            html += '<div class="text-sm">';
+                            html += `<div class="font-semibold text-[var(--text-primary)] truncate">${anchor.text || 'N/A'}</div>`;
+                            html += `<div class="text-[var(--text-secondary)] text-xs">Linking Domains: <span class="text-[var(--text-primary)]">${domainsP}</span> • Inbound Links: <span class="text-[var(--text-primary)]">${pagesP}</span></div>`;
                             html += '</div>';
                         });
                         html += '</div>';
