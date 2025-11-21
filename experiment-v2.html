@@ -3388,24 +3388,34 @@ ${JSON.stringify(clusterData, null, 2)}`;
                         relatedKeywords: relatedKeywords.slice(0, 30)
                     };
 
-                    const recommendationsPrompt = `Provide SEO content improvement recommendations for each URL related to the seed topic "${seedTopic}".
+                    const currentYear = new Date().getFullYear();
+                    const recommendationsPrompt = `You are an SEO content strategist. Analyze the URLs and their ranking keywords for the seed topic "${seedTopic}".
 
-Focus on:
-1. Missing subtopics / content gaps
-2. On-page optimization opportunities
-3. Keyword alignment improvements
+Your task is to provide DETAILED, SPECIFIC content improvement recommendations.
 
-Use ${new Date().getFullYear()} for all year references.
+For each URL, your recommendations MUST include:
+1. Subtopic gaps: specific sections, angles, or themes missing from the page.
+2. SERP-aligned enhancements: what competing top-ranking pages commonly include (structures, examples, comparison tables, FAQs, data visuals).
+3. Content depth improvements: additional explanations, definitions, step-by-step guidance, use cases, or real-world examples.
+4. Asset opportunities: templates, calculators, checklists, visuals, diagrams, or downloadable resources that should be added.
+5. Keyword-targeting improvements: semantically related terms the page should incorporate based strictly on the provided keyword data.
+6. Internal linking ideas: which topics or pages could be linked to strengthen topical authority.
 
-Return ONLY this JSON:
+IMPORTANT:
+- All recommendations must strictly relate to the seed topic. 
+- Do NOT invent unrelated SEO themes like Local SEO unless it appears in the data.
+- When referencing years, ALWAYS use: ${currentYear}.
+- Be specific. Avoid vague suggestions like "improve content."
+
+Return ONLY this JSON structure:
 {
   "recommendations": [
     {
       "url": "url",
-      "recommendations": ["item1", "item2"]
+      "recommendations": ["specific recommendation 1", "specific recommendation 2"]
     }
   ],
-  "generalRecommendations": ["item1", "item2"]
+  "generalRecommendations": ["specific general recommendation 1", "specific general recommendation 2"]
 }
 
 Data:
@@ -3448,21 +3458,35 @@ ${JSON.stringify(recommendationsData, null, 2)}`;
                         intentGroups: Object.entries(intentGroups).map(([intent, urls]) => ({ intent, count: urls.length }))
                     };
 
-                    const newContentPrompt = `Identify NEW content opportunities based on the seed topic "${seedTopic}" and the existing content set.
+                    const newContentPrompt = `You are an SEO content strategist. Based on the seed topic "${seedTopic}" and the existing content, identify new content opportunities.
 
-Focus only on:
-- Missing intents
-- Uncovered subtopics
-- Complementary pages that expand topical depth
-- Areas with strong thematic or keyword gaps
+Your ideas must follow these rules:
+- All ideas must be subtopics or expansions of the seed topic.
+- Do NOT suggest unrelated SEO themes (e.g., Local SEO, link building) unless directly supported by the data.
+- Do NOT infer Local intent unless geographic modifiers are explicitly present.
+- Ideas must fill actual gaps in the existing content set.
+- Each content idea must represent a unique angle, not a duplicate of existing pages.
+
+IMPORTANT:
+Do NOT suggest "local" topics, "near me" content, or Local intent pages unless the seed topic explicitly contains local/geographic language. You must NOT infer a Local intent unless it is directly present in the seed topic or keyword set.
+
+You must NOT propose content related to "Local SEO", "local search", geographic modifiers, "near me" keywords, or local intent unless the seed topic itself directly includes local modifiers. If the seed topic is not local, exclude any local-related ideas.
+
+All new content ideas must be strictly based on subtopics directly related to the seed topic. Do NOT propose unrelated SEO themes (e.g., Local SEO, link building, social media, analytics, etc.) unless explicitly present in the provided data.
+
+For each idea, provide:
+- A clear content title
+- One valid intent: Informational, Commercial, Navigational, or Transactional
+- 2–6 target keywords aligned with the seed topic
+- A rationale explaining *why* this is a meaningful gap based on the provided URLs, keywords, and intent distribution
 
 Return ONLY this JSON:
 {
   "newContentIdeas": [
     {
       "title": "Content title",
-      "intent": "Informational | Commercial | Navigational | Transactional",
-      "targetKeywords": ["kw1", "kw2"],
+      "intent": "Informational|Commercial|Navigational|Transactional",
+      "targetKeywords": ["keyword1", "keyword2"],
       "rationale": "text"
     }
   ]
