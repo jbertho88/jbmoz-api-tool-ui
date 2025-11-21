@@ -3231,7 +3231,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
             }
 
             async function runContentClustersIdentification(openaiApiKey, params, proxyUrl, opensignal) {
-                const { urls, scope, contentClusters } = params;
+                const { urls, scope, contentClusters, model = 'gpt-3.5-turbo' } = params;
                 const resultsByUrl = {};
 
                 // Step 1: Fetch and clean HTML content for each URL
