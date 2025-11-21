@@ -4530,7 +4530,7 @@ Page Summary: ${resultsByUrl[url].summary}`;
                     html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="content-recommendations-content">Collapse</button>';
                     html += '</div>';
                     html += '<div id="content-recommendations-content">';
-                    html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                    html += '<div class="bg-[var(--bg-container)] border-2 border-[var(--text-accent)] rounded-lg p-4">';
                     
                     // Collect URLs that are recommended to be deleted (from consolidation clusters)
                     const urlsToDelete = new Set();
@@ -4690,6 +4690,12 @@ Page Summary: ${resultsByUrl[url].summary}`;
                 // Individual URL Summaries with Anchor Text
                 html += '<div id="url-metrics-grid" class="metrics-grid-container mt-6">';
                 html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4 w-full col-span-full">Individual URL Summaries</h4>';
+                const urlSummaryColors = [
+                    'border-2 border-[var(--text-accent)]', // blue
+                    'border-2 border-fuchsia-400', // pink
+                    'border-2 border-emerald-400', // green
+                    'border-2 border-violet-400'  // purple
+                ];
                 urls.forEach((u, idx) => {
                     const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
                     const linkingDomains = sm.root_domains_to_page ?? 'N/A';
@@ -4699,8 +4705,9 @@ Page Summary: ${resultsByUrl[url].summary}`;
                     const similarity = typeof seedTopicSimilarities[u] === 'number' && !isNaN(seedTopicSimilarities[u]) ? seedTopicSimilarities[u] : 0;
                     const valueScore = typeof resultsByUrl[u]?.valueScore === 'number' && !isNaN(resultsByUrl[u]?.valueScore) ? resultsByUrl[u].valueScore : 0;
                     const topAnchors = resultsByUrl[u].topAnchors || [];
+                    const borderClass = urlSummaryColors[idx % urlSummaryColors.length];
                     
-                    html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                    html += `<div class="bg-[var(--bg-container)] ${borderClass} rounded-lg p-4">`;
                     html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1">URL ${idx + 1}</h4>`;
                     html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3">${u}</p>`;
                     
