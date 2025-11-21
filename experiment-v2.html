@@ -1618,6 +1618,8 @@
                 allDOMElements.historyList.addEventListener('click', (e) => {
                     if (e.target.dataset.replay) {
                         replaySearch(e.target.dataset.replay);
+                    } else if (e.target.dataset.edit) {
+                        editSearch(e.target.dataset.edit);
                     } else if (e.target.dataset.delete) {
                         deleteHistoryEntry(e.target.dataset.delete);
                     }
@@ -2826,12 +2828,16 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         }
                         newContentToCreate = JSON.parse(jsonStr);
                         
-                        // Fetch keyword metrics for target keywords
+                        // Enhance target keywords: fetch related keywords, get metrics, and select best (relevance + volume)
                         if (newContentToCreate.newContentIdeas && Array.isArray(newContentToCreate.newContentIdeas)) {
                             for (const idea of newContentToCreate.newContentIdeas) {
                                 if (idea.targetKeywords && Array.isArray(idea.targetKeywords) && idea.targetKeywords.length > 0) {
                                     idea.keywordMetrics = {};
-                                    for (const keyword of idea.targetKeywords.slice(0, 10)) { // Limit to 10 keywords per idea
+                                    const originalKeywords = idea.targetKeywords.slice(0, 5); // Limit to 5 original keywords per idea
+                                    const allCandidateKeywords = new Map(); // keyword -> { relevance, volume, difficulty, opportunity_ctr, source }
+                                    
+                                    // Step 1: Get metrics for original keywords and add them as candidates
+                                    for (const keyword of originalKeywords) {
                                         try {
                                             const kmResp = await fetch(proxyUrl, {
                                                 method: 'POST',
@@ -2849,16 +2855,131 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                                             });
                                             const kmData = await kmResp.json();
                                             if (kmResp.ok && Array.isArray(kmData) && kmData[0]?.status === 'success') {
-                                                idea.keywordMetrics[keyword] = {
-                                                    volume: kmData[0]?.data?.keyword_metrics?.volume ?? null,
-                                                    difficulty: kmData[0]?.data?.keyword_metrics?.difficulty ?? null,
-                                                    opportunity_ctr: kmData[0]?.data?.keyword_metrics?.organic_ctr ?? null
-                                                };
+                                                const volume = kmData[0]?.data?.keyword_metrics?.volume ?? null;
+                                                const difficulty = kmData[0]?.data?.keyword_metrics?.difficulty ?? null;
+                                                const opportunity_ctr = kmData[0]?.data?.keyword_metrics?.organic_ctr ?? null;
+                                                
+                                                allCandidateKeywords.set(keyword, {
+                                                    relevance: 100, // Original keywords get max relevance
+                                                    volume: volume,
+                                                    difficulty: difficulty,
+                                                    opportunity_ctr: opportunity_ctr,
+                                                    source: 'original'
+                                                });
                                             }
                                         } catch (e) {
                                             // Non-fatal, continue
                                         }
                                     }
+                                    
+                                    // Step 2: For each original keyword, fetch related keywords
+                                    for (const keyword of originalKeywords) {
+                                        try {
+                                            const rkResp = await fetch(proxyUrl, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ 
+                                                    apiKey, 
+                                                    method: 'relatedKeywords', 
+                                                    params: { 
+                                                        locale: locale,
+                                                        keywords: [keyword]
+                                                    } 
+                                                }),
+                                                signal: opensignal.signal
+                                            });
+                                            const rkData = await rkResp.json();
+                                            if (rkResp.ok && Array.isArray(rkData) && rkData[0]?.status === 'success' && rkData[0]?.data?.suggestions) {
+                                                const suggestions = rkData[0].data.suggestions.slice(0, 10); // Limit to top 10 related keywords
+                                                
+                                                // Step 3: Get metrics for related keywords
+                                                for (const suggestion of suggestions) {
+                                                    const relatedKw = suggestion.keyword;
+                                                    const relevance = suggestion.relevance || 0;
+                                                    
+                                                    // Skip if we already have this keyword
+                                                    if (allCandidateKeywords.has(relatedKw)) {
+                                                        // Update relevance if higher
+                                                        const existing = allCandidateKeywords.get(relatedKw);
+                                                        if (relevance > existing.relevance) {
+                                                            existing.relevance = relevance;
+                                                        }
+                                                        continue;
+                                                    }
+                                                    
+                                                    try {
+                                                        const kmResp = await fetch(proxyUrl, {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ 
+                                                                apiKey, 
+                                                                method: 'keywordMetrics', 
+                                                                params: { 
+                                                                    metricType: 'all',
+                                                                    locale: locale,
+                                                                    keywords: [relatedKw]
+                                                                } 
+                                                            }),
+                                                            signal: opensignal.signal
+                                                        });
+                                                        const kmData = await kmResp.json();
+                                                        if (kmResp.ok && Array.isArray(kmData) && kmData[0]?.status === 'success') {
+                                                            const volume = kmData[0]?.data?.keyword_metrics?.volume ?? null;
+                                                            const difficulty = kmData[0]?.data?.keyword_metrics?.difficulty ?? null;
+                                                            const opportunity_ctr = kmData[0]?.data?.keyword_metrics?.organic_ctr ?? null;
+                                                            
+                                                            allCandidateKeywords.set(relatedKw, {
+                                                                relevance: relevance,
+                                                                volume: volume,
+                                                                difficulty: difficulty,
+                                                                opportunity_ctr: opportunity_ctr,
+                                                                source: 'related'
+                                                            });
+                                                        }
+                                                    } catch (e) {
+                                                        // Non-fatal, continue
+                                                    }
+                                                }
+                                            }
+                                        } catch (e) {
+                                            // Non-fatal, continue
+                                        }
+                                    }
+                                    
+                                    // Step 4: Sort candidates by combined score (relevance + volume)
+                                    // Score = (relevance * 0.4) + (normalized_volume * 0.6)
+                                    const candidatesArray = Array.from(allCandidateKeywords.entries()).map(([kw, data]) => ({
+                                        keyword: kw,
+                                        ...data
+                                    }));
+                                    
+                                    // Normalize volume (0-100 scale) and calculate score
+                                    const volumes = candidatesArray.map(c => c.volume || 0).filter(v => v > 0);
+                                    const maxVolume = volumes.length > 0 ? Math.max(...volumes) : 1;
+                                    
+                                    candidatesArray.forEach(c => {
+                                        const normalizedVolume = c.volume ? (c.volume / maxVolume) * 100 : 0;
+                                        c.score = (c.relevance * 0.4) + (normalizedVolume * 0.6);
+                                    });
+                                    
+                                    // Sort by score (descending) and take top 8 keywords
+                                    candidatesArray.sort((a, b) => b.score - a.score);
+                                    const bestKeywords = candidatesArray.slice(0, 8).map(c => c.keyword);
+                                    
+                                    // Update idea with enhanced keywords
+                                    idea.targetKeywords = bestKeywords;
+                                    
+                                    // Store metrics for all selected keywords
+                                    bestKeywords.forEach(kw => {
+                                        const candidate = candidatesArray.find(c => c.keyword === kw);
+                                        if (candidate) {
+                                            idea.keywordMetrics[kw] = {
+                                                volume: candidate.volume,
+                                                difficulty: candidate.difficulty,
+                                                opportunity_ctr: candidate.opportunity_ctr
+                                            };
+                                        }
+                                    });
                                 }
                             }
                         }
@@ -3438,7 +3559,11 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
 
                 // Intent Groups - Card Layout
                 html += '<div id="intent-groups-section" class="mt-6">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Segments by Search Intent</h4>';
+                html += '<div class="flex items-center justify-between mb-4">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Content Segments by Search Intent</h4>';
+                html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="intent-groups-content">Collapse</button>';
+                html += '</div>';
+                html += '<div id="intent-groups-content">';
                 const intentColors = {
                     Informational: '#60a5fa',
                     Commercial: '#fbbf24',
@@ -3472,7 +3597,11 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
 
                 // Consolidation Clusters
                 html += '<div id="consolidation-clusters-section" class="mt-6">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Consolidation Clusters</h4>';
+                html += '<div class="flex items-center justify-between mb-4">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Content Consolidation Clusters</h4>';
+                html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="consolidation-clusters-content">Collapse</button>';
+                html += '</div>';
+                html += '<div id="consolidation-clusters-content">';
                 if (consolidationClusters.length > 0) {
                     html += '<div class="space-y-4">';
                     consolidationClusters.forEach((cluster, idx) => {
@@ -3528,13 +3657,18 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += `<p class="text-[var(--text-secondary)]">No consolidation clusters identified. URLs are sufficiently distinct.</p>`;
                 }
                 html += '</div>';
+                html += '</div>';
 
                 // Internal Linking Strategy removed per user request
 
                 // Content Recommendations
                 if (contentRecommendations && !contentRecommendations.error) {
                     html += '<div id="content-recommendations-section" class="mt-6">';
-                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Recommendations</h4>';
+                    html += '<div class="flex items-center justify-between mb-4">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Recommendations to Update Existing Content</h4>';
+                    html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="content-recommendations-content">Collapse</button>';
+                    html += '</div>';
+                    html += '<div id="content-recommendations-content">';
                     html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
                     if (contentRecommendations.recommendations && Array.isArray(contentRecommendations.recommendations)) {
                         contentRecommendations.recommendations.forEach(rec => {
@@ -3570,12 +3704,17 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     }
                     html += '</div>';
                     html += '</div>';
+                    html += '</div>';
                 }
 
                 // New Content to Create
                 if (newContentToCreate && !newContentToCreate.error && newContentToCreate.newContentIdeas) {
                     html += '<div id="new-content-section" class="mt-6">';
-                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">New Content to Create</h4>';
+                    html += '<div class="flex items-center justify-between mb-4">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">New Content to Create</h4>';
+                    html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="new-content-content">Collapse</button>';
+                    html += '</div>';
+                    html += '<div id="new-content-content">';
                     html += '<div class="space-y-3">';
                     const intentColors = {
                         Informational: '#60a5fa',
@@ -3590,7 +3729,12 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
                         html += `<div class="flex items-start justify-between mb-2">`;
                         html += `<div class="flex-1">`;
-                        html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-2">${idea.title || `Content Idea ${idx + 1}`}</div>`;
+                        // Replace years in title
+                        const currentYear = new Date().getFullYear();
+                        const yearRegex = /\b(20\d{2})\b/g;
+                        const titleWithYear = idea.title || `Content Idea ${idx + 1}`;
+                        const updatedTitle = titleWithYear.replace(yearRegex, currentYear.toString());
+                        html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-2">${updatedTitle}</div>`;
                         html += `<div class="text-xs mb-2">`;
                         html += `<span class="font-bold text-[var(--text-secondary)]">Intent:</span> `;
                         html += `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold" style="background-color: ${intentColor}20; color: ${intentColor};">`;
@@ -3621,12 +3765,27 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                             html += `</div>`;
                         }
                         if (idea.rationale) {
-                            html += `<div class="text-sm text-[var(--text-secondary)] mt-2">${idea.rationale}</div>`;
+                            // Replace any year references with current year (2025)
+                            const currentYear = new Date().getFullYear();
+                            const yearRegex = /\b(20\d{2})\b/g;
+                            const updatedRationale = idea.rationale.replace(yearRegex, currentYear.toString());
+                            html += `<div class="text-sm text-[var(--text-secondary)] mt-2">${updatedRationale}</div>`;
+                        }
+                        if (idea.title) {
+                            // Also replace years in title
+                            const currentYear = new Date().getFullYear();
+                            const yearRegex = /\b(20\d{2})\b/g;
+                            const updatedTitle = idea.title.replace(yearRegex, currentYear.toString());
+                            if (updatedTitle !== idea.title) {
+                                // Update title if it had a year
+                                html = html.replace(`>${idea.title || `Content Idea ${idx + 1}`}<`, `>${updatedTitle}<`);
+                            }
                         }
                         html += `</div>`;
                         html += `</div>`;
                         html += `</div>`;
                     });
+                    html += '</div>';
                     html += '</div>';
                     html += '</div>';
                 }
@@ -3645,7 +3804,11 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
 
                 // Individual URL Summaries with Anchor Text
                 html += '<div id="url-metrics-grid" class="metrics-grid-container mt-6">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4 w-full col-span-full">Individual URL Summaries</h4>';
+                html += '<div class="flex items-center justify-between mb-4 w-full col-span-full">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Individual URL Summaries</h4>';
+                html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="url-metrics-content">Collapse</button>';
+                html += '</div>';
+                html += '<div id="url-metrics-content">';
                 urls.forEach((u, idx) => {
                     const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
                     const linkingDomains = sm.root_domains_to_page ?? 'N/A';
@@ -3677,18 +3840,20 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += '</div>';
                     html += '</div>';
                     
-                    // Inbound Anchor Texts (matching Keyword Targeting Analysis style)
+                    // Inbound Anchor Texts (matching Keyword Targeting Analysis style with modal)
                     const allAnchors = topAnchors || [];
                     const anchorsCount = allAnchors.length;
                     const previewAnchors = allAnchors.slice(0, 3);
+                    html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
+                    html += '<div class="flex items-center justify-between mb-2">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Inbound Anchor Texts</div>';
                     if (anchorsCount > 0) {
-                        html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
-                        html += '<div class="flex items-center justify-between mb-2">';
-                        html += '<div class="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Inbound Anchor Texts</div>';
-                        if (anchorsCount > 3) {
-                            html += `<span class="text-[11px] text-[var(--text-secondary)]">(${anchorsCount} total)</span>`;
-                        }
-                        html += '</div>';
+                        html += `<button type="button" class="cca-anchors-toggle text-[11px] text-[var(--text-accent)] hover:text-[var(--text-accent-hover)]" data-url-idx="${idx}">View More (${anchorsCount})</button>`;
+                    }
+                    html += '</div>';
+                    if (anchorsCount === 0) {
+                        html += '<div class="text-[var(--text-secondary)] text-xs">No inbound anchor texts found.</div>';
+                    } else {
                         html += '<div class="space-y-2">';
                         previewAnchors.forEach((anchor) => {
                             const domainsP = (typeof anchor.external_root_domains === 'number') ? formatNumber(anchor.external_root_domains) : (anchor.external_root_domains ?? 'N/A');
@@ -3699,21 +3864,23 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                             html += '</div>';
                         });
                         html += '</div>';
-                        html += '</div>';
                     }
+                    html += '</div>';
 
                     const rkList = Array.isArray(resultsByUrl[u].rankingKeywords) ? resultsByUrl[u].rankingKeywords : [];
                     html += '<div class="mt-3">';
                     html += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Ranking Keywords (${rkList.length})</div>`;
-                    html += '<div class="text-sm text-[var(--text-secondary)]">Top 5:</div>';
-                    html += '<div class="space-y-1 text-sm mt-1">';
-                    rkList.slice(0, 5).forEach(k => {
-                        html += `<div><span class="text-[var(--text-primary)]">${k.keyword || 'N/A'}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
-                    });
-                    html += '</div>';
-                    html += '</div>';
-
-                    // Intent distribution
+                    if (rkList.length === 0) {
+                        html += '<div class="text-sm text-[var(--text-secondary)]">No keywords ranking in the top 50 positions</div>';
+                    } else {
+                        html += '<div class="text-sm text-[var(--text-secondary)]">Top 5:</div>';
+                        html += '<div class="space-y-1 text-sm mt-1">';
+                        rkList.slice(0, 5).forEach(k => {
+                            html += `<div><span class="text-[var(--text-primary)]">${k.keyword || 'N/A'}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
+                        });
+                        html += '</div>';
+                        
+                        // Intent distribution (only show if there are ranking keywords)
                     const intents = [
                         { label: 'Informational', color: '#60a5fa', value: Number(idist.Informational || 0) },
                         { label: 'Transactional', color: '#34d399', value: Number(idist.Transactional || 0) },
@@ -3732,25 +3899,92 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         offset += seg.value;
                         return `<circle r="${r}" cx="20" cy="20" fill="transparent" stroke="${seg.color}" stroke-width="8" stroke-dasharray="${dash} ${gap}" transform="rotate(-90 20 20) rotate(${rot} 20 20)"></circle>`;
                     }).join('');
-                    html += '<div class="mt-3 pb-3 border-b border-[var(--border-primary)]">';
-                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Search Intent</div>';
-                    html += '<div class="flex items-center gap-3">';
-                    html += `<svg width="40" height="40" viewBox="0 0 40 40">${slices}</svg>`;
-                    html += '<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">';
-                    intents.forEach(seg => {
-                        html += `<div class="flex items-center gap-1"><span style="background:${seg.color};width:8px;height:8px;border-radius:9999px;display:inline-block"></span><span class="text-[var(--text-secondary)]">${seg.label}:</span><span class="text-[var(--text-primary)]">${seg.value}%</span></div>`;
-                    });
-                    html += '</div>';
+                        html += '<div class="mt-3 pb-3 border-b border-[var(--border-primary)]">';
+                        html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Search Intent</div>';
+                        html += '<div class="flex items-center gap-3">';
+                        html += `<svg width="40" height="40" viewBox="0 0 40 40">${slices}</svg>`;
+                        html += '<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">';
+                        intents.forEach(seg => {
+                            html += `<div class="flex items-center gap-1"><span style="background:${seg.color};width:8px;height:8px;border-radius:9999px;display:inline-block"></span><span class="text-[var(--text-secondary)]">${seg.label}:</span><span class="text-[var(--text-primary)]">${seg.value}%</span></div>`;
+                        });
+                        html += '</div>';
+                        html += '</div>';
+                    }
                     html += '</div>';
                     html += '</div>';
                     html += '</div>';
                 });
+                html += '</div>';
                 html += '</div>';
 
                 html += '</div>';
 
                 allDOMElements.rawCode.textContent = JSON.stringify(payload, null, 2);
                 allDOMElements.rawWrapper.innerHTML = html;
+                
+                // Set up anchor text modal for Content Cluster Analysis (similar to Keyword Targeting Analysis)
+                let ccaAnchorModal = document.getElementById('cca-anchor-modal');
+                if (!ccaAnchorModal) {
+                    ccaAnchorModal = document.createElement('div');
+                    ccaAnchorModal.id = 'cca-anchor-modal';
+                    ccaAnchorModal.className = 'hidden';
+                    ccaAnchorModal.innerHTML = `
+                        <div class="fixed inset-0 z-[9998] bg-black/50" data-overlay></div>
+                        <div class="fixed z-[9999] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--bg-container)] text-[var(--text-primary)] w-[min(92vw,800px)] max-h-[80vh] rounded-lg shadow-xl border border-[var(--border-primary)] p-4 overflow-auto" role="dialog" aria-modal="true">
+                            <div class="flex items-center justify-between mb-3">
+                                <h5 class="font-semibold">Inbound Anchor Texts</h5>
+                                <button type="button" class="cca-modal-close text-sm px-2 py-1 border border-[var(--border-primary)] rounded-md">Close</button>
+                            </div>
+                            <div class="cca-modal-body space-y-2 text-sm"></div>
+                        </div>`;
+                    document.body.appendChild(ccaAnchorModal);
+                }
+                const ccaModal = document.getElementById('cca-anchor-modal');
+                const ccaModalBody = ccaModal && ccaModal.querySelector('.cca-modal-body');
+                const ccaCloseBtn = ccaModal && ccaModal.querySelector('.cca-modal-close');
+                const ccaOverlay = ccaModal && ccaModal.querySelector('[data-overlay]');
+                const hideCcaModal = () => {
+                    ccaModal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                };
+                const showCcaModal = () => {
+                    ccaModal.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                };
+                if (ccaCloseBtn) ccaCloseBtn.addEventListener('click', hideCcaModal);
+                if (ccaOverlay) ccaOverlay.addEventListener('click', hideCcaModal);
+                allDOMElements.rawWrapper.querySelectorAll('.cca-anchors-toggle').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const i = Number(btn.getAttribute('data-url-idx'));
+                        const url = urls[i];
+                        const fullAnchors = (resultsByUrl[url].topAnchors || []);
+                        if (!ccaModal || !ccaModalBody) return;
+                        ccaModalBody.innerHTML = fullAnchors.length === 0 ? '<div class="text-[var(--text-secondary)]">No anchor texts found.</div>' : fullAnchors.map(a => {
+                            const domains = (typeof a.external_root_domains === 'number') ? formatNumber(a.external_root_domains) : (a.external_root_domains ?? 'N/A');
+                            const pages = (typeof a.external_pages === 'number') ? formatNumber(a.external_pages) : (a.external_pages ?? 'N/A');
+                            return `<div class="border-b border-[var(--border-primary)] pb-2">`
+                                + `<div class="font-semibold text-[var(--text-primary)]">${a.text || 'N/A'}</div>`
+                                + `<div class="text-[var(--text-secondary)] text-xs">Linking Domains: <span class="text-[var(--text-primary)]">${domains}</span></div>`
+                                + `<div class="text-[var(--text-secondary)] text-xs">Inbound Links: <span class="text-[var(--text-primary)]">${pages}</span></div>`
+                                + `</div>`;
+                        }).join('');
+                        showCcaModal();
+                    });
+                });
+                
+                // Set up collapse/expand handlers for all sections
+                allDOMElements.rawWrapper.querySelectorAll('.cca-section-toggle').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const sectionId = btn.getAttribute('data-section');
+                        const section = document.getElementById(sectionId);
+                        if (section) {
+                            const isHidden = section.classList.contains('hidden');
+                            section.classList.toggle('hidden');
+                            btn.textContent = isHidden ? 'Collapse' : 'Expand';
+                        }
+                    });
+                });
+                
                 allDOMElements.rawWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.add('hidden');
@@ -5006,6 +5240,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                             <div class="flex items-center gap-2">
                                 <span class="text-sm text-[var(--text-secondary)]">${date}</span>
                                 <button class="text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] text-sm" data-replay="${entry.id}">Replay</button>
+                                <button class="text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] text-sm" data-edit="${entry.id}">Edit</button>
                                 <button class="text-[var(--text-error)] hover:text-red-600 text-sm" data-delete="${entry.id}">Delete</button>
                             </div>
                         </div>
@@ -5075,6 +5310,56 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                             allDOMElements.form.dispatchEvent(new Event('submit'));
                         }, 200);
                     }
+                }, 100);
+
+                allDOMElements.historyModal.classList.add('hidden');
+            }
+
+            function editSearch(entryId) {
+                const history = getSearchHistory();
+                const entry = history.find(h => h.id.toString() === entryId);
+                
+                if (!entry) {
+                    displayError('Search entry not found.');
+                    return;
+                }
+
+                // Set the method
+                allDOMElements.methodSelector.value = entry.method;
+                allDOMElements.methodSelector.dispatchEvent(new Event('change'));
+
+                // Populate form fields (same as replay, but don't auto-submit)
+                setTimeout(() => {
+                    Object.entries(entry.params).forEach(([key, value]) => {
+                        // Map parameter names to field IDs
+                        const fieldId = getFieldIdForParam(entry.method, key);
+                        const element = document.getElementById(fieldId);
+                        
+                        if (element) {
+                            if (element.type === 'checkbox') {
+                                element.checked = value;
+                            } else if (Array.isArray(value)) {
+                                // For competitive analysis competitors array, content cluster URLs, or any array value
+                                if (entry.method === 'contentClusterAnalysis' && key === 'urls') {
+                                    element.value = value.join('\n');
+                                } else {
+                                    element.value = value.join('\n');
+                                }
+                            } else if (element.type === 'select-one' || element.type === 'select-multiple') {
+                                if (Array.isArray(value)) {
+                                    // For multi-select
+                                    Array.from(element.options).forEach(option => {
+                                        option.selected = value.includes(option.value);
+                                    });
+                                } else {
+                                    element.value = value;
+                                }
+                            } else {
+                                element.value = value;
+                            }
+                        }
+                    });
+                    // Don't auto-submit - let user edit and submit manually
                 }, 100);
 
                 allDOMElements.historyModal.classList.add('hidden');
