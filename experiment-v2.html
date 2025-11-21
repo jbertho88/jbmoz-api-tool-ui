@@ -4930,14 +4930,35 @@ Page Summary: ${resultsByUrl[url].summary}`;
                     html += '</div>';
 
                     // Clusters Overview
-                    if (clusters.length > 0) {
+                    if (clusters.length > 0 || (contentClusters && contentClusters.length > 0)) {
                         html += '<div class="mb-6">';
-                        html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Clusters Overview</h4>';
-                        html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+                        html += '<div class="flex items-center justify-between mb-4">';
+                        html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Content Clusters Overview</h4>';
+                        html += '<div class="flex gap-2">';
+                        html += '<button type="button" id="cci-filter-all" class="cci-filter-btn px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--text-accent)] text-white hover:opacity-90">All</button>';
+                        html += '<button type="button" id="cci-filter-llm" class="cci-filter-btn px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">LLM-Defined</button>';
+                        if (contentClusters && contentClusters.length > 0) {
+                            html += '<button type="button" id="cci-filter-user" class="cci-filter-btn px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">User Content Cluster</button>';
+                        }
+                        html += '</div>';
+                        html += '</div>';
+                        html += '<div id="cci-clusters-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+                        
+                        // LLM-Defined Clusters
                         clusters.forEach((cluster, idx) => {
                             const label = clusterLabels.find(cl => cl.clusterIndex === idx);
-                            html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
-                            html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-2">${label?.clusterName || `Cluster ${idx + 1}`}</div>`;
+                            const clusterName = label?.clusterName || `Cluster ${idx + 1}`;
+                            // Color palette: blue (idx 0), pink (idx 1), green (idx 2), purple (idx 3), then cycle
+                            const colorBorders = [
+                                'border-2 border-[var(--text-accent)]', // blue
+                                'border-2 border-fuchsia-400', // pink
+                                'border-2 border-emerald-400', // green
+                                'border-2 border-violet-400'  // purple
+                            ];
+                            const borderClass = colorBorders[idx % colorBorders.length];
+                            
+                            html += `<div class="cci-cluster-box bg-[var(--bg-container)] ${borderClass} rounded-lg p-4" data-cluster-type="llm" data-cluster-name="${clusterName}">`;
+                            html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-2">${clusterName}</div>`;
                             if (label?.description) {
                                 html += `<div class="text-xs text-[var(--text-secondary)] mb-2">${label.description}</div>`;
                             }
@@ -4958,43 +4979,50 @@ Page Summary: ${resultsByUrl[url].summary}`;
                             }
                             html += '</div>';
                         });
+                        
+                        // User-Defined Clusters (if any)
+                        if (contentClusters && contentClusters.length > 0) {
+                            // Get unique user-defined clusters from results
+                            const userClusterNames = [...new Set(contentClusters)];
+                            const userClusterStats = {};
+                            urls.forEach(url => {
+                                const result = resultsByUrl[url];
+                                if (result && result.contentCluster && userClusterNames.includes(result.contentCluster)) {
+                                    if (!userClusterStats[result.contentCluster]) {
+                                        userClusterStats[result.contentCluster] = { count: 0, urls: [] };
+                                    }
+                                    userClusterStats[result.contentCluster].count++;
+                                    userClusterStats[result.contentCluster].urls.push(url);
+                                }
+                            });
+                            
+                            userClusterNames.forEach((clusterName, idx) => {
+                                const stats = userClusterStats[clusterName] || { count: 0, urls: [] };
+                                // Use same color palette, starting from where LLM clusters left off
+                                const colorBorders = [
+                                    'border-2 border-[var(--text-accent)]', // blue
+                                    'border-2 border-fuchsia-400', // pink
+                                    'border-2 border-emerald-400', // green
+                                    'border-2 border-violet-400'  // purple
+                                ];
+                                const borderClass = colorBorders[(clusters.length + idx) % colorBorders.length];
+                                
+                                html += `<div class="cci-cluster-box bg-[var(--bg-container)] ${borderClass} rounded-lg p-4" data-cluster-type="user" data-cluster-name="${clusterName}">`;
+                                html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-2">${clusterName}</div>`;
+                                html += `<div class="text-xs text-[var(--text-secondary)] mb-2 italic">User-Defined Cluster</div>`;
+                                html += `<div class="text-xs text-[var(--text-secondary)] mb-2">URLs: <span class="text-[var(--text-primary)] font-semibold">${stats.count}</span></div>`;
+                                html += '</div>';
+                            });
+                        }
+                        
                         html += '</div>';
                         html += '</div>';
                     }
 
-                    // Pages Table
+                    // Pages Table (Tabulator)
                     html += '<div class="mb-6">';
                     html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Page Analysis Results</h4>';
-                    html += '<div class="overflow-x-auto">';
-                    html += '<table class="w-full border-collapse border border-[var(--border-primary)]">';
-                    html += '<thead>';
-                    html += '<tr class="bg-[var(--bg-input)]">';
-                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">URL</th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">LLM-Defined Topic</th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">Content Cluster</th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">Primary Intent</th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">Audience</th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">Expertise Level</th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">Topic Tags</th>';
-                    html += '</tr>';
-                    html += '</thead>';
-                    html += '<tbody>';
-                    urls.forEach(url => {
-                        const result = resultsByUrl[url];
-                        if (!result) return;
-                        html += '<tr class="hover:bg-[var(--bg-input)]">';
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)] break-all">${url}</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.llmDefinedTopic || 'N/A'}</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.contentCluster || 'Unassigned'}</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.primaryIntent || 'N/A'}</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.audience || 'N/A'}</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.expertiseLevel || 'N/A'}</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.topicTags && result.topicTags.length > 0 ? result.topicTags.join(', ') : 'N/A'}</td>`;
-                        html += '</tr>';
-                    });
-                    html += '</tbody>';
-                    html += '</table>';
-                    html += '</div>';
+                    html += '<div id="cci-page-analysis-table"></div>';
                     html += '</div>';
 
                     // Errors section (if any)
@@ -5024,6 +5052,81 @@ Page Summary: ${resultsByUrl[url].summary}`;
                     allDOMElements.rawWrapper.classList.remove('hidden');
                     allDOMElements.viewDataBtn.textContent = 'View JSON';
                     allDOMElements.exportPdfBtn.classList.add('hidden');
+                    
+                    // Initialize Tabulator for Page Analysis Results
+                    setTimeout(() => {
+                        if (typeof Tabulator !== 'undefined' && document.getElementById('cci-page-analysis-table')) {
+                            const tableData = urls.map(url => {
+                                const result = resultsByUrl[url];
+                                if (!result) return null;
+                                return {
+                                    url: url,
+                                    llmDefinedTopic: result.llmDefinedTopic || 'N/A',
+                                    contentCluster: result.contentCluster || 'Unassigned',
+                                    primaryIntent: result.primaryIntent || 'N/A',
+                                    audience: result.audience || 'N/A',
+                                    expertiseLevel: result.expertiseLevel || 'N/A',
+                                    topicTags: result.topicTags && result.topicTags.length > 0 ? result.topicTags.join(', ') : 'N/A'
+                                };
+                            }).filter(row => row !== null);
+                            
+                            new Tabulator("#cci-page-analysis-table", {
+                                data: tableData,
+                                columns: [
+                                    { title: 'URL', field: 'url', sorter: 'string', widthGrow: 2 },
+                                    { title: 'LLM-Defined Topic', field: 'llmDefinedTopic', sorter: 'string' },
+                                    { title: 'Content Cluster', field: 'contentCluster', sorter: 'string' },
+                                    { title: 'Primary Intent', field: 'primaryIntent', sorter: 'string' },
+                                    { title: 'Audience', field: 'audience', sorter: 'string' },
+                                    { title: 'Expertise Level', field: 'expertiseLevel', sorter: 'string' },
+                                    { title: 'Topic Tags', field: 'topicTags', sorter: 'string', widthGrow: 2 }
+                                ],
+                                layout: "fitDataStretch",
+                                pagination: "local",
+                                paginationSize: 25,
+                                movableColumns: true,
+                                resizableColumns: true
+                            });
+                        }
+                    }, 100);
+                    
+                    // Initialize cluster filter buttons
+                    setTimeout(() => {
+                        const filterButtons = document.querySelectorAll('.cci-filter-btn');
+                        const clusterBoxes = document.querySelectorAll('.cci-cluster-box');
+                        
+                        filterButtons.forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                // Update active state
+                                filterButtons.forEach(b => {
+                                    b.classList.remove('bg-[var(--text-accent)]', 'text-white');
+                                    b.classList.add('bg-[var(--bg-input)]', 'text-[var(--text-primary)]');
+                                });
+                                btn.classList.remove('bg-[var(--bg-input)]', 'text-[var(--text-primary)]');
+                                btn.classList.add('bg-[var(--text-accent)]', 'text-white');
+                                
+                                // Filter clusters
+                                const filterType = btn.id.replace('cci-filter-', '');
+                                clusterBoxes.forEach(box => {
+                                    if (filterType === 'all') {
+                                        box.classList.remove('hidden');
+                                    } else if (filterType === 'llm') {
+                                        if (box.getAttribute('data-cluster-type') === 'llm') {
+                                            box.classList.remove('hidden');
+                                        } else {
+                                            box.classList.add('hidden');
+                                        }
+                                    } else if (filterType === 'user') {
+                                        if (box.getAttribute('data-cluster-type') === 'user') {
+                                            box.classList.remove('hidden');
+                                        } else {
+                                            box.classList.add('hidden');
+                                        }
+                                    }
+                                });
+                            });
+                        });
+                    }, 100);
                 } catch (err) {
                     displayError('Render error in Content Clusters Identification: ' + (err && err.message ? err.message : err));
                 }
