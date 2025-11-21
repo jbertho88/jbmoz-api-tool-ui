@@ -1330,6 +1330,51 @@
                     </ul>
                 </div>
                 
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Content Cluster Analysis</u></strong></h4>
+                    <p><strong>Description:</strong> Advanced content analysis using OpenAI API to analyze URLs, identify content clusters, determine semantic similarity to a seed topic, and provide consolidation recommendations. Uses semantic embeddings to understand content relationships beyond keyword matching.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>Seed Topic:</strong> The main keyword/topic to analyze pages against</li>
+                        <li><strong>URLs:</strong> Enter URLs to analyze (1-25 URLs, one per line)</li>
+                        <li><strong>Locale:</strong> Select geographic region/language for keyword analysis</li>
+                        <li><strong>Similarity Threshold:</strong> Threshold for consolidation recommendations (default 0.85)</li>
+                        <li><strong>Limit:</strong> Number of related keywords to fetch (default 25)</li>
+                        <li><strong>OpenAI API Key:</strong> Required for content analysis and embeddings</li>
+                    </ul>
+                    <p><strong>Features:</strong></p>
+                    <ul>
+                        <li>Semantic similarity scoring using OpenAI embeddings</li>
+                        <li>Content segmentation by search intent (Informational, Commercial, Navigational, Transactional)</li>
+                        <li>Value Score calculation for each URL (see formula below)</li>
+                        <li>Content consolidation recommendations based on similarity and keyword overlap</li>
+                        <li>Main topic page identification</li>
+                        <li>Content recommendations and new content opportunities</li>
+                        <li>Keyword metrics for target keywords in new content ideas</li>
+                    </ul>
+                    <div class="p-4 rounded-lg mt-3" style="background-color: var(--bg-input); border: 1px solid var(--border-secondary);">
+                        <h4><strong>Value Score Calculation</strong></h4>
+                        <p>The Value Score is a weighted metric used to evaluate the relative value of URLs in a content cluster. It helps identify which pages should be prioritized or kept when consolidating content.</p>
+                        <p><strong>Formula:</strong></p>
+                        <code style="display: block; padding: 0.5rem; background: var(--bg-container); border-radius: 4px; margin: 0.5rem 0;">
+                            Value Score = (Ranking Keywords Count × 2.0)<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ (Linking Domains × 1.5)<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ (Inbound Links × 0.5)<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ (Page Authority × 0.1)<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ (Anchor Text Diversity × 0.3)
+                        </code>
+                        <p><strong>Components:</strong></p>
+                        <ul>
+                            <li><strong>Ranking Keywords Count × 2.0</strong> - Highest weight, number of keywords the URL ranks for</li>
+                            <li><strong>Linking Domains × 1.5</strong> - Number of unique root domains linking to the page</li>
+                            <li><strong>Inbound Links × 0.5</strong> - Total number of external pages linking to the URL</li>
+                            <li><strong>Page Authority × 0.1</strong> - Moz's Page Authority score (0-100)</li>
+                            <li><strong>Anchor Text Diversity × 0.3</strong> - Count of unique anchor texts used to link to the page</li>
+                        </ul>
+                        <p><strong>Usage:</strong> The Value Score is used to identify the main topic page (highest value score among URLs with ranking keywords) and helps determine which URL to keep when consolidating similar content.</p>
+                    </div>
+                </div>
+                
                 <hr class="my-4" style="border-color: var(--border-primary);">
                 
                 <h3>🔗 Link Building</h3>
@@ -2682,12 +2727,15 @@ Cluster Data: ${JSON.stringify(clusterData, null, 2)}`;
                         relatedKeywords: relatedKeywords.slice(0, 30)
                     };
 
+                    const currentYear = new Date().getFullYear();
                     const recommendationsPrompt = `You are an SEO content analysis expert. Analyze the following URLs and their ranking keywords for the seed topic "${seedTopic}".
 
 Provide content recommendations for improving these pages. Focus on:
 1. Content gaps (what's missing from current pages)
 2. Optimization opportunities (how to better target the seed topic)
 3. Keyword targeting improvements
+
+IMPORTANT: When mentioning years, always use ${currentYear} (the current year). Do not use outdated years like 2023 or 2024.
 
 Return your response as JSON with this structure:
 {
@@ -2775,6 +2823,43 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                             jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
                         }
                         newContentToCreate = JSON.parse(jsonStr);
+                        
+                        // Fetch keyword metrics for target keywords
+                        if (newContentToCreate.newContentIdeas && Array.isArray(newContentToCreate.newContentIdeas)) {
+                            for (const idea of newContentToCreate.newContentIdeas) {
+                                if (idea.targetKeywords && Array.isArray(idea.targetKeywords) && idea.targetKeywords.length > 0) {
+                                    idea.keywordMetrics = {};
+                                    for (const keyword of idea.targetKeywords.slice(0, 10)) { // Limit to 10 keywords per idea
+                                        try {
+                                            const kmResp = await fetch(proxyUrl, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ 
+                                                    apiKey, 
+                                                    method: 'keywordMetrics', 
+                                                    params: { 
+                                                        metricType: 'all',
+                                                        locale: locale,
+                                                        keywords: [keyword]
+                                                    } 
+                                                }),
+                                                signal: opensignal.signal
+                                            });
+                                            const kmData = await kmResp.json();
+                                            if (kmResp.ok && Array.isArray(kmData) && kmData[0]?.status === 'success') {
+                                                idea.keywordMetrics[keyword] = {
+                                                    volume: kmData[0]?.data?.keyword_metrics?.volume ?? null,
+                                                    difficulty: kmData[0]?.data?.keyword_metrics?.difficulty ?? null,
+                                                    opportunity_ctr: kmData[0]?.data?.keyword_metrics?.organic_ctr ?? null
+                                                };
+                                            }
+                                        } catch (e) {
+                                            // Non-fatal, continue
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     } catch {
                         // If parsing fails, create a single idea from the response
                         newContentToCreate = { 
@@ -3309,7 +3394,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += '<thead><tr>';
                     html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-left text-sm font-semibold">Rank</th>';
                     html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-left text-sm font-semibold">URL</th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Similarity Score</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Similarity Score <span class="text-xs font-normal text-[var(--text-secondary)]" title="Semantic similarity calculated using cosine similarity between the seed topic embedding and each URL\'s content embedding. Higher scores indicate more conceptually relevant content to the seed topic.">(?)</span></th>';
                     html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Value Score <span class="text-xs font-normal text-[var(--text-secondary)]" title="Formula: (Ranking Keywords × 2.0) + (Linking Domains × 1.5) + (Inbound Links × 0.5) + (Page Authority × 0.1) + (Anchor Text Diversity × 0.3)">(?)</span></th>';
                     html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Primary Intent</th>';
                     html += '</tr></thead><tbody>';
@@ -3347,7 +3432,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                 }
                 html += '</div>';
 
-                // Intent Groups
+                // Intent Groups - Card Layout
                 html += '<div id="intent-groups-section" class="mt-6">';
                 html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Segments by Search Intent</h4>';
                 const intentColors = {
@@ -3357,25 +3442,28 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     Transactional: '#34d399',
                     Other: '#94a3b8'
                 };
+                html += '<div class="metrics-grid-container">';
                 Object.entries(intentGroups).forEach(([intent, groupUrls]) => {
                     if (groupUrls.length === 0) return;
-                    html += `<div class="mb-4 bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
-                    html += `<div class="flex items-center gap-2 mb-3">`;
-                    html += `<span style="background:${intentColors[intent]};width:16px;height:16px;border-radius:9999px;display:inline-block"></span>`;
+                    const intentColor = intentColors[intent] || intentColors.Other;
+                    html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                    html += `<div class="flex items-center gap-2 mb-3 pb-3 border-b border-[var(--border-primary)]">`;
+                    html += `<span style="background:${intentColor};width:16px;height:16px;border-radius:9999px;display:inline-block"></span>`;
                     html += `<h5 class="font-semibold text-[var(--text-primary)]">${intent} (${groupUrls.length} URLs)</h5>`;
                     html += '</div>';
-                    html += '<div class="space-y-2">';
+                    html += '<div class="space-y-1 max-h-64 overflow-y-auto">';
                     groupUrls.forEach(u => {
                         const similarity = seedTopicSimilarities[u] || 0;
                         const valueScore = resultsByUrl[u]?.valueScore || 0;
-                        html += `<div class="text-sm p-2 bg-[var(--bg-input)] rounded">`;
-                        html += `<div class="text-[var(--text-primary)] break-all mb-1">${u}</div>`;
-                        html += `<div class="text-xs text-[var(--text-secondary)]">Similarity: ${(similarity * 100).toFixed(1)}% • Value: ${valueScore.toFixed(1)}</div>`;
+                        html += `<div class="text-xs p-1.5 bg-[var(--bg-input)] rounded">`;
+                        html += `<div class="text-[var(--text-primary)] break-all text-xs">${u}</div>`;
+                        html += `<div class="text-[10px] text-[var(--text-secondary)] mt-0.5">Similarity: ${(similarity * 100).toFixed(1)}% • Value: ${valueScore.toFixed(1)}</div>`;
                         html += '</div>';
                     });
                     html += '</div>';
                     html += '</div>';
                 });
+                html += '</div>';
                 html += '</div>';
 
                 // Consolidation Clusters
@@ -3448,7 +3536,11 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                             if (Array.isArray(rec.recommendations)) {
                                 html += '<ul class="list-disc list-inside space-y-1 text-sm text-[var(--text-secondary)]">';
                                 rec.recommendations.forEach(r => {
-                                    html += `<li>${r}</li>`;
+                                    // Replace any year references with current year (2025)
+                                    const currentYear = new Date().getFullYear();
+                                    const yearRegex = /\b(20\d{2})\b/g;
+                                    const updatedRec = r.replace(yearRegex, currentYear.toString());
+                                    html += `<li>${updatedRec}</li>`;
                                 });
                                 html += '</ul>';
                             }
@@ -3460,7 +3552,11 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         html += '<div class="text-sm font-semibold text-[var(--text-primary)] mb-2">General Recommendations</div>';
                         html += '<ul class="list-disc list-inside space-y-1 text-sm text-[var(--text-secondary)]">';
                         contentRecommendations.generalRecommendations.forEach(r => {
-                            html += `<li>${r}</li>`;
+                            // Replace any year references with current year (2025)
+                            const currentYear = new Date().getFullYear();
+                            const yearRegex = /\b(20\d{2})\b/g;
+                            const updatedRec = r.replace(yearRegex, currentYear.toString());
+                            html += `<li>${updatedRec}</li>`;
                         });
                         html += '</ul>';
                         html += '</div>';
@@ -3474,17 +3570,49 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += '<div id="new-content-section" class="mt-6">';
                     html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">New Content to Create</h4>';
                     html += '<div class="space-y-3">';
+                    const intentColors = {
+                        Informational: '#60a5fa',
+                        Commercial: '#fbbf24',
+                        Navigational: '#a78bfa',
+                        Transactional: '#34d399',
+                        Other: '#94a3b8'
+                    };
                     newContentToCreate.newContentIdeas.forEach((idea, idx) => {
+                        const ideaIntent = idea.intent || 'Informational';
+                        const intentColor = intentColors[ideaIntent] || intentColors.Other;
                         html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
                         html += `<div class="flex items-start justify-between mb-2">`;
                         html += `<div class="flex-1">`;
-                        html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1">${idea.title || `Content Idea ${idx + 1}`}</div>`;
-                        html += `<div class="text-xs text-[var(--text-secondary)] mb-2">Intent: <span class="text-[var(--text-primary)]">${idea.intent || 'Informational'}</span></div>`;
+                        html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-2">${idea.title || `Content Idea ${idx + 1}`}</div>`;
+                        html += `<div class="text-xs mb-2">`;
+                        html += `<span class="font-bold text-[var(--text-secondary)]">Intent:</span> `;
+                        html += `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold" style="background-color: ${intentColor}20; color: ${intentColor};">`;
+                        html += `<span style="background:${intentColor};width:8px;height:8px;border-radius:9999px;display:inline-block"></span>${ideaIntent}</span>`;
+                        html += `</div>`;
                         if (idea.targetKeywords && Array.isArray(idea.targetKeywords) && idea.targetKeywords.length > 0) {
-                            html += `<div class="text-xs text-[var(--text-secondary)] mb-2">Target Keywords: <span class="text-[var(--text-primary)]">${idea.targetKeywords.join(', ')}</span></div>`;
+                            html += `<div class="text-xs mb-2">`;
+                            html += `<span class="font-bold text-[var(--text-secondary)]">Target Keywords:</span> `;
+                            html += `<div class="mt-1 space-y-1">`;
+                            idea.targetKeywords.forEach(kw => {
+                                const metrics = idea.keywordMetrics?.[kw] || {};
+                                html += `<div class="text-xs">`;
+                                html += `<span class="text-[var(--text-primary)] font-semibold">${kw}</span>`;
+                                if (metrics.volume !== null || metrics.difficulty !== null || metrics.opportunity_ctr !== null) {
+                                    html += `<span class="text-[var(--text-secondary)] ml-2">• `;
+                                    const metricsParts = [];
+                                    if (metrics.volume !== null) metricsParts.push(`Vol: ${typeof metrics.volume === 'number' ? metrics.volume.toLocaleString() : metrics.volume}`);
+                                    if (metrics.difficulty !== null) metricsParts.push(`Diff: ${metrics.difficulty}`);
+                                    if (metrics.opportunity_ctr !== null) metricsParts.push(`CTR: ${(metrics.opportunity_ctr * 100).toFixed(1)}%`);
+                                    html += metricsParts.join(' • ');
+                                    html += `</span>`;
+                                }
+                                html += `</div>`;
+                            });
+                            html += `</div>`;
+                            html += `</div>`;
                         }
                         if (idea.rationale) {
-                            html += `<div class="text-sm text-[var(--text-secondary)]">${idea.rationale}</div>`;
+                            html += `<div class="text-sm text-[var(--text-secondary)] mt-2">${idea.rationale}</div>`;
                         }
                         html += `</div>`;
                         html += `</div>`;
@@ -3506,18 +3634,30 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += '</div>';
                 }
 
-                // URL Cards Summary with Anchor Text
+                // Individual URL Summaries with Anchor Text
                 html += '<div id="url-metrics-grid" class="metrics-grid-container mt-6">';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4 w-full col-span-full">Individual URL Summaries</h4>';
                 urls.forEach((u, idx) => {
                     const sm = resultsByUrl[u].siteMetrics?.data?.site_metrics || {};
                     const linkingDomains = sm.root_domains_to_page ?? 'N/A';
                     const inboundLinks = sm.external_pages_to_page ?? 'N/A';
                     const pageAuthority = sm.page_authority ?? 'N/A';
                     const idist = resultsByUrl[u].intentDistribution || {};
+                    const similarity = seedTopicSimilarities[u] || 0;
+                    const valueScore = resultsByUrl[u]?.valueScore || 0;
+                    const topAnchors = resultsByUrl[u].topAnchors || [];
                     
                     html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
                     html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1">URL ${idx + 1}</h4>`;
                     html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3">${u}</p>`;
+                    
+                    html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
+                    html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Cluster Analysis Metrics</div>';
+                    html += '<div class="space-y-1 text-sm">';
+                    html += `<div>Semantic Similarity: <span class="font-bold text-[var(--text-primary)]">${(similarity * 100).toFixed(1)}%</span></div>`;
+                    html += `<div>Value Score: <span class="font-bold text-[var(--text-primary)]">${valueScore.toFixed(1)}</span></div>`;
+                    html += '</div>';
+                    html += '</div>';
                     
                     html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
                     html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Page Metrics</div>';
@@ -3527,6 +3667,21 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     html += `<div>Page Authority: <span class="font-bold text-[var(--text-primary)]">${pageAuthority}</span></div>`;
                     html += '</div>';
                     html += '</div>';
+                    
+                    // Top Anchor Texts
+                    if (topAnchors.length > 0) {
+                        html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
+                        html += `<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Top Anchor Texts (${topAnchors.length})</div>`;
+                        html += '<div class="space-y-1 text-sm">';
+                        topAnchors.slice(0, 5).forEach(anchor => {
+                            html += `<div class="text-xs">`;
+                            html += `<span class="text-[var(--text-primary)]">${anchor.text || 'N/A'}</span>`;
+                            html += `<span class="text-[var(--text-secondary)] ml-2">• Domains: ${anchor.external_root_domains || 0} • Pages: ${anchor.external_pages || 0}</span>`;
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                        html += '</div>';
+                    }
 
                     const rkList = Array.isArray(resultsByUrl[u].rankingKeywords) ? resultsByUrl[u].rankingKeywords : [];
                     html += '<div class="mt-3">';
