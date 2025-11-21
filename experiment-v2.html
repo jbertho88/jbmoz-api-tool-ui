@@ -631,6 +631,7 @@
                     <option value="competitiveAnalysis">Competitive Analysis</option>
                     <option value="keywordTargetingAnalysis">Keyword Targeting Analysis</option>
                     <option value="contentClusterAnalysis">Content Cluster Analysis</option>
+                    <option value="contentClustersIdentification">Content Clusters Identification</option>
                 </optgroup>
                 <optgroup label="Website Research">
                     <option value="siteMetrics">Fetch Site Metrics</option>
@@ -677,6 +678,7 @@
                 <fieldset id="competitiveAnalysisInputs" class="input-section space-y-4"><legend class="sr-only">Competitive Analysis Inputs</legend></fieldset>
                 <fieldset id="keywordTargetingAnalysisInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Targeting Analysis Inputs</legend></fieldset>
                 <fieldset id="contentClusterAnalysisInputs" class="input-section space-y-4"><legend class="sr-only">Content Cluster Analysis Inputs</legend></fieldset>
+                <fieldset id="contentClustersIdentificationInputs" class="input-section space-y-4"><legend class="sr-only">Content Clusters Identification Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -1207,6 +1209,15 @@
                     createLabel('Similarity Threshold (Default 0.85; 0-1)') +
                     '<input type="number" id="ccaSimilarityThreshold" value="0.85" min="0" max="1" step="0.01" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">' +
                     createNumberInput('ccaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze per URL (Default 25; 1-500)');
+                document.getElementById('contentClustersIdentificationInputs').innerHTML = 
+                    createDescription('Scan a list of URLs and automatically segment them into topic clusters using OpenAI. Returns LLM-defined topics and maps them to your content clusters.') +
+                    createLabel('URLs (10-1000)') +
+                    createTextarea('cciUrls', 'Enter URLs to analyze, one per line (e.g., https://example.com/page1). Minimum 10, maximum 1000 URLs.') +
+                    createLabel('Scope (Default: URL)') +
+                    createSelect('cciScopeSelect', scopeOptions) +
+                    createLabel('Content Clusters (Optional)') +
+                    createTextarea('cciContentClusters', 'Enter seed topics/clusters for content assignment, one per line (e.g., "Digital Marketing", "SEO Best Practices"). Leave blank to auto-generate clusters.') +
+                    createDescription('If provided, pages will be mapped to these clusters. If blank, clusters will be auto-generated from the content.');
             };
             
             const readmeContent = `
@@ -1879,6 +1890,30 @@
                     }
                     return;
                 }
+                if (selectedMethod === 'contentClustersIdentification') {
+                    try {
+                        const openaiApiKey = allDOMElements.openaiApiKeyInput.value.trim();
+                        if (!openaiApiKey) {
+                            displayError('Please provide an OpenAI API Key for Content Clusters Identification.');
+                            resetSubmitButton();
+                            return;
+                        }
+                        const cciData = await runContentClustersIdentification(openaiApiKey, payload.params, PROXY_URL, inFlightRequest);
+                        currentResultsData = cciData;
+                        currentOriginalParams = payload.params;
+                        currentMethod = selectedMethod;
+                        showContentClustersIdentificationDashboard(cciData);
+                        autoSaveToHistory();
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            displayError(error.message);
+                        }
+                    } finally {
+                        resetSubmitButton();
+                        inFlightRequest = null;
+                    }
+                    return;
+                }
                 
                 // For non-dashboard methods, ensure dashboards are cleared
                 const existingCompetitive = document.getElementById('competitive-dashboard');
@@ -1887,6 +1922,8 @@
                 if (existingKta) existingKta.remove();
                 const existingCca = document.getElementById('content-cluster-dashboard');
                 if (existingCca) existingCca.remove();
+                const existingCci = document.getElementById('content-clusters-identification-dashboard');
+                if (existingCci) existingCci.remove();
                 
                 try {
                     const response = await fetch(PROXY_URL, {
@@ -3049,6 +3086,367 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                 };
             }
 
+            // K-means clustering implementation
+            function kMeansClustering(embeddings, k, maxIterations = 100) {
+                const n = embeddings.length;
+                if (n === 0) return [];
+                if (n <= k) {
+                    // Each point is its own cluster
+                    return embeddings.map((_, i) => [i]);
+                }
+
+                // Initialize centroids randomly
+                const centroids = [];
+                const indices = Array.from({ length: n }, (_, i) => i);
+                for (let i = 0; i < k; i++) {
+                    const randomIdx = indices[Math.floor(Math.random() * indices.length)];
+                    centroids.push([...embeddings[randomIdx]]);
+                    indices.splice(indices.indexOf(randomIdx), 1);
+                }
+
+                let clusters = Array(k).fill(null).map(() => []);
+                let prevClusters = null;
+                let iterations = 0;
+
+                while (iterations < maxIterations) {
+                    // Assign points to nearest centroid (using cosine similarity - higher is better)
+                    clusters = Array(k).fill(null).map(() => []);
+                    embeddings.forEach((embedding, idx) => {
+                        let maxSimilarity = -Infinity;
+                        let nearestCentroid = 0;
+                        centroids.forEach((centroid, cIdx) => {
+                            const similarity = cosineSimilarity(embedding, centroid);
+                            if (similarity > maxSimilarity) {
+                                maxSimilarity = similarity;
+                                nearestCentroid = cIdx;
+                            }
+                        });
+                        clusters[nearestCentroid].push(idx);
+                    });
+
+                    // Check for convergence
+                    if (prevClusters && JSON.stringify(clusters) === JSON.stringify(prevClusters)) {
+                        break;
+                    }
+                    prevClusters = JSON.parse(JSON.stringify(clusters));
+
+                    // Update centroids
+                    centroids.forEach((centroid, cIdx) => {
+                        if (clusters[cIdx].length === 0) return;
+                        const dim = centroid.length;
+                        for (let d = 0; d < dim; d++) {
+                            let sum = 0;
+                            clusters[cIdx].forEach(idx => {
+                                sum += embeddings[idx][d];
+                            });
+                            centroid[d] = sum / clusters[cIdx].length;
+                        }
+                    });
+
+                    iterations++;
+                }
+
+                return clusters.filter(c => c.length > 0);
+            }
+
+            // Determine optimal number of clusters using elbow method (simplified)
+            function determineOptimalClusters(embeddings, maxK = 10) {
+                const n = embeddings.length;
+                if (n <= 3) return n;
+                const actualMaxK = Math.min(maxK, Math.floor(n / 2));
+                if (actualMaxK < 2) return 2;
+
+                // Use a simple heuristic: sqrt(n/2) or between 3-10
+                const k = Math.max(3, Math.min(actualMaxK, Math.ceil(Math.sqrt(n / 2))));
+                return k;
+            }
+
+            async function runContentClustersIdentification(openaiApiKey, params, proxyUrl, opensignal) {
+                const { urls, scope, contentClusters } = params;
+                const resultsByUrl = {};
+
+                // Step 1: Fetch and clean HTML content for each URL
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching content from ' + urls.length + ' URLs...</span>';
+                const contentPromises = urls.map(async (url) => {
+                    try {
+                        const content = await extractPageContent(url, proxyUrl);
+                        resultsByUrl[url] = {
+                            url,
+                            rawContent: content,
+                            summary: '',
+                            embedding: null,
+                            llmDefinedTopic: '',
+                            contentCluster: '',
+                            primaryIntent: '',
+                            audience: '',
+                            expertiseLevel: '',
+                            topicTags: [],
+                            errors: []
+                        };
+                    } catch (error) {
+                        resultsByUrl[url] = {
+                            url,
+                            rawContent: '',
+                            summary: '',
+                            embedding: null,
+                            llmDefinedTopic: '',
+                            contentCluster: '',
+                            primaryIntent: '',
+                            audience: '',
+                            expertiseLevel: '',
+                            topicTags: [],
+                            errors: [error.message]
+                        };
+                    }
+                });
+                await Promise.all(contentPromises);
+
+                // Step 2: Summarize each page (optional but recommended)
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Summarizing pages...</span>';
+                const summaryPromises = urls.map(async (url) => {
+                    if (resultsByUrl[url].errors.length > 0 || !resultsByUrl[url].rawContent) {
+                        resultsByUrl[url].summary = '';
+                        return;
+                    }
+                    try {
+                        const summaryPrompt = `Summarize the main topic and content of this webpage in 2-3 sentences. Focus on the primary subject matter and key points.
+
+Content: ${resultsByUrl[url].rawContent.substring(0, 4000)}
+
+Provide a concise summary:`;
+                        const summary = await analyzeWithOpenAI({ analysisData: { prompt: summaryPrompt } }, openaiApiKey, proxyUrl);
+                        resultsByUrl[url].summary = summary.trim();
+                    } catch (error) {
+                        resultsByUrl[url].errors.push('Summary: ' + error.message);
+                        resultsByUrl[url].summary = resultsByUrl[url].rawContent.substring(0, 500);
+                    }
+                });
+                await Promise.all(summaryPromises);
+
+                // Step 3: Create embeddings for each page summary
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Creating embeddings...</span>';
+                const embeddingPromises = urls.map(async (url) => {
+                    if (resultsByUrl[url].errors.length > 0 || !resultsByUrl[url].summary) {
+                        return;
+                    }
+                    try {
+                        const embedding = await getEmbeddings(resultsByUrl[url].summary, openaiApiKey, proxyUrl);
+                        resultsByUrl[url].embedding = embedding;
+                    } catch (error) {
+                        resultsByUrl[url].errors.push('Embedding: ' + error.message);
+                    }
+                });
+                await Promise.all(embeddingPromises);
+
+                // Step 4: Cluster embeddings
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Clustering content...</span>';
+                const validUrls = urls.filter(url => resultsByUrl[url].embedding && resultsByUrl[url].embedding.length > 0);
+                const embeddings = validUrls.map(url => resultsByUrl[url].embedding);
+                let clusters = [];
+                
+                if (embeddings.length > 0) {
+                    const k = determineOptimalClusters(embeddings);
+                    clusters = kMeansClustering(embeddings, k);
+                }
+
+                // Step 5: Label clusters using GPT
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Labeling clusters...</span>';
+                const clusterLabels = [];
+                for (let i = 0; i < clusters.length; i++) {
+                    const clusterUrls = clusters[i].map(idx => validUrls[idx]);
+                    const clusterPages = clusterUrls.map(url => ({
+                        url,
+                        title: url.split('/').pop() || url,
+                        summary: resultsByUrl[url].summary || 'No summary available'
+                    }));
+
+                    try {
+                        const clusterPrompt = `You are an SEO and information architecture expert.
+
+You will receive a list of pages that belong to a single content cluster on a website.
+
+Each page has a title and a topic summary.
+
+Your job is to:
+1) Infer the unifying topic of the cluster.
+2) Provide a short, human-readable cluster name (suitable as a content hub or navigation label).
+3) Provide a 1–2 sentence description of what this cluster covers.
+4) Provide 3–8 canonical "topic tags" that describe this cluster.
+5) Estimate the dominant search intent (Informational, Commercial, Transactional, Navigational, Local).
+6) Suggest 1–2 funnel stages this cluster supports (e.g. Awareness, Consideration, Decision, Retention).
+
+Return JSON only with this exact structure:
+{
+  "clusterName": "Cluster Name",
+  "description": "1-2 sentence description",
+  "topicTags": ["tag1", "tag2", "tag3"],
+  "dominantIntent": "Informational|Commercial|Transactional|Navigational|Local",
+  "funnelStages": ["Awareness", "Consideration"]
+}
+
+Pages in cluster:
+${JSON.stringify(clusterPages, null, 2)}`;
+
+                        const clusterLabelResponse = await analyzeWithOpenAI({ analysisData: { prompt: clusterPrompt } }, openaiApiKey, proxyUrl);
+                        let clusterLabel;
+                        try {
+                            let jsonStr = clusterLabelResponse.trim();
+                            if (jsonStr.includes('```json')) {
+                                jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+                            } else if (jsonStr.includes('```')) {
+                                jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+                            }
+                            clusterLabel = JSON.parse(jsonStr);
+                        } catch {
+                            // Fallback parsing
+                            clusterLabel = {
+                                clusterName: `Cluster ${i + 1}`,
+                                description: clusterLabelResponse.substring(0, 200),
+                                topicTags: [],
+                                dominantIntent: 'Informational',
+                                funnelStages: ['Awareness']
+                            };
+                        }
+                        clusterLabels.push({ clusterIndex: i, ...clusterLabel });
+                    } catch (error) {
+                        clusterLabels.push({
+                            clusterIndex: i,
+                            clusterName: `Cluster ${i + 1}`,
+                            description: 'Unable to generate description',
+                            topicTags: [],
+                            dominantIntent: 'Informational',
+                            funnelStages: ['Awareness']
+                        });
+                    }
+                }
+
+                // Step 6: Map pages to clusters and assign cluster info
+                const urlToClusterIndex = {};
+                clusters.forEach((cluster, clusterIdx) => {
+                    cluster.forEach(urlIdx => {
+                        const url = validUrls[urlIdx];
+                        urlToClusterIndex[url] = clusterIdx;
+                    });
+                });
+
+                // Step 7: For each page, get LLM-defined topic and map to content clusters
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing individual pages...</span>';
+                const pageAnalysisPromises = urls.map(async (url) => {
+                    if (resultsByUrl[url].errors.length > 0 || !resultsByUrl[url].summary) {
+                        return;
+                    }
+
+                    // Get LLM-defined topic for this page
+                    try {
+                        const topicPrompt = `Analyze this webpage and provide:
+1. Primary topic (1-2 words)
+2. Primary intent (Informational, Commercial, Transactional, Navigational, Local)
+3. Target audience (e.g., "Marketing Professionals", "Small Business Owners")
+4. Expertise level (Beginner, Intermediate, Advanced)
+
+Return JSON only:
+{
+  "topic": "Main Topic",
+  "primaryIntent": "Informational|Commercial|Transactional|Navigational|Local",
+  "audience": "Target Audience",
+  "expertiseLevel": "Beginner|Intermediate|Advanced"
+}
+
+Page Summary: ${resultsByUrl[url].summary}`;
+
+                        const topicResponse = await analyzeWithOpenAI({ analysisData: { prompt: topicPrompt } }, openaiApiKey, proxyUrl);
+                        let pageAnalysis;
+                        try {
+                            let jsonStr = topicResponse.trim();
+                            if (jsonStr.includes('```json')) {
+                                jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+                            } else if (jsonStr.includes('```')) {
+                                jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+                            }
+                            pageAnalysis = JSON.parse(jsonStr);
+                        } catch {
+                            pageAnalysis = {
+                                topic: 'Unknown',
+                                primaryIntent: 'Informational',
+                                audience: 'General',
+                                expertiseLevel: 'Intermediate'
+                            };
+                        }
+
+                        resultsByUrl[url].llmDefinedTopic = pageAnalysis.topic || 'Unknown';
+                        resultsByUrl[url].primaryIntent = pageAnalysis.primaryIntent || 'Informational';
+                        resultsByUrl[url].audience = pageAnalysis.audience || 'General';
+                        resultsByUrl[url].expertiseLevel = pageAnalysis.expertiseLevel || 'Intermediate';
+
+                        // Assign cluster info
+                        const clusterIdx = urlToClusterIndex[url];
+                        if (clusterIdx !== undefined && clusterLabels[clusterIdx]) {
+                            const clusterLabel = clusterLabels[clusterIdx];
+                            resultsByUrl[url].contentCluster = clusterLabel.clusterName || `Cluster ${clusterIdx + 1}`;
+                            resultsByUrl[url].topicTags = clusterLabel.topicTags || [];
+                        } else {
+                            resultsByUrl[url].contentCluster = 'Unassigned';
+                            resultsByUrl[url].topicTags = [];
+                        }
+                    } catch (error) {
+                        resultsByUrl[url].errors.push('Page Analysis: ' + error.message);
+                        resultsByUrl[url].llmDefinedTopic = 'Unknown';
+                        resultsByUrl[url].primaryIntent = 'Informational';
+                        resultsByUrl[url].audience = 'General';
+                        resultsByUrl[url].expertiseLevel = 'Intermediate';
+                    }
+                });
+                await Promise.all(pageAnalysisPromises);
+
+                // Step 8: If user provided content clusters, map pages to them
+                if (contentClusters && contentClusters.length > 0) {
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Mapping to user-defined clusters...</span>';
+                    
+                    // Create embeddings for user-provided clusters
+                    const clusterEmbeddings = {};
+                    for (const cluster of contentClusters) {
+                        try {
+                            const embedding = await getEmbeddings(cluster, openaiApiKey, proxyUrl);
+                            clusterEmbeddings[cluster] = embedding;
+                        } catch (error) {
+                            console.warn(`Failed to create embedding for cluster "${cluster}":`, error);
+                        }
+                    }
+
+                    // Map each page to the closest user-defined cluster
+                    urls.forEach(url => {
+                        if (!resultsByUrl[url].embedding || resultsByUrl[url].errors.length > 0) return;
+
+                        let maxSimilarity = -1;
+                        let bestCluster = null;
+                        Object.entries(clusterEmbeddings).forEach(([clusterName, clusterEmbedding]) => {
+                            const similarity = cosineSimilarity(resultsByUrl[url].embedding, clusterEmbedding);
+                            if (similarity > maxSimilarity) {
+                                maxSimilarity = similarity;
+                                bestCluster = clusterName;
+                            }
+                        });
+
+                        if (bestCluster) {
+                            resultsByUrl[url].contentCluster = bestCluster;
+                        }
+                    });
+                }
+
+                return {
+                    urls,
+                    scope,
+                    contentClusters: contentClusters || null,
+                    resultsByUrl,
+                    clusterLabels,
+                    clusters: clusters.map((cluster, idx) => ({
+                        clusterIndex: idx,
+                        urls: cluster.map(urlIdx => validUrls[urlIdx]),
+                        label: clusterLabels[idx] || null
+                    }))
+                };
+            }
+
             function showKeywordTargetingDashboard(payload) {
                 // Hide regular view elements
                 allDOMElements.tableWrapper.classList.add('hidden');
@@ -4021,6 +4419,156 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                 }
             }
 
+            function showContentClustersIdentificationDashboard(data) {
+                allDOMElements.tableWrapper.classList.add('hidden');
+                allDOMElements.filterBtn.classList.add('hidden');
+                allDOMElements.resultsContainer.classList.remove('hidden');
+                
+                try {
+                    const { urls, scope, contentClusters, resultsByUrl, clusterLabels, clusters } = data;
+                    
+                    let html = '<div id="content-clusters-identification-dashboard" class="space-y-6">';
+                    
+                    // Header
+                    html += '<div class="flex items-start justify-between gap-3 mb-6">';
+                    html += '<div>';
+                    html += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-1">Content Clusters Identification</h3>';
+                    html += `<p class="text-sm text-[var(--text-secondary)]">URLs Analyzed: <span class="text-[var(--text-primary)]">${urls.length}</span> • Scope: ${scope} • Clusters Found: ${clusters.length}</p>`;
+                    if (contentClusters && contentClusters.length > 0) {
+                        html += `<p class="text-xs text-[var(--text-secondary)] mt-1">User-Defined Clusters: ${contentClusters.join(', ')}</p>`;
+                    }
+                    html += '</div>';
+                    html += '</div>';
+
+                    // Summary Statistics
+                    html += '<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">';
+                    const intentCounts = {};
+                    const clusterCounts = {};
+                    urls.forEach(url => {
+                        const result = resultsByUrl[url];
+                        if (result) {
+                            intentCounts[result.primaryIntent] = (intentCounts[result.primaryIntent] || 0) + 1;
+                            clusterCounts[result.contentCluster] = (clusterCounts[result.contentCluster] || 0) + 1;
+                        }
+                    });
+                    html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                    html += `<div class="text-xs text-[var(--text-secondary)] uppercase mb-1">Total URLs</div>`;
+                    html += `<div class="text-2xl font-bold text-[var(--text-primary)]">${urls.length}</div>`;
+                    html += `</div>`;
+                    html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                    html += `<div class="text-xs text-[var(--text-secondary)] uppercase mb-1">Clusters</div>`;
+                    html += `<div class="text-2xl font-bold text-[var(--text-primary)]">${clusters.length}</div>`;
+                    html += `</div>`;
+                    html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                    html += `<div class="text-xs text-[var(--text-secondary)] uppercase mb-1">Successfully Analyzed</div>`;
+                    html += `<div class="text-2xl font-bold text-[var(--text-primary)]">${urls.filter(url => !resultsByUrl[url]?.errors?.length || resultsByUrl[url]?.errors?.length === 0).length}</div>`;
+                    html += `</div>`;
+                    html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                    html += `<div class="text-xs text-[var(--text-secondary)] uppercase mb-1">With Errors</div>`;
+                    html += `<div class="text-2xl font-bold text-[var(--text-error)]">${urls.filter(url => resultsByUrl[url]?.errors?.length > 0).length}</div>`;
+                    html += `</div>`;
+                    html += '</div>';
+
+                    // Clusters Overview
+                    if (clusters.length > 0) {
+                        html += '<div class="mb-6">';
+                        html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Content Clusters Overview</h4>';
+                        html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+                        clusters.forEach((cluster, idx) => {
+                            const label = clusterLabels.find(cl => cl.clusterIndex === idx);
+                            html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                            html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-2">${label?.clusterName || `Cluster ${idx + 1}`}</div>`;
+                            if (label?.description) {
+                                html += `<div class="text-xs text-[var(--text-secondary)] mb-2">${label.description}</div>`;
+                            }
+                            html += `<div class="text-xs text-[var(--text-secondary)] mb-2">URLs: <span class="text-[var(--text-primary)] font-semibold">${cluster.urls.length}</span></div>`;
+                            if (label?.dominantIntent) {
+                                html += `<div class="text-xs text-[var(--text-secondary)] mb-2">Intent: <span class="text-[var(--text-primary)]">${label.dominantIntent}</span></div>`;
+                            }
+                            if (label?.topicTags && label.topicTags.length > 0) {
+                                html += `<div class="text-xs text-[var(--text-secondary)] mb-1">Tags:</div>`;
+                                html += `<div class="flex flex-wrap gap-1">`;
+                                label.topicTags.slice(0, 5).forEach(tag => {
+                                    html += `<span class="px-2 py-1 bg-[var(--bg-input)] text-[var(--text-primary)] text-xs rounded">${tag}</span>`;
+                                });
+                                if (label.topicTags.length > 5) {
+                                    html += `<span class="text-xs text-[var(--text-secondary)]">+${label.topicTags.length - 5} more</span>`;
+                                }
+                                html += `</div>`;
+                            }
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                        html += '</div>';
+                    }
+
+                    // Pages Table
+                    html += '<div class="mb-6">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Page Analysis Results</h4>';
+                    html += '<div class="overflow-x-auto">';
+                    html += '<table class="w-full border-collapse border border-[var(--border-primary)]">';
+                    html += '<thead>';
+                    html += '<tr class="bg-[var(--bg-input)]">';
+                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">URL</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">LLM-Defined Topic</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">Content Cluster</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">Primary Intent</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">Audience</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">Expertise Level</th>';
+                    html += '<th class="border border-[var(--border-primary)] p-2 text-left text-sm font-semibold text-[var(--text-primary)]">Topic Tags</th>';
+                    html += '</tr>';
+                    html += '</thead>';
+                    html += '<tbody>';
+                    urls.forEach(url => {
+                        const result = resultsByUrl[url];
+                        if (!result) return;
+                        html += '<tr class="hover:bg-[var(--bg-input)]">';
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)] break-all">${url}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.llmDefinedTopic || 'N/A'}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.contentCluster || 'Unassigned'}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.primaryIntent || 'N/A'}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.audience || 'N/A'}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.expertiseLevel || 'N/A'}</td>`;
+                        html += `<td class="border border-[var(--border-primary)] p-2 text-sm text-[var(--text-primary)]">${result.topicTags && result.topicTags.length > 0 ? result.topicTags.join(', ') : 'N/A'}</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody>';
+                    html += '</table>';
+                    html += '</div>';
+                    html += '</div>';
+
+                    // Errors section (if any)
+                    const urlsWithErrors = urls.filter(url => resultsByUrl[url]?.errors?.length > 0);
+                    if (urlsWithErrors.length > 0) {
+                        html += '<div class="mb-6">';
+                        html += '<h4 class="font-bold text-lg text-[var(--text-error)] mb-4">Errors</h4>';
+                        html += '<div class="space-y-2">';
+                        urlsWithErrors.forEach(url => {
+                            html += '<div class="bg-[var(--error-bg)] border border-[var(--error-border)] rounded-lg p-3">';
+                            html += `<div class="text-sm font-semibold text-[var(--text-error)] mb-1 break-all">${url}</div>`;
+                            html += '<ul class="list-disc list-inside text-xs text-[var(--text-error)]">';
+                            resultsByUrl[url].errors.forEach(error => {
+                                html += `<li>${error}</li>`;
+                            });
+                            html += '</ul>';
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                        html += '</div>';
+                    }
+
+                    html += '</div>';
+                    
+                    allDOMElements.rawCode.textContent = '';
+                    allDOMElements.rawWrapper.innerHTML = html;
+                    allDOMElements.rawWrapper.classList.remove('hidden');
+                    allDOMElements.viewDataBtn.textContent = 'View JSON';
+                    allDOMElements.exportPdfBtn.classList.add('hidden');
+                } catch (err) {
+                    displayError('Render error in Content Clusters Identification: ' + (err && err.message ? err.message : err));
+                }
+            }
+
             function showCompetitiveDashboard(data) {
                 // Hide regular view elements
                 allDOMElements.tableWrapper.classList.add('hidden');
@@ -4646,6 +5194,8 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
         exportKeywordTargetingToCsv(currentResultsData);
     } else if (currentMethod === 'contentClusterAnalysis' && currentResultsData) {
         exportContentClusterAnalysisToCsv(currentResultsData);
+    } else if (currentMethod === 'contentClustersIdentification' && currentResultsData) {
+        exportContentClustersIdentificationToCsv(currentResultsData);
     } else if (currentResultsData) {
                     exportDataToCsv(currentResultsData, currentMethod, currentOriginalParams);
                 } else {
@@ -5038,13 +5588,103 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                 document.head.appendChild(script);
             }
 
+            function exportContentClustersIdentificationToCsv(data) {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                script.onload = () => {
+                    try {
+                        const workbook = XLSX.utils.book_new();
+                        const { urls = [], scope, contentClusters, resultsByUrl = {}, clusterLabels = [], clusters = [] } = data || {};
+
+                        // Sheet 1: Summary
+                        const summary = [
+                            ['Scope', scope || 'N/A'],
+                            ['Total URLs', urls.length],
+                            ['Clusters Found', clusters.length],
+                            ['User-Defined Clusters', contentClusters && contentClusters.length > 0 ? contentClusters.join(', ') : 'Auto-generated'],
+                            ['Successfully Analyzed', urls.filter(url => !resultsByUrl[url]?.errors?.length || resultsByUrl[url]?.errors?.length === 0).length],
+                            ['With Errors', urls.filter(url => resultsByUrl[url]?.errors?.length > 0).length]
+                        ];
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summary), 'Summary');
+
+                        // Sheet 2: Page Analysis Results
+                        const pageRows = [['URL', 'LLM-Defined Topic', 'Content Cluster', 'Primary Intent', 'Audience', 'Expertise Level', 'Topic Tags']];
+                        urls.forEach(url => {
+                            const result = resultsByUrl[url];
+                            if (result) {
+                                pageRows.push([
+                                    url,
+                                    result.llmDefinedTopic || 'N/A',
+                                    result.contentCluster || 'Unassigned',
+                                    result.primaryIntent || 'N/A',
+                                    result.audience || 'N/A',
+                                    result.expertiseLevel || 'N/A',
+                                    result.topicTags && result.topicTags.length > 0 ? result.topicTags.join(', ') : 'N/A'
+                                ]);
+                            }
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(pageRows), 'Page Analysis');
+
+                        // Sheet 3: Clusters
+                        const clusterRows = [['Cluster Name', 'Description', 'URLs Count', 'Dominant Intent', 'Topic Tags', 'Funnel Stages']];
+                        clusters.forEach((cluster, idx) => {
+                            const label = clusterLabels.find(cl => cl.clusterIndex === idx);
+                            clusterRows.push([
+                                label?.clusterName || `Cluster ${idx + 1}`,
+                                label?.description || 'N/A',
+                                cluster.urls.length,
+                                label?.dominantIntent || 'N/A',
+                                label?.topicTags && label.topicTags.length > 0 ? label.topicTags.join(', ') : 'N/A',
+                                label?.funnelStages && label.funnelStages.length > 0 ? label.funnelStages.join(', ') : 'N/A'
+                            ]);
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(clusterRows), 'Clusters');
+
+                        // Sheet 4: Cluster URLs Mapping
+                        const clusterUrlRows = [['Cluster Name', 'URL']];
+                        clusters.forEach((cluster, idx) => {
+                            const label = clusterLabels.find(cl => cl.clusterIndex === idx);
+                            const clusterName = label?.clusterName || `Cluster ${idx + 1}`;
+                            cluster.urls.forEach(url => {
+                                clusterUrlRows.push([clusterName, url]);
+                            });
+                        });
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(clusterUrlRows), 'Cluster URLs');
+
+                        // Sheet 5: Errors (if any)
+                        const urlsWithErrors = urls.filter(url => resultsByUrl[url]?.errors?.length > 0);
+                        if (urlsWithErrors.length > 0) {
+                            const errorRows = [['URL', 'Errors']];
+                            urlsWithErrors.forEach(url => {
+                                errorRows.push([
+                                    url,
+                                    resultsByUrl[url].errors.join('; ')
+                                ]);
+                            });
+                            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(errorRows), 'Errors');
+                        }
+
+                        const dateStr = new Date().toISOString().split('T')[0];
+                        XLSX.writeFile(workbook, `content-clusters-identification-${dateStr}.xlsx`);
+                    } catch (error) {
+                        console.error('Export error:', error);
+                        displayError('Failed to export to Excel. Please try again.');
+                    }
+                };
+                script.onerror = () => {
+                    displayError('Failed to load Excel export library. Please try again.');
+                };
+                document.head.appendChild(script);
+            }
+
             function toggleDataView() {
                 // Handle multi-endpoint dashboards specially
-                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis' || currentMethod === 'contentClusterAnalysis') {
+                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis' || currentMethod === 'contentClusterAnalysis' || currentMethod === 'contentClustersIdentification') {
                     const dashboard = document.getElementById('competitive-dashboard');
                     const altDashboard = document.getElementById('keyword-targeting-dashboard');
                     const ccaDashboard = document.getElementById('content-cluster-dashboard');
-                    const activeDash = dashboard || altDashboard || ccaDashboard;
+                    const cciDashboard = document.getElementById('content-clusters-identification-dashboard');
+                    const activeDash = dashboard || altDashboard || ccaDashboard || cciDashboard;
                     const isDashboardVisible = activeDash && !activeDash.closest('.hidden');
                     
                     if (isDashboardVisible) {
@@ -5063,6 +5703,8 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                             showKeywordTargetingDashboard(currentResultsData);
                         } else if (currentMethod === 'contentClusterAnalysis') {
                             showContentClusterDashboard(currentResultsData);
+                        } else if (currentMethod === 'contentClustersIdentification') {
+                            showContentClustersIdentificationDashboard(currentResultsData);
                         }
                         allDOMElements.viewDataBtn.textContent = 'View JSON';
                         allDOMElements.exportPdfBtn.classList.add('hidden');
@@ -5090,7 +5732,7 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
             
             function showRawJsonResults(data) {
                 // Don't override dashboards for multi-endpoint views
-                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis' || currentMethod === 'contentClusterAnalysis') {
+                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis' || currentMethod === 'contentClusterAnalysis' || currentMethod === 'contentClustersIdentification') {
                     return;
                 }
                 
@@ -5165,6 +5807,8 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                     if (Array.isArray(currentResultsData)) {
                         resultCount = currentResultsData.length;
                     } else if (currentMethod === 'contentClusterAnalysis' && currentResultsData.urls) {
+                        resultCount = currentResultsData.urls.length;
+                    } else if (currentMethod === 'contentClustersIdentification' && currentResultsData.urls) {
                         resultCount = currentResultsData.urls.length;
                     } else if (currentMethod === 'competitiveAnalysis' && typeof currentResultsData === 'object') {
                         resultCount = Object.keys(currentResultsData).length;
@@ -5516,6 +6160,11 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                         'locale': 'ccaLocaleSelect',
                         'similarityThreshold': 'ccaSimilarityThreshold',
                         'limit': 'ccaLimit'
+                    },
+                    'contentClustersIdentification': {
+                        'urls': 'cciUrls',
+                        'scope': 'cciScopeSelect',
+                        'contentClusters': 'cciContentClusters'
                     }
                 };
 
@@ -5642,6 +6291,19 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                             locale: getInputValue('ccaLocaleSelect') || 'en-US',
                             similarityThreshold: parseFloat(getInputValue('ccaSimilarityThreshold')) || 0.85,
                             limit: parseInt(getInputValue('ccaLimit'), 10) || 25
+                        };
+                        break;
+                    }
+                    case 'contentClustersIdentification': {
+                        const urls = getCleanedList('cciUrls');
+                        const contentClusters = getCleanedList('cciContentClusters');
+                        const scope = getInputValue('cciScopeSelect') || 'url';
+                        if (!urls || urls.length < 10) throw new Error('Please enter at least 10 URLs.');
+                        if (urls.length > 1000) throw new Error('Maximum 1000 URLs allowed.');
+                        payload.params = { 
+                            urls,
+                            scope,
+                            contentClusters: contentClusters && contentClusters.length > 0 ? contentClusters : null
                         };
                         break;
                     }
