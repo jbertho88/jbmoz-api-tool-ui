@@ -1238,7 +1238,7 @@
                     createLabel('Similarity Threshold (Default 0.85; 0-1)') +
                     '<input type="number" id="ccaSimilarityThreshold" value="0.85" min="0" max="1" step="0.01" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">' +
                     createNumberInput('ccaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze per URL (Default 25; 1-500)');
-                const modelOptions = `<option value="gpt-3.5-turbo">GPT-3.5 Turbo (Recommended - ~90% cheaper, good quality)</option><option value="gpt-4-turbo-preview">GPT-4 Turbo (Best quality, ~10-20x more expensive)</option>`;
+                const modelOptions = `<option value="gpt-3.5-turbo">GPT-3.5 Turbo (Recommended - ~90% cheaper, good quality)</option><option value="gpt-4o-mini">GPT-4o mini (Fast, affordable, better quality)</option><option value="gpt-4o">GPT-4o (Best quality, more expensive)</option>`;
                 document.getElementById('contentClustersIdentificationInputs').innerHTML = 
                     '<div class="mb-4 p-3 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
@@ -1250,7 +1250,7 @@
                     createDescription('Scan a list of URLs and automatically segment them into topic clusters using OpenAI. Returns LLM-defined topics and maps them to your content clusters.') +
                     createLabel('OpenAI Model') +
                     createSelect('cciModelSelect', modelOptions) +
-                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4 Turbo provides higher quality cluster names and descriptions but costs significantly more. For 100 URLs: GPT-3.5 ≈ $0.25-0.75, GPT-4 ≈ $5-15.') +
+                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive.') +
                     createLabel('URLs (10-1000)') +
                     createTextarea('cciUrls', 'Enter URLs to analyze, one per line (e.g., https://example.com/page1). Minimum 10, maximum 1000 URLs.') +
                     createLabel('Scope (Default: URL)') +
@@ -2630,20 +2630,24 @@
             }
 
             // Analyze with OpenAI GPT (via proxy) with rate limiting
-            // model: 'gpt-3.5-turbo' (default, cheaper) or 'gpt-4-turbo-preview' (better quality, more expensive)
+            // model: 'gpt-3.5-turbo' (default, cheaper), 'gpt-4o-mini' (affordable, better quality), or 'gpt-4o' (best quality, more expensive)
             async function analyzeWithOpenAI(analysisData, openaiApiKey, proxyUrl, model = 'gpt-3.5-turbo') {
                 return rateLimitedOpenAICall(async () => {
+                    // Debug: Log the model being sent
+                    console.log('[OpenAI API] Requesting model:', model);
+                    const requestBody = {
+                        method: 'analyzeWithOpenAI',
+                        openaiApiKey,
+                        params: { 
+                            analysisData,
+                            model: model // Specify model for cost control
+                        }
+                    };
+                    console.log('[OpenAI API] Request payload:', JSON.stringify(requestBody, null, 2));
                     const response = await fetch(proxyUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            method: 'analyzeWithOpenAI',
-                            openaiApiKey,
-                            params: { 
-                                analysisData,
-                                model: model // Specify model for cost control
-                            }
-                        })
+                        body: JSON.stringify(requestBody)
                     });
                     if (!response.ok) {
                         const error = await response.json();
@@ -6938,6 +6942,7 @@ Page Summary: ${resultsByUrl[url].summary}`;
                         const contentClusters = getCleanedList('cciContentClusters');
                         const scope = getInputValue('cciScopeSelect') || 'url';
                         const model = getInputValue('cciModelSelect') || 'gpt-3.5-turbo';
+                        console.log('[Content Clusters Identification] Selected model from dropdown:', model);
                         if (!urls || urls.length < 10) throw new Error('Please enter at least 10 URLs.');
                         if (urls.length > 1000) throw new Error('Maximum 1000 URLs allowed.');
                         payload.params = { 
@@ -6946,6 +6951,7 @@ Page Summary: ${resultsByUrl[url].summary}`;
                             model,
                             contentClusters: contentClusters && contentClusters.length > 0 ? contentClusters : null
                         };
+                        console.log('[Content Clusters Identification] Payload params.model:', payload.params.model);
                         break;
                     }
                     default: throw new Error('Invalid method selected.');
