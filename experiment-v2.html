@@ -1256,7 +1256,7 @@
                     createLabel('Locale') +
                     createSelect('ktaLocaleSelect', localeOptions) +
                     createNumberInput('ktaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze (Default 25; 1-500)');
-                const modelOptions = `<option value="gpt-3.5-turbo">GPT-3.5 Turbo (Recommended - ~90% cheaper, good quality)</option><option value="gpt-4o-mini">GPT-4o mini (Fast, affordable, better quality)</option><option value="gpt-4o">GPT-4o (Best quality, more expensive)</option>`;
+                const modelOptions = `<option value="gpt-3.5-turbo">GPT-3.5 Turbo (Recommended - ~90% cheaper, good quality)</option><option value="gpt-4o-mini">GPT-4o mini (Fast, affordable, better quality)</option><option value="gpt-4o">GPT-4o (Best quality, more expensive)</option><option value="gpt-5-mini">GPT-5 mini (Faster, cost-efficient GPT-5)</option><option value="gpt-5">GPT-5 (Best model for coding and agentic tasks)</option><option value="gpt-5.1">GPT-5.1 (Latest - Best for content analysis)</option><option value="o3-deep-research">o3-deep-research (Most powerful deep research model)</option><option value="o4-mini-deep-research">o4-mini-deep-research (Faster, affordable deep research)</option><option value="gpt-4.1">GPT-4.1 (Smartest non-reasoning model)</option>`;
                 document.getElementById('contentClusterAnalysisInputs').innerHTML = 
                     '<div class="mb-4 p-3 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
@@ -1268,7 +1268,7 @@
                     createDescription('Analyze content similarity across multiple URLs using semantic embeddings. Identifies content consolidation opportunities and keyword targeting gaps.') +
                     createLabel('OpenAI Model') +
                     createSelect('ccaModelSelect', modelOptions) +
-                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive.') +
+                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive. GPT-5 mini is a faster, cost-efficient version of GPT-5. GPT-5 is the best model for coding and agentic tasks. GPT-5.1 is the latest and best for content analysis. o3-deep-research and o4-mini-deep-research excel at deep content research. GPT-4.1 is the smartest non-reasoning model. See the Read Me section for detailed pricing and recommendations.') +
                     createLabel('Seed Topic') +
                     createTextarea('ccaSeedTopic', 'Enter the main topic/keyword to analyze pages against (e.g., "digital marketing")') +
                     createLabel('URLs') +
@@ -1289,7 +1289,7 @@
                     createDescription('Scan a list of URLs and automatically segment them into topic clusters using OpenAI. Returns LLM-defined topics and maps them to your content clusters.') +
                     createLabel('OpenAI Model') +
                     createSelect('cciModelSelect', modelOptions) +
-                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive.') +
+                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive. GPT-5 mini is a faster, cost-efficient version of GPT-5. GPT-5 is the best model for coding and agentic tasks. GPT-5.1 is the latest and best for content analysis. o3-deep-research and o4-mini-deep-research excel at deep content research. GPT-4.1 is the smartest non-reasoning model. See the Read Me section for detailed pricing and recommendations.') +
                     createLabel('URLs (10-1000)') +
                     createTextarea('cciUrls', 'Enter URLs to analyze, one per line (e.g., https://example.com/page1). Minimum 10, maximum 1000 URLs.') +
                     createLabel('Scope (Default: URL)') +
@@ -1496,6 +1496,120 @@
                         </ul>
                         <p><strong>Usage:</strong> The Value Score is used to identify the main topic page (highest value score among URLs with ranking keywords) and helps determine which URL to keep when consolidating similar content.</p>
                     </div>
+                </div>
+                
+                <div class="readme-method mb-4">
+                    <h4><strong><u>Content Clusters Identification</u></strong></h4>
+                    <p><strong>Description:</strong> Automatically scan and segment a list of URLs into topic clusters using OpenAI. This method uses LLM analysis to identify content themes and map URLs to your defined content clusters or auto-generate clusters.</p>
+                    <p><strong>Inputs Required:</strong></p>
+                    <ul>
+                        <li><strong>URLs:</strong> Enter 10-1000 URLs to analyze, one per line</li>
+                        <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
+                        <li><strong>Content Clusters (Optional):</strong> Pre-defined clusters/topics to map URLs to, or leave blank for auto-generation</li>
+                        <li><strong>OpenAI Model:</strong> Select the model for content analysis (see OpenAI Model Guide below)</li>
+                        <li><strong>OpenAI API Key:</strong> Required for content analysis</li>
+                    </ul>
+                    <p><strong>Features:</strong></p>
+                    <ul>
+                        <li>Automatic topic clustering using advanced LLM analysis</li>
+                        <li>Search intent classification for each URL</li>
+                        <li>Content cluster overview with filterable views</li>
+                        <li>Page analysis results in filterable table format</li>
+                        <li>Toggle between LLM-defined and user-defined clusters</li>
+                    </ul>
+                </div>
+                
+                <hr class="my-4" style="border-color: var(--border-primary);">
+                
+                <h2>🤖 OpenAI Model Guide & Pricing</h2>
+                <div class="p-4 rounded-lg mb-4" style="background-color: var(--bg-input); border: 1px solid var(--border-secondary);">
+                    <h3><strong>Recommended Models for Content Analysis</strong></h3>
+                    <p>For the BEST content recommendations and analysis, we recommend these models in order of quality:</p>
+                    <ol class="mt-2">
+                        <li><strong>GPT-5.1</strong> - Latest model, best for content analysis and recommendations</li>
+                        <li><strong>o3-deep-research</strong> - Most powerful deep research model, excellent for comprehensive content analysis</li>
+                        <li><strong>GPT-5</strong> - Best model for coding and agentic tasks, great for structured content analysis</li>
+                        <li><strong>o4-mini-deep-research</strong> - Faster, more affordable deep research option</li>
+                        <li><strong>GPT-4.1</strong> - Smartest non-reasoning model, excellent quality</li>
+                        <li><strong>GPT-4o</strong> - High quality, reliable for content analysis</li>
+                        <li><strong>GPT-5-mini</strong> - Cost-efficient GPT-5 variant</li>
+                        <li><strong>GPT-4o-mini</strong> - Fast and affordable</li>
+                        <li><strong>GPT-3.5 Turbo</strong> - Budget-friendly option (~90% cost savings)</li>
+                    </ol>
+                </div>
+                
+                <div class="p-4 rounded-lg mb-4" style="background-color: var(--bg-input); border: 1px solid var(--border-secondary);">
+                    <h3><strong>OpenAI Model Pricing (per 1M tokens)</strong></h3>
+                    <p class="text-xs text-[var(--text-secondary)] mb-3">Pricing is approximate and may vary. Check <a href="https://platform.openai.com/pricing" target="_blank" rel="noopener" class="text-[var(--text-accent)] hover:underline">OpenAI's official pricing page</a> for the most current rates.</p>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                            <thead>
+                                <tr style="background-color: var(--bg-container); border-bottom: 2px solid var(--border-primary);">
+                                    <th style="padding: 0.75rem; text-align: left; font-weight: bold; color: var(--text-primary);">Model</th>
+                                    <th style="padding: 0.75rem; text-align: right; font-weight: bold; color: var(--text-primary);">Input (per 1M tokens)</th>
+                                    <th style="padding: 0.75rem; text-align: right; font-weight: bold; color: var(--text-primary);">Output (per 1M tokens)</th>
+                                    <th style="padding: 0.75rem; text-align: left; font-weight: bold; color: var(--text-primary);">Best For</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid var(--border-secondary);">
+                                    <td style="padding: 0.75rem; color: var(--text-primary);"><strong>GPT-5.1</strong></td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$1.50</td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$12.00</td>
+                                    <td style="padding: 0.75rem; color: var(--text-secondary); font-size: 0.875rem;">Latest, best content analysis</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-secondary);">
+                                    <td style="padding: 0.75rem; color: var(--text-primary);"><strong>o3-deep-research</strong></td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$15.00</td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$60.00</td>
+                                    <td style="padding: 0.75rem; color: var(--text-secondary); font-size: 0.875rem;">Deep research, comprehensive analysis</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-secondary);">
+                                    <td style="padding: 0.75rem; color: var(--text-primary);"><strong>GPT-5</strong></td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$1.25</td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$10.00</td>
+                                    <td style="padding: 0.75rem; color: var(--text-secondary); font-size: 0.875rem;">Coding, agentic tasks, structured analysis</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-secondary);">
+                                    <td style="padding: 0.75rem; color: var(--text-primary);"><strong>o4-mini-deep-research</strong></td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$3.00</td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$12.00</td>
+                                    <td style="padding: 0.75rem; color: var(--text-secondary); font-size: 0.875rem;">Affordable deep research</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-secondary);">
+                                    <td style="padding: 0.75rem; color: var(--text-primary);"><strong>GPT-4.1</strong></td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$3.00</td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$12.00</td>
+                                    <td style="padding: 0.75rem; color: var(--text-secondary); font-size: 0.875rem;">Smartest non-reasoning model</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-secondary);">
+                                    <td style="padding: 0.75rem; color: var(--text-primary);"><strong>GPT-4o</strong></td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$2.50</td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$15.00</td>
+                                    <td style="padding: 0.75rem; color: var(--text-secondary); font-size: 0.875rem;">High quality, reliable</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-secondary);">
+                                    <td style="padding: 0.75rem; color: var(--text-primary);"><strong>GPT-5-mini</strong></td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$0.25</td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$2.00</td>
+                                    <td style="padding: 0.75rem; color: var(--text-secondary); font-size: 0.875rem;">Cost-efficient GPT-5</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-secondary);">
+                                    <td style="padding: 0.75rem; color: var(--text-primary);"><strong>GPT-4o-mini</strong></td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$0.15</td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$1.50</td>
+                                    <td style="padding: 0.75rem; color: var(--text-secondary); font-size: 0.875rem;">Fast, affordable</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-secondary);">
+                                    <td style="padding: 0.75rem; color: var(--text-primary);"><strong>GPT-3.5 Turbo</strong></td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$0.50</td>
+                                    <td style="padding: 0.75rem; text-align: right; color: var(--text-primary);">~$1.50</td>
+                                    <td style="padding: 0.75rem; color: var(--text-secondary); font-size: 0.875rem;">Budget-friendly (~90% savings)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-xs text-[var(--text-secondary)] mt-3"><strong>Note:</strong> Pricing is approximate and subject to change. Input costs apply to tokens sent to the model, output costs apply to tokens generated by the model. For content analysis tasks, expect to use both input and output tokens.</p>
                 </div>
                 
                 <hr class="my-4" style="border-color: var(--border-primary);">
