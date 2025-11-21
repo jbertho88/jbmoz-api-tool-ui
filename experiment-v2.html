@@ -1209,8 +1209,12 @@
                     createLabel('Similarity Threshold (Default 0.85; 0-1)') +
                     '<input type="number" id="ccaSimilarityThreshold" value="0.85" min="0" max="1" step="0.01" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">' +
                     createNumberInput('ccaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze per URL (Default 25; 1-500)');
+                const modelOptions = `<option value="gpt-3.5-turbo">GPT-3.5 Turbo (Recommended - ~90% cheaper, good quality)</option><option value="gpt-4-turbo-preview">GPT-4 Turbo (Best quality, ~10-20x more expensive)</option>`;
                 document.getElementById('contentClustersIdentificationInputs').innerHTML = 
                     createDescription('Scan a list of URLs and automatically segment them into topic clusters using OpenAI. Returns LLM-defined topics and maps them to your content clusters.') +
+                    createLabel('OpenAI Model') +
+                    createSelect('cciModelSelect', modelOptions) +
+                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4 Turbo provides higher quality cluster names and descriptions but costs significantly more. For 100 URLs: GPT-3.5 ≈ $0.25-0.75, GPT-4 ≈ $5-15.') +
                     createLabel('URLs (10-1000)') +
                     createTextarea('cciUrls', 'Enter URLs to analyze, one per line (e.g., https://example.com/page1). Minimum 10, maximum 1000 URLs.') +
                     createLabel('Scope (Default: URL)') +
@@ -2234,21 +2238,7 @@
             // Get embeddings from OpenAI (via proxy)
             async function getEmbeddings(text, openaiApiKey, proxyUrl) {
                 try {
-                    const response = await fetch(proxyUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            method: 'getEmbeddings',
-                            openaiApiKey,
-                            params: { text }
-                        })
-                    });
-                    if (!response.ok) {
-                        const error = await response.json();
-                        throw new Error(error.error || 'Failed to get embeddings');
-                    }
-                    const data = await response.json();
-                    return data.embedding;
+                    return await getEmbeddingsWithRateLimit(text, openaiApiKey, proxyUrl);
                 } catch (error) {
                     console.error('Embeddings error:', error);
                     throw error;
@@ -2269,16 +2259,54 @@
                 return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
             }
 
-            // Analyze with OpenAI GPT (via proxy)
-            async function analyzeWithOpenAI(analysisData, openaiApiKey, proxyUrl) {
-                try {
+            // Rate-limited OpenAI API call with retry logic
+            async function rateLimitedOpenAICall(apiCallFn, maxRetries = 5, baseDelay = 1000) {
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        return await apiCallFn();
+                    } catch (error) {
+                        const errorMessage = error.message || '';
+                        const isRateLimit = /rate limit|429|TPM|RPM/i.test(errorMessage);
+                        
+                        if (isRateLimit && attempt < maxRetries - 1) {
+                            // Extract retry-after time if available
+                            let retryAfter = baseDelay;
+                            const retryAfterMatch = errorMessage.match(/try again in ([\d.]+)s/i);
+                            if (retryAfterMatch) {
+                                retryAfter = parseFloat(retryAfterMatch[1]) * 1000;
+                            } else {
+                                // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+                                retryAfter = baseDelay * Math.pow(2, attempt);
+                            }
+                            
+                            // Add some jitter to avoid thundering herd
+                            retryAfter += Math.random() * 1000;
+                            
+                            console.log(`Rate limit hit. Retrying in ${(retryAfter / 1000).toFixed(1)}s... (attempt ${attempt + 1}/${maxRetries})`);
+                            await new Promise(resolve => setTimeout(resolve, retryAfter));
+                            continue;
+                        }
+                        
+                        // If not a rate limit error or out of retries, throw
+                        throw error;
+                    }
+                }
+            }
+
+            // Analyze with OpenAI GPT (via proxy) with rate limiting
+            // model: 'gpt-3.5-turbo' (default, cheaper) or 'gpt-4-turbo-preview' (better quality, more expensive)
+            async function analyzeWithOpenAI(analysisData, openaiApiKey, proxyUrl, model = 'gpt-3.5-turbo') {
+                return rateLimitedOpenAICall(async () => {
                     const response = await fetch(proxyUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             method: 'analyzeWithOpenAI',
                             openaiApiKey,
-                            params: { analysisData }
+                            params: { 
+                                analysisData,
+                                model: model // Specify model for cost control
+                            }
                         })
                     });
                     if (!response.ok) {
@@ -2287,10 +2315,51 @@
                     }
                     const data = await response.json();
                     return data.analysis;
-                } catch (error) {
-                    console.error('OpenAI analysis error:', error);
-                    throw error;
+                });
+            }
+
+            // Get embeddings with rate limiting
+            async function getEmbeddingsWithRateLimit(text, openaiApiKey, proxyUrl) {
+                return rateLimitedOpenAICall(async () => {
+                    const response = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            method: 'getEmbeddings',
+                            openaiApiKey,
+                            params: { text }
+                        })
+                    });
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to get embeddings');
+                    }
+                    const data = await response.json();
+                    return data.embedding;
+                });
+            }
+
+            // Process items in batches with delays
+            async function processInBatches(items, batchSize, delayMs, processFn, progressCallback) {
+                const results = [];
+                for (let i = 0; i < items.length; i += batchSize) {
+                    const batch = items.slice(i, i + batchSize);
+                    const batchResults = await Promise.all(
+                        batch.map((item, idx) => processFn(item, i + idx))
+                    );
+                    results.push(...batchResults);
+                    
+                    // Update progress
+                    if (progressCallback) {
+                        progressCallback(i + batch.length, items.length);
+                    }
+                    
+                    // Delay between batches (except for the last batch)
+                    if (i + batchSize < items.length) {
+                        await new Promise(resolve => setTimeout(resolve, delayMs));
+                    }
                 }
+                return results;
             }
 
             async function runContentClusterAnalysis(apiKey, openaiApiKey, params, proxyUrl, opensignal) {
@@ -3201,42 +3270,59 @@ Data: ${JSON.stringify(newContentData, null, 2)}`;
                 });
                 await Promise.all(contentPromises);
 
-                // Step 2: Summarize each page (optional but recommended)
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Summarizing pages...</span>';
-                const summaryPromises = urls.map(async (url) => {
-                    if (resultsByUrl[url].errors.length > 0 || !resultsByUrl[url].rawContent) {
-                        resultsByUrl[url].summary = '';
-                        return;
-                    }
-                    try {
-                        const summaryPrompt = `Summarize the main topic and content of this webpage in 2-3 sentences. Focus on the primary subject matter and key points.
+                // Step 2: Summarize each page (optional but recommended) - Process in batches to avoid rate limits
+                const urlsToSummarize = urls.filter(url => resultsByUrl[url].errors.length === 0 && resultsByUrl[url].rawContent);
+                await processInBatches(
+                    urlsToSummarize,
+                    5, // Process 5 at a time
+                    2000, // 2 second delay between batches
+                    async (url, index) => {
+                        try {
+                            allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Summarizing pages... ${index + 1}/${urls.length}</span>`;
+                            const summaryPrompt = `Summarize the main topic and content of this webpage in 2-3 sentences. Focus on the primary subject matter and key points.
 
 Content: ${resultsByUrl[url].rawContent.substring(0, 4000)}
 
 Provide a concise summary:`;
-                        const summary = await analyzeWithOpenAI({ analysisData: { prompt: summaryPrompt } }, openaiApiKey, proxyUrl);
-                        resultsByUrl[url].summary = summary.trim();
-                    } catch (error) {
-                        resultsByUrl[url].errors.push('Summary: ' + error.message);
-                        resultsByUrl[url].summary = resultsByUrl[url].rawContent.substring(0, 500);
+                            // Use selected model for summaries
+                            const summary = await analyzeWithOpenAI({ analysisData: { prompt: summaryPrompt } }, openaiApiKey, proxyUrl, model);
+                            resultsByUrl[url].summary = summary.trim();
+                        } catch (error) {
+                            resultsByUrl[url].errors.push('Summary: ' + error.message);
+                            resultsByUrl[url].summary = resultsByUrl[url].rawContent.substring(0, 500);
+                        }
+                    },
+                    (processed, total) => {
+                        allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Summarizing pages... ${processed}/${total}</span>`;
+                    }
+                );
+                
+                // Set empty summaries for URLs that were skipped
+                urls.forEach(url => {
+                    if (!resultsByUrl[url].summary && resultsByUrl[url].errors.length === 0) {
+                        resultsByUrl[url].summary = '';
                     }
                 });
-                await Promise.all(summaryPromises);
 
-                // Step 3: Create embeddings for each page summary
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Creating embeddings...</span>';
-                const embeddingPromises = urls.map(async (url) => {
-                    if (resultsByUrl[url].errors.length > 0 || !resultsByUrl[url].summary) {
-                        return;
+                // Step 3: Create embeddings for each page summary - Process in batches to avoid rate limits
+                const urlsToEmbed = urls.filter(url => resultsByUrl[url].errors.length === 0 && resultsByUrl[url].summary);
+                await processInBatches(
+                    urlsToEmbed,
+                    10, // Process 10 at a time (embeddings are faster)
+                    1500, // 1.5 second delay between batches
+                    async (url, index) => {
+                        try {
+                            allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Creating embeddings... ${index + 1}/${urls.length}</span>`;
+                            const embedding = await getEmbeddings(resultsByUrl[url].summary, openaiApiKey, proxyUrl);
+                            resultsByUrl[url].embedding = embedding;
+                        } catch (error) {
+                            resultsByUrl[url].errors.push('Embedding: ' + error.message);
+                        }
+                    },
+                    (processed, total) => {
+                        allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Creating embeddings... ${processed}/${total}</span>`;
                     }
-                    try {
-                        const embedding = await getEmbeddings(resultsByUrl[url].summary, openaiApiKey, proxyUrl);
-                        resultsByUrl[url].embedding = embedding;
-                    } catch (error) {
-                        resultsByUrl[url].errors.push('Embedding: ' + error.message);
-                    }
-                });
-                await Promise.all(embeddingPromises);
+                );
 
                 // Step 4: Cluster embeddings
                 allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Clustering content...</span>';
@@ -3249,10 +3335,12 @@ Provide a concise summary:`;
                     clusters = kMeansClustering(embeddings, k);
                 }
 
-                // Step 5: Label clusters using GPT
+                // Step 5: Label clusters using GPT - Process sequentially with delays
                 allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Labeling clusters...</span>';
                 const clusterLabels = [];
                 for (let i = 0; i < clusters.length; i++) {
+                    allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Labeling clusters... ${i + 1}/${clusters.length}</span>`;
+                    
                     const clusterUrls = clusters[i].map(idx => validUrls[idx]);
                     const clusterPages = clusterUrls.map(url => ({
                         url,
@@ -3287,7 +3375,8 @@ Return JSON only with this exact structure:
 Pages in cluster:
 ${JSON.stringify(clusterPages, null, 2)}`;
 
-                        const clusterLabelResponse = await analyzeWithOpenAI({ analysisData: { prompt: clusterPrompt } }, openaiApiKey, proxyUrl);
+                        // Use selected model for cluster labeling
+                        const clusterLabelResponse = await analyzeWithOpenAI({ analysisData: { prompt: clusterPrompt } }, openaiApiKey, proxyUrl, model);
                         let clusterLabel;
                         try {
                             let jsonStr = clusterLabelResponse.trim();
@@ -3318,6 +3407,11 @@ ${JSON.stringify(clusterPages, null, 2)}`;
                             funnelStages: ['Awareness']
                         });
                     }
+                    
+                    // Add delay between cluster labeling calls (except for the last one)
+                    if (i < clusters.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
                 }
 
                 // Step 6: Map pages to clusters and assign cluster info
@@ -3329,16 +3423,17 @@ ${JSON.stringify(clusterPages, null, 2)}`;
                     });
                 });
 
-                // Step 7: For each page, get LLM-defined topic and map to content clusters
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing individual pages...</span>';
-                const pageAnalysisPromises = urls.map(async (url) => {
-                    if (resultsByUrl[url].errors.length > 0 || !resultsByUrl[url].summary) {
-                        return;
-                    }
-
-                    // Get LLM-defined topic for this page
-                    try {
-                        const topicPrompt = `Analyze this webpage and provide:
+                // Step 7: For each page, get LLM-defined topic and map to content clusters - Process in batches
+                const urlsToAnalyze = urls.filter(url => resultsByUrl[url].errors.length === 0 && resultsByUrl[url].summary);
+                await processInBatches(
+                    urlsToAnalyze,
+                    5, // Process 5 at a time
+                    2000, // 2 second delay between batches
+                    async (url, index) => {
+                        try {
+                            allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Analyzing pages... ${index + 1}/${urls.length}</span>`;
+                            
+                            const topicPrompt = `Analyze this webpage and provide:
 1. Primary topic (1-2 words)
 2. Primary intent (Informational, Commercial, Transactional, Navigational, Local)
 3. Target audience (e.g., "Marketing Professionals", "Small Business Owners")
@@ -3354,31 +3449,61 @@ Return JSON only:
 
 Page Summary: ${resultsByUrl[url].summary}`;
 
-                        const topicResponse = await analyzeWithOpenAI({ analysisData: { prompt: topicPrompt } }, openaiApiKey, proxyUrl);
-                        let pageAnalysis;
-                        try {
-                            let jsonStr = topicResponse.trim();
-                            if (jsonStr.includes('```json')) {
-                                jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
-                            } else if (jsonStr.includes('```')) {
-                                jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+                            // Use selected model for page analysis
+                            const topicResponse = await analyzeWithOpenAI({ analysisData: { prompt: topicPrompt } }, openaiApiKey, proxyUrl, model);
+                            let pageAnalysis;
+                            try {
+                                let jsonStr = topicResponse.trim();
+                                if (jsonStr.includes('```json')) {
+                                    jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+                                } else if (jsonStr.includes('```')) {
+                                    jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+                                }
+                                pageAnalysis = JSON.parse(jsonStr);
+                            } catch {
+                                pageAnalysis = {
+                                    topic: 'Unknown',
+                                    primaryIntent: 'Informational',
+                                    audience: 'General',
+                                    expertiseLevel: 'Intermediate'
+                                };
                             }
-                            pageAnalysis = JSON.parse(jsonStr);
-                        } catch {
-                            pageAnalysis = {
-                                topic: 'Unknown',
-                                primaryIntent: 'Informational',
-                                audience: 'General',
-                                expertiseLevel: 'Intermediate'
-                            };
+
+                            resultsByUrl[url].llmDefinedTopic = pageAnalysis.topic || 'Unknown';
+                            resultsByUrl[url].primaryIntent = pageAnalysis.primaryIntent || 'Informational';
+                            resultsByUrl[url].audience = pageAnalysis.audience || 'General';
+                            resultsByUrl[url].expertiseLevel = pageAnalysis.expertiseLevel || 'Intermediate';
+
+                            // Assign cluster info
+                            const clusterIdx = urlToClusterIndex[url];
+                            if (clusterIdx !== undefined && clusterLabels[clusterIdx]) {
+                                const clusterLabel = clusterLabels[clusterIdx];
+                                resultsByUrl[url].contentCluster = clusterLabel.clusterName || `Cluster ${clusterIdx + 1}`;
+                                resultsByUrl[url].topicTags = clusterLabel.topicTags || [];
+                            } else {
+                                resultsByUrl[url].contentCluster = 'Unassigned';
+                                resultsByUrl[url].topicTags = [];
+                            }
+                        } catch (error) {
+                            resultsByUrl[url].errors.push('Page Analysis: ' + error.message);
+                            resultsByUrl[url].llmDefinedTopic = 'Unknown';
+                            resultsByUrl[url].primaryIntent = 'Informational';
+                            resultsByUrl[url].audience = 'General';
+                            resultsByUrl[url].expertiseLevel = 'Intermediate';
                         }
-
-                        resultsByUrl[url].llmDefinedTopic = pageAnalysis.topic || 'Unknown';
-                        resultsByUrl[url].primaryIntent = pageAnalysis.primaryIntent || 'Informational';
-                        resultsByUrl[url].audience = pageAnalysis.audience || 'General';
-                        resultsByUrl[url].expertiseLevel = pageAnalysis.expertiseLevel || 'Intermediate';
-
-                        // Assign cluster info
+                    },
+                    (processed, total) => {
+                        allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Analyzing pages... ${processed}/${total}</span>`;
+                    }
+                );
+                
+                // Set default values for URLs that were skipped
+                urls.forEach(url => {
+                    if (!resultsByUrl[url].llmDefinedTopic && resultsByUrl[url].errors.length === 0) {
+                        resultsByUrl[url].llmDefinedTopic = 'Unknown';
+                        resultsByUrl[url].primaryIntent = 'Informational';
+                        resultsByUrl[url].audience = 'General';
+                        resultsByUrl[url].expertiseLevel = 'Intermediate';
                         const clusterIdx = urlToClusterIndex[url];
                         if (clusterIdx !== undefined && clusterLabels[clusterIdx]) {
                             const clusterLabel = clusterLabels[clusterIdx];
@@ -3388,32 +3513,31 @@ Page Summary: ${resultsByUrl[url].summary}`;
                             resultsByUrl[url].contentCluster = 'Unassigned';
                             resultsByUrl[url].topicTags = [];
                         }
-                    } catch (error) {
-                        resultsByUrl[url].errors.push('Page Analysis: ' + error.message);
-                        resultsByUrl[url].llmDefinedTopic = 'Unknown';
-                        resultsByUrl[url].primaryIntent = 'Informational';
-                        resultsByUrl[url].audience = 'General';
-                        resultsByUrl[url].expertiseLevel = 'Intermediate';
                     }
                 });
-                await Promise.all(pageAnalysisPromises);
 
                 // Step 8: If user provided content clusters, map pages to them
                 if (contentClusters && contentClusters.length > 0) {
                     allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Mapping to user-defined clusters...</span>';
                     
-                    // Create embeddings for user-provided clusters
+                    // Create embeddings for user-provided clusters - Process sequentially with delays
                     const clusterEmbeddings = {};
-                    for (const cluster of contentClusters) {
+                    for (let i = 0; i < contentClusters.length; i++) {
+                        const cluster = contentClusters[i];
                         try {
+                            allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Creating cluster embeddings... ${i + 1}/${contentClusters.length}</span>`;
                             const embedding = await getEmbeddings(cluster, openaiApiKey, proxyUrl);
                             clusterEmbeddings[cluster] = embedding;
+                            // Small delay between cluster embeddings
+                            if (i < contentClusters.length - 1) {
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
                         } catch (error) {
                             console.warn(`Failed to create embedding for cluster "${cluster}":`, error);
                         }
                     }
 
-                    // Map each page to the closest user-defined cluster
+                    // Map each page to the closest user-defined cluster (no API calls needed here)
                     urls.forEach(url => {
                         if (!resultsByUrl[url].embedding || resultsByUrl[url].errors.length > 0) return;
 
@@ -6164,6 +6288,7 @@ Page Summary: ${resultsByUrl[url].summary}`;
                     'contentClustersIdentification': {
                         'urls': 'cciUrls',
                         'scope': 'cciScopeSelect',
+                        'model': 'cciModelSelect',
                         'contentClusters': 'cciContentClusters'
                     }
                 };
@@ -6298,11 +6423,13 @@ Page Summary: ${resultsByUrl[url].summary}`;
                         const urls = getCleanedList('cciUrls');
                         const contentClusters = getCleanedList('cciContentClusters');
                         const scope = getInputValue('cciScopeSelect') || 'url';
+                        const model = getInputValue('cciModelSelect') || 'gpt-3.5-turbo';
                         if (!urls || urls.length < 10) throw new Error('Please enter at least 10 URLs.');
                         if (urls.length > 1000) throw new Error('Maximum 1000 URLs allowed.');
                         payload.params = { 
                             urls,
                             scope,
+                            model,
                             contentClusters: contentClusters && contentClusters.length > 0 ? contentClusters : null
                         };
                         break;
