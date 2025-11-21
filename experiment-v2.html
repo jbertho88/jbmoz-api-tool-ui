@@ -4402,47 +4402,10 @@ Page Summary: ${resultsByUrl[url].summary}`;
 
                 // Seed Topic Similarity Table
                 html += '<div id="similarity-table-section" class="mt-6">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Semantic Similarity to Seed Topic</h4>';
+                html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-2">Semantic Similarity to Seed Topic</h4>';
+                html += '<p class="text-sm text-[var(--text-secondary)] mb-4">This section lets you know how related each page is to your seed topic. The higher the value, the more related this URL is to your seed topic.</p>';
                 if (Object.keys(seedTopicSimilarities).length > 0) {
-                    const sortedUrls = [...urls].sort((a, b) => (seedTopicSimilarities[b] || 0) - (seedTopicSimilarities[a] || 0));
-                    html += '<div class="overflow-x-auto">';
-                    html += '<table class="w-full border-collapse border border-[var(--border-primary)]">';
-                    html += '<thead><tr>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-left text-sm font-semibold">Rank</th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-left text-sm font-semibold">URL</th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Similarity Score <span class="text-xs font-normal text-[var(--text-secondary)]" title="Semantic similarity calculated using cosine similarity between the seed topic embedding and each URL\'s content embedding. Higher scores indicate more conceptually relevant content to the seed topic.">(?)</span></th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Value Score <span class="text-xs font-normal text-[var(--text-secondary)]" title="Formula: (Ranking Keywords × 2.0) + (Linking Domains × 1.5) + (Inbound Links × 0.5) + (Page Authority × 0.1) + (Anchor Text Diversity × 0.3)">(?)</span></th>';
-                    html += '<th class="border border-[var(--border-primary)] p-2 bg-[var(--bg-input)] text-center text-sm font-semibold">Primary Intent</th>';
-                    html += '</tr></thead><tbody>';
-                    const intentColors = {
-                        Informational: '#60a5fa',
-                        Commercial: '#fbbf24',
-                        Navigational: '#a78bfa',
-                        Transactional: '#34d399',
-                        Other: '#94a3b8'
-                    };
-                    sortedUrls.forEach((u, idx) => {
-                        const similarity = typeof seedTopicSimilarities[u] === 'number' && !isNaN(seedTopicSimilarities[u]) ? seedTopicSimilarities[u] : 0;
-                        const valueScore = typeof resultsByUrl[u]?.valueScore === 'number' && !isNaN(resultsByUrl[u]?.valueScore) ? resultsByUrl[u].valueScore : 0;
-                        const primaryIntent = resultsByUrl[u]?.primaryIntent || 'Other';
-                        const metrics = resultsByUrl[u]?.mozMetrics || {};
-                        const isMain = u === mainTopicPage;
-                        const rowClass = isMain ? 'bg-[var(--text-accent)]/10' : '';
-                        const intensity = Math.min(255, Math.round(similarity * 255));
-                        const bgColor = `rgb(${255 - intensity}, ${255}, ${255 - intensity})`;
-                        const intentColor = intentColors[primaryIntent] || intentColors.Other;
-                        const valueFormula = `(${metrics.rankingKeywordsCount || 0}×2) + (${metrics.linkingDomains || 0}×1.5) + (${metrics.inboundLinks || 0}×0.5) + (${metrics.pageAuthority || 0}×0.1) + (${metrics.anchorTextsCount || 0}×0.3) = ${valueScore.toFixed(1)}`;
-                        html += `<tr class="${rowClass}">`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm">${idx + 1}</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-xs text-[var(--text-secondary)] break-all">${u}${isMain ? ' <span class="text-[var(--text-accent)] font-semibold">(Main)</span>' : ''}</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm font-semibold" style="background-color: ${bgColor}">${(similarity * 100).toFixed(1)}%</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-sm" title="${valueFormula}">${valueScore.toFixed(1)}</td>`;
-                        html += `<td class="border border-[var(--border-primary)] p-2 text-center text-xs" style="background-color: ${intentColor}20; color: ${intentColor}; font-weight: 600;">`;
-                        html += `<span style="background:${intentColor};width:8px;height:8px;border-radius:9999px;display:inline-block;margin-right:4px;"></span>${primaryIntent}</td>`;
-                        html += '</tr>';
-                    });
-                    html += '</tbody></table>';
-                    html += '</div>';
+                    html += '<div id="cca-similarity-table"></div>';
                 } else {
                     html += '<p class="text-[var(--text-secondary)]">No similarity data available.</p>';
                 }
@@ -4466,7 +4429,7 @@ Page Summary: ${resultsByUrl[url].summary}`;
                 Object.entries(intentGroups).forEach(([intent, groupUrls]) => {
                     if (groupUrls.length === 0) return;
                     const intentColor = intentColors[intent] || intentColors.Other;
-                    html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                    html += `<div class="bg-[var(--bg-container)] border-2 rounded-lg p-4" style="border-color: ${intentColor}">`;
                     html += `<div class="flex items-center gap-2 mb-3 pb-3 border-b border-[var(--border-primary)]">`;
                     html += `<span style="background:${intentColor};width:16px;height:16px;border-radius:9999px;display:inline-block"></span>`;
                     html += `<h5 class="font-semibold text-[var(--text-primary)]">${intent} (${groupUrls.length} URLs)</h5>`;
@@ -4495,10 +4458,17 @@ Page Summary: ${resultsByUrl[url].summary}`;
                 html += '<div id="consolidation-clusters-content">';
                 if (consolidationClusters.length > 0) {
                     html += '<div class="space-y-4">';
+                    const consolidationColors = [
+                        'border-2 border-[var(--text-accent)]', // blue
+                        'border-2 border-fuchsia-400', // pink
+                        'border-2 border-emerald-400', // green
+                        'border-2 border-violet-400'  // purple
+                    ];
                     consolidationClusters.forEach((cluster, idx) => {
                         const aiAnalysis = cluster.aiAnalysis || {};
                         const urlToKeep = aiAnalysis.urlToKeep || cluster.urls[0];
-                        html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                        const borderClass = consolidationColors[idx % consolidationColors.length];
+                        html += `<div class="bg-[var(--bg-container)] ${borderClass} rounded-lg p-4">`;
                         html += `<div class="flex items-start justify-between mb-3">`;
                         html += `<div>`;
                         html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-1">Cluster ${idx + 1} - ${cluster.intent} Intent</div>`;
@@ -4561,26 +4531,24 @@ Page Summary: ${resultsByUrl[url].summary}`;
                     html += '</div>';
                     html += '<div id="content-recommendations-content">';
                     html += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
-                    if (contentRecommendations.recommendations && Array.isArray(contentRecommendations.recommendations)) {
-                        contentRecommendations.recommendations.forEach(rec => {
-                            html += `<div class="mb-4 pb-4 border-b border-[var(--border-primary)] last:border-0">`;
-                            html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-2 break-all">${rec.url}</div>`;
-                            if (Array.isArray(rec.recommendations)) {
-                                html += '<ul class="list-disc list-inside space-y-1 text-sm text-[var(--text-secondary)]">';
-                                rec.recommendations.forEach(r => {
-                                    // Replace any year references with current year (2025)
-                                    const currentYear = new Date().getFullYear();
-                                    const yearRegex = /\b(20\d{2})\b/g;
-                                    const updatedRec = r.replace(yearRegex, currentYear.toString());
-                                    html += `<li>${updatedRec}</li>`;
-                                });
-                                html += '</ul>';
-                            }
-                            html += '</div>';
+                    
+                    // Collect URLs that are recommended to be deleted (from consolidation clusters)
+                    const urlsToDelete = new Set();
+                    if (consolidationClusters && Array.isArray(consolidationClusters)) {
+                        consolidationClusters.forEach(cluster => {
+                            const aiAnalysis = cluster.aiAnalysis || {};
+                            const urlToKeep = aiAnalysis.urlToKeep || cluster.urls[0];
+                            cluster.urls.forEach(url => {
+                                if (url !== urlToKeep) {
+                                    urlsToDelete.add(url);
+                                }
+                            });
                         });
                     }
+                    
+                    // General Recommendations at the top
                     if (contentRecommendations.generalRecommendations && Array.isArray(contentRecommendations.generalRecommendations)) {
-                        html += '<div class="mt-4 pt-4 border-t border-[var(--border-primary)]">';
+                        html += '<div class="mb-4 pb-4 border-b border-[var(--border-primary)]">';
                         html += '<div class="text-sm font-semibold text-[var(--text-primary)] mb-2">General Recommendations</div>';
                         html += '<ul class="list-disc list-inside space-y-1 text-sm text-[var(--text-secondary)]">';
                         contentRecommendations.generalRecommendations.forEach(r => {
@@ -4592,6 +4560,32 @@ Page Summary: ${resultsByUrl[url].summary}`;
                         });
                         html += '</ul>';
                         html += '</div>';
+                    }
+                    
+                    // Recommendations by URL (excluding deleted URLs)
+                    if (contentRecommendations.recommendations && Array.isArray(contentRecommendations.recommendations)) {
+                        const validRecommendations = contentRecommendations.recommendations.filter(rec => !urlsToDelete.has(rec.url));
+                        if (validRecommendations.length > 0) {
+                            html += '<div class="mt-4">';
+                            html += '<div class="text-sm font-semibold text-[var(--text-primary)] mb-3">Recommendations by URL</div>';
+                            validRecommendations.forEach(rec => {
+                                html += `<div class="mb-4 pb-4 border-b border-[var(--border-primary)] last:border-0">`;
+                                html += `<div class="text-sm font-semibold text-[var(--text-primary)] mb-2 break-all">${rec.url}</div>`;
+                                if (Array.isArray(rec.recommendations)) {
+                                    html += '<ul class="list-disc list-inside space-y-1 text-sm text-[var(--text-secondary)]">';
+                                    rec.recommendations.forEach(r => {
+                                        // Replace any year references with current year (2025)
+                                        const currentYear = new Date().getFullYear();
+                                        const yearRegex = /\b(20\d{2})\b/g;
+                                        const updatedRec = r.replace(yearRegex, currentYear.toString());
+                                        html += `<li>${updatedRec}</li>`;
+                                    });
+                                    html += '</ul>';
+                                }
+                                html += '</div>';
+                            });
+                            html += '</div>';
+                        }
                     }
                     html += '</div>';
                     html += '</div>';
@@ -4617,7 +4611,7 @@ Page Summary: ${resultsByUrl[url].summary}`;
                     newContentToCreate.newContentIdeas.forEach((idea, idx) => {
                         const ideaIntent = idea.intent || 'Informational';
                         const intentColor = intentColors[ideaIntent] || intentColors.Other;
-                        html += `<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">`;
+                        html += `<div class="bg-[var(--bg-container)] border-2 rounded-lg p-4" style="border-color: ${intentColor}">`;
                         html += `<div class="flex items-start justify-between mb-2">`;
                         html += `<div class="flex-1">`;
                         // Replace years in title
@@ -4857,6 +4851,80 @@ Page Summary: ${resultsByUrl[url].summary}`;
                         showCcaModal();
                     });
                 });
+                
+                // Initialize Tabulator for Semantic Similarity table
+                setTimeout(() => {
+                    if (typeof Tabulator !== 'undefined' && document.getElementById('cca-similarity-table') && Object.keys(seedTopicSimilarities).length > 0) {
+                        const sortedUrls = [...urls].sort((a, b) => (seedTopicSimilarities[b] || 0) - (seedTopicSimilarities[a] || 0));
+                        const intentColors = {
+                            Informational: '#60a5fa',
+                            Commercial: '#fbbf24',
+                            Navigational: '#a78bfa',
+                            Transactional: '#34d399',
+                            Other: '#94a3b8'
+                        };
+                        
+                        const tableData = sortedUrls.map((u, idx) => {
+                            const similarity = typeof seedTopicSimilarities[u] === 'number' && !isNaN(seedTopicSimilarities[u]) ? seedTopicSimilarities[u] : 0;
+                            const valueScore = typeof resultsByUrl[u]?.valueScore === 'number' && !isNaN(resultsByUrl[u]?.valueScore) ? resultsByUrl[u].valueScore : 0;
+                            const primaryIntent = resultsByUrl[u]?.primaryIntent || 'Other';
+                            const metrics = resultsByUrl[u]?.mozMetrics || {};
+                            const isMain = u === mainTopicPage;
+                            const valueFormula = `(${metrics.rankingKeywordsCount || 0}×2) + (${metrics.linkingDomains || 0}×1.5) + (${metrics.inboundLinks || 0}×0.5) + (${metrics.pageAuthority || 0}×0.1) + (${metrics.anchorTextsCount || 0}×0.3) = ${valueScore.toFixed(1)}`;
+                            
+                            return {
+                                rank: idx + 1,
+                                url: u + (isMain ? ' (Main)' : ''),
+                                similarityScore: (similarity * 100).toFixed(1) + '%',
+                                valueScore: valueScore.toFixed(1),
+                                valueScoreTooltip: valueFormula,
+                                primaryIntent: primaryIntent,
+                                intentColor: intentColors[primaryIntent] || intentColors.Other,
+                                isMain: isMain,
+                                similarityRaw: similarity
+                            };
+                        });
+                        
+                        new Tabulator("#cca-similarity-table", {
+                            data: tableData,
+                            columns: [
+                                { title: 'Rank', field: 'rank', sorter: 'number', width: 80 },
+                                { title: 'URL', field: 'url', sorter: 'string', widthGrow: 3, formatter: (cell) => {
+                                    const value = cell.getValue();
+                                    const isMain = cell.getRow().getData().isMain;
+                                    if (isMain) {
+                                        return `<span class="break-all">${value.replace(' (Main)', '')} <span class="text-[var(--text-accent)] font-semibold">(Main)</span></span>`;
+                                    }
+                                    return `<span class="break-all">${value}</span>`;
+                                }},
+                                { title: 'Similarity Score', field: 'similarityScore', sorter: (a, b) => {
+                                    const aData = a.getRow().getData();
+                                    const bData = b.getRow().getData();
+                                    return (aData.similarityRaw || 0) - (bData.similarityRaw || 0);
+                                }, width: 150, formatter: (cell) => {
+                                    const similarity = cell.getRow().getData().similarityRaw || 0;
+                                    const intensity = Math.min(255, Math.round(similarity * 255));
+                                    const bgColor = `rgb(${255 - intensity}, ${255}, ${255 - intensity})`;
+                                    return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center;">${cell.getValue()}</div>`;
+                                }},
+                                { title: 'Value Score', field: 'valueScore', sorter: 'number', width: 120, formatter: (cell) => {
+                                    const tooltip = cell.getRow().getData().valueScoreTooltip || '';
+                                    return `<span title="${tooltip}">${cell.getValue()}</span>`;
+                                }},
+                                { title: 'Primary Intent', field: 'primaryIntent', sorter: 'string', width: 150, formatter: (cell) => {
+                                    const intent = cell.getValue();
+                                    const intentColor = cell.getRow().getData().intentColor;
+                                    return `<div style="background-color: ${intentColor}20; color: ${intentColor}; font-weight: 600; padding: 4px; border-radius: 4px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px;"><span style="background:${intentColor};width:8px;height:8px;border-radius:9999px;display:inline-block"></span>${intent}</div>`;
+                                }}
+                            ],
+                            layout: "fitDataStretch",
+                            pagination: "local",
+                            paginationSize: 25,
+                            movableColumns: true,
+                            resizableColumns: true
+                        });
+                    }
+                }, 100);
                 
                 // Set up collapse/expand handlers for all sections
                 allDOMElements.rawWrapper.querySelectorAll('.cca-section-toggle').forEach(btn => {
