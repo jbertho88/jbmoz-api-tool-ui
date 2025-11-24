@@ -920,6 +920,9 @@
                     <button id="history-btn" type="button" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-200 btn-inverted-text hover:scale-105 active:scale-95 shadow-md hover:shadow-lg" aria-label="View recent API calls">
                         📋 Recent API Calls
                     </button>
+                    <button id="saved-results-btn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-200 btn-inverted-text hover:scale-105 active:scale-95 shadow-md hover:shadow-lg" aria-label="View saved results">
+                        💾 Saved Results
+                    </button>
                 </div>
                 <div id="submit-help" class="sr-only">Submit your API request with the selected method and parameters</div>
             </div>
@@ -941,6 +944,7 @@
                         <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Copy JSON data to clipboard">Copy JSON</button>
                         <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Export data as CSV file">Export to CSV</button>
                         <button id="export-pdf-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Export dashboard as PDF">Export to PDF</button>
+                        <button id="save-results-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Save results for later reload">💾 Save Results</button>
                         <button id="clear-data-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Clear results data">Clear Data</button>
                     </div>
                 </div>
@@ -1014,9 +1018,29 @@
                 <input type="text" id="history-search" placeholder="Search history by method, parameters, or date..." class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)]">
             </div>
             <div id="history-list" class="p-4 overflow-y-auto flex-1">
-                <div id="history-empty" class="text-center text-[var(--text-secondary)] py-8">
-                    <p>No search history yet.</p>
-                    <p class="text-sm mt-2">Your searches will be automatically saved here.</p>
+                <div id="history-empty" class="text-center text-[var(--text-secondary)] py-8">No history found.</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Saved Results Modal -->
+    <div id="saved-results-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-labelledby="saved-results-modal-title" aria-modal="true">
+        <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-[var(--border-primary)]">
+                <h2 id="saved-results-modal-title" class="text-lg font-semibold text-[var(--text-primary)]">💾 Saved Results</h2>
+                <div class="flex items-center gap-2">
+                    <button id="export-saved-results-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-3 py-1 text-sm rounded-md transition btn-inverted-text" aria-label="Export saved results">Export</button>
+                    <button id="clear-saved-results-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-3 py-1 text-sm rounded-md transition btn-inverted-text" aria-label="Clear all saved results">Clear All</button>
+                    <button id="close-saved-results-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label="Close saved results dialog">&times;</button>
+                </div>
+            </div>
+            <div class="p-4 border-b border-[var(--border-primary)]">
+                <input type="text" id="saved-results-search" placeholder="Search saved results by method, URLs, or date..." class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)]">
+            </div>
+            <div id="saved-results-list" class="p-4 overflow-y-auto flex-1">
+                <div id="saved-results-empty" class="text-center text-[var(--text-secondary)] py-8">
+                    <p>No saved results yet.</p>
+                    <p class="text-sm mt-2">Save results from any endpoint to reload them later without making new API calls.</p>
                 </div>
             </div>
         </div>
@@ -1377,7 +1401,16 @@
                 historyEmpty: document.getElementById('history-empty'),
                 exportHistoryBtn: document.getElementById('export-history-btn'),
                 clearHistoryBtn: document.getElementById('clear-history-btn'),
-                exportPdfBtn: document.getElementById('export-pdf-btn')
+                exportPdfBtn: document.getElementById('export-pdf-btn'),
+                savedResultsBtn: document.getElementById('saved-results-btn'),
+                savedResultsModal: document.getElementById('saved-results-modal'),
+                closeSavedResultsBtn: document.getElementById('close-saved-results-btn'),
+                savedResultsSearch: document.getElementById('saved-results-search'),
+                savedResultsList: document.getElementById('saved-results-list'),
+                savedResultsEmpty: document.getElementById('saved-results-empty'),
+                exportSavedResultsBtn: document.getElementById('export-saved-results-btn'),
+                clearSavedResultsBtn: document.getElementById('clear-saved-results-btn'),
+                saveResultsBtn: document.getElementById('save-results-btn')
             };
 
             const populateInputs = () => {
@@ -2033,6 +2066,18 @@
                     allDOMElements.historyModal.classList.remove('hidden');
                     renderHistoryList();
                 });
+                allDOMElements.savedResultsBtn.addEventListener('click', () => {
+                    allDOMElements.savedResultsModal.classList.remove('hidden');
+                    renderSavedResultsList();
+                });
+                allDOMElements.closeSavedResultsBtn.addEventListener('click', () => allDOMElements.savedResultsModal.classList.add('hidden'));
+                allDOMElements.savedResultsModal.addEventListener('click', (e) => {
+                    if (e.target === allDOMElements.savedResultsModal) allDOMElements.savedResultsModal.classList.add('hidden');
+                });
+                allDOMElements.savedResultsSearch.addEventListener('input', debounce(filterSavedResults, 300));
+                allDOMElements.saveResultsBtn.addEventListener('click', saveCurrentResults);
+                allDOMElements.exportSavedResultsBtn.addEventListener('click', exportSavedResults);
+                allDOMElements.clearSavedResultsBtn.addEventListener('click', clearAllSavedResults);
                 allDOMElements.clearDataBtn.addEventListener('click', clearResultsData);
                 allDOMElements.exportPdfBtn.addEventListener('click', handleExportPdf);
                 allDOMElements.filterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.remove('hidden'));
@@ -2681,6 +2726,7 @@
                     currentOriginalParams = payload.params;
                     currentMethod = selectedMethod;
                     showRawJsonResults(data);
+                    updateSaveButtonVisibility();
                     fetchQuota(apiKey);
                     
                     // Auto-save successful search to history
@@ -7324,6 +7370,233 @@ ${resultsByUrl[url].summary}`;
                 if (confirm('Are you sure you want to clear all search history? This cannot be undone.')) {
                     saveSearchHistory([]);
                     renderHistoryList();
+                }
+            }
+
+            // ========== SAVED RESULTS FUNCTIONS ==========
+            
+            function getSavedResults() {
+                try {
+                    const saved = localStorage.getItem('mozSavedResults');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) {
+                    console.warn('Could not load saved results:', e);
+                    return [];
+                }
+            }
+            
+            function saveSavedResults(savedResults) {
+                try {
+                    localStorage.setItem('mozSavedResults', JSON.stringify(savedResults));
+                } catch (e) {
+                    console.warn('Could not save results:', e);
+                    if (e.name === 'QuotaExceededError') {
+                        displayError('Storage is full. Please delete some saved results or clear browser data.');
+                    } else {
+                        displayError('Could not save results. Storage may be full.');
+                    }
+                    return false;
+                }
+                return true;
+            }
+            
+            function saveCurrentResults() {
+                if (!currentMethod || !currentResultsData || !currentOriginalParams) {
+                    displayError('No results to save.');
+                    return;
+                }
+                
+                // Generate a unique ID and save
+                const savedEntry = {
+                    id: Date.now(),
+                    timestamp: new Date().toISOString(),
+                    method: currentMethod,
+                    params: { ...currentOriginalParams },
+                    results: JSON.parse(JSON.stringify(currentResultsData)), // Deep copy
+                    resultCount: Array.isArray(currentResultsData) ? currentResultsData.length : 
+                                (currentResultsData.urls ? currentResultsData.urls.length : 
+                                (typeof currentResultsData === 'object' ? Object.keys(currentResultsData).length : 0))
+                };
+                
+                const saved = getSavedResults();
+                saved.unshift(savedEntry);
+                
+                // Keep only last 100 saved entries
+                if (saved.length > 100) {
+                    saved.splice(100);
+                }
+                
+                if (saveSavedResults(saved)) {
+                    displaySuccess(`Results saved! You can reload them anytime from the "Saved Results" button.`);
+                    renderSavedResultsList();
+                }
+            }
+            
+            function renderSavedResultsList(savedResults = null) {
+                const saved = savedResults || getSavedResults();
+                const searchTerm = allDOMElements.savedResultsSearch.value.toLowerCase();
+                
+                const filteredSaved = searchTerm 
+                    ? saved.filter(entry => 
+                        entry.method.toLowerCase().includes(searchTerm) ||
+                        JSON.stringify(entry.params).toLowerCase().includes(searchTerm) ||
+                        new Date(entry.timestamp).toLocaleDateString().includes(searchTerm)
+                      )
+                    : saved;
+                
+                if (filteredSaved.length === 0) {
+                    allDOMElements.savedResultsEmpty.classList.remove('hidden');
+                    allDOMElements.savedResultsList.innerHTML = '';
+                    return;
+                }
+                
+                allDOMElements.savedResultsEmpty.classList.add('hidden');
+                allDOMElements.savedResultsList.innerHTML = '';
+                
+                filteredSaved.forEach(entry => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'border border-[var(--border-primary)] rounded-lg p-4 mb-3 hover:bg-[var(--bg-input)] transition-colors';
+                    
+                    const methodName = entry.method.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    const date = new Date(entry.timestamp).toLocaleString();
+                    const paramsSummary = Object.entries(entry.params)
+                        .filter(([key, value]) => {
+                            if (value === null || value === undefined) return false;
+                            if (Array.isArray(value)) return value.length > 0;
+                            if (typeof value === 'string') return value.length > 0;
+                            if (typeof value === 'number') return true;
+                            return true;
+                        })
+                        .map(([key, value]) => {
+                            if (Array.isArray(value)) {
+                                if (key === 'urls' && value.length > 3) {
+                                    return `${key}: ${value.length} URLs (${value.slice(0, 2).join(', ')}...)`;
+                                }
+                                return `${key}: ${value.join(', ')}`;
+                            }
+                            return `${key}: ${value}`;
+                        })
+                        .join(' | ');
+                    
+                    entryDiv.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-semibold text-[var(--text-primary)]">${methodName}</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-[var(--text-secondary)]">${date}</span>
+                                <button class="text-green-600 hover:text-green-700 text-sm font-semibold" data-load="${entry.id}">Load</button>
+                                <button class="text-[var(--text-error)] hover:text-red-600 text-sm" data-delete-saved="${entry.id}">Delete</button>
+                            </div>
+                        </div>
+                        <p class="text-sm text-[var(--text-secondary)] mb-2">${paramsSummary}</p>
+                        <div class="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+                            <span>Results: ${entry.resultCount}</span>
+                            <span class="text-green-600">💾 Saved</span>
+                        </div>
+                    `;
+                    
+                    // Add event listeners
+                    entryDiv.querySelector(`[data-load="${entry.id}"]`).addEventListener('click', () => loadSavedResults(entry.id));
+                    entryDiv.querySelector(`[data-delete-saved="${entry.id}"]`).addEventListener('click', () => deleteSavedResult(entry.id));
+                    
+                    allDOMElements.savedResultsList.appendChild(entryDiv);
+                });
+            }
+            
+            function filterSavedResults() {
+                renderSavedResultsList();
+            }
+            
+            function loadSavedResults(entryId) {
+                const saved = getSavedResults();
+                const entry = saved.find(s => s.id.toString() === entryId.toString());
+                
+                if (!entry) {
+                    displayError('Saved result not found.');
+                    return;
+                }
+                
+                // Set current data
+                currentMethod = entry.method;
+                currentOriginalParams = entry.params;
+                currentResultsData = entry.results;
+                
+                // Display results - handle special dashboard endpoints, otherwise use standard display
+                if (currentMethod === 'contentClusterAnalysis') {
+                    showContentClusterDashboard(currentResultsData);
+                } else if (currentMethod === 'contentClustersIdentification') {
+                    showContentClustersIdentificationDashboard(currentResultsData);
+                } else if (currentMethod === 'competitiveAnalysis') {
+                    showCompetitiveDashboard(currentResultsData);
+                } else if (currentMethod === 'keywordTargetingAnalysis') {
+                    showKeywordTargetingDashboard(currentResultsData);
+                } else {
+                    // For all other endpoints, use standard JSON/table view
+                    showRawJsonResults(currentResultsData);
+                }
+                
+                // Update save button visibility
+                updateSaveButtonVisibility();
+                
+                // Close modal
+                allDOMElements.savedResultsModal.classList.add('hidden');
+                
+                displaySuccess(`Loaded saved results from ${new Date(entry.timestamp).toLocaleString()}`);
+            }
+            
+            function deleteSavedResult(entryId) {
+                if (confirm('Are you sure you want to delete this saved result?')) {
+                    const saved = getSavedResults();
+                    const filtered = saved.filter(s => s.id.toString() !== entryId.toString());
+                    saveSavedResults(filtered);
+                    renderSavedResultsList();
+                }
+            }
+            
+            function exportSavedResults() {
+                const saved = getSavedResults();
+                if (saved.length === 0) {
+                    displayError('No saved results to export.');
+                    return;
+                }
+                
+                const dataStr = JSON.stringify(saved, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `saved-results-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+            
+            function clearAllSavedResults() {
+                if (confirm('Are you sure you want to delete ALL saved results? This cannot be undone.')) {
+                    saveSavedResults([]);
+                    renderSavedResultsList();
+                    displaySuccess('All saved results cleared.');
+                }
+            }
+            
+            function displaySuccess(message) {
+                // Create a temporary success message
+                const successDiv = document.createElement('div');
+                successDiv.className = 'bg-green-600 border-l-4 border-green-800 text-white px-5 py-4 rounded-lg shadow-md flex items-start gap-3 mb-4';
+                successDiv.innerHTML = `
+                    <span class="text-2xl flex-shrink-0">✓</span>
+                    <div class="flex-1 font-medium">${message}</div>
+                `;
+                allDOMElements.errorMessage.parentElement.insertBefore(successDiv, allDOMElements.errorMessage);
+                setTimeout(() => successDiv.remove(), 5000);
+            }
+            
+            // Show/hide save button based on method - show for all endpoints when results exist
+            function updateSaveButtonVisibility() {
+                if (currentMethod && currentResultsData) {
+                    allDOMElements.saveResultsBtn.classList.remove('hidden');
+                } else {
+                    allDOMElements.saveResultsBtn.classList.add('hidden');
                 }
             }
 
