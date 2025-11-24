@@ -679,20 +679,85 @@
         .bg-\[var\(--bg-container\)\]:hover {
             transform: translateY(-1px);
         }
+        
+        /* Loading skeleton states */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-input) 25%, var(--bg-input-secondary) 50%, var(--bg-input) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+            border-radius: 0.5rem;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .skeleton-text {
+            height: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .skeleton-title {
+            height: 1.5rem;
+            width: 60%;
+            margin-bottom: 1rem;
+        }
+        
+        .skeleton-button {
+            height: 2.5rem;
+            width: 120px;
+            border-radius: 0.5rem;
+        }
+        
+        /* Theme toggle button styles */
+        #theme-toggle {
+            position: relative;
+        }
+        
+        #theme-toggle:hover {
+            transform: rotate(15deg);
+        }
+        
+        /* Improved button styles in results */
+        #results-container button {
+            transition: all 0.2s ease;
+        }
+        
+        #results-container button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        #results-container button:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData" class="transition-colors duration-300 css-loading">
 
     <div class="w-full max-w-4xl mx-auto bg-[var(--bg-container-translucent)] backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-[var(--border-primary)] my-8">
         
-        <header class="relative text-center mb-8 pb-6 border-b border-[var(--border-primary)]">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz Logo" class="mx-auto h-12 mb-5 opacity-90" id="moz-logo" loading="lazy" decoding="async" width="177" height="48">
+        <header class="relative text-center mb-8 pb-6 border-b border-[var(--border-primary)] bg-gradient-to-br from-[var(--bg-container)] via-[var(--bg-container)] to-[var(--bg-input)] rounded-t-2xl -mt-6 -mx-6 md:-mx-8 pt-6 px-6 md:px-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex-1"></div>
+                <div class="flex-1 text-center">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz Logo" class="mx-auto h-12 opacity-90" id="moz-logo" loading="lazy" decoding="async" width="177" height="48">
+                </div>
+                <div class="flex-1 flex justify-end">
+                    <button id="theme-toggle" class="p-2 rounded-lg bg-[var(--bg-input)] hover:bg-[var(--bg-input-secondary)] border border-[var(--border-primary)] transition-all duration-200 hover:scale-110 active:scale-95" aria-label="Toggle theme" title="Switch theme">
+                        <span id="theme-icon" class="text-xl">🌓</span>
+                    </button>
+                </div>
+            </div>
             <h1 class="text-3xl md:text-4xl font-bold text-[var(--text-heading)] mb-2 tracking-tight">Advanced Moz API Tool</h1>
             <p class="text-[var(--text-secondary)] text-sm md:text-base">Connect to the Moz API and analyze SEO data with ease</p>
         </header>
         
         <section class="mb-5 bg-[var(--bg-container)] p-5 rounded-xl border border-[var(--border-primary)] shadow-sm hover:shadow-md transition-shadow duration-200" aria-labelledby="api-key-heading">
-            <h2 id="api-key-heading" class="block text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">Moz API Key</h2>
+            <h2 id="api-key-heading" class="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">
+                <span class="text-base">🔑</span> Moz API Key
+            </h2>
             <div id="apiKeyDisplay" class="hidden items-center justify-between" role="status" aria-live="polite">
                 <span id="apiKeyText" class="text-[var(--text-secondary)] font-mono"></span>
                 <button id="editApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold" aria-label="Edit API key">Edit</button>
@@ -710,7 +775,9 @@
         </section>
 
         <section class="mb-5 bg-[var(--bg-container)] p-5 rounded-xl border border-[var(--border-primary)] shadow-sm hover:shadow-md transition-shadow duration-200" aria-labelledby="openai-api-key-heading">
-            <h2 id="openai-api-key-heading" class="block text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">OpenAI API Key</h2>
+            <h2 id="openai-api-key-heading" class="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">
+                <span class="text-base">🤖</span> OpenAI API Key
+            </h2>
             <div id="openaiApiKeyDisplay" class="hidden items-center justify-between" role="status" aria-live="polite">
                 <span id="openaiApiKeyText" class="text-[var(--text-secondary)] font-mono"></span>
                 <button id="editOpenaiApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold" aria-label="Edit OpenAI API key">Edit</button>
@@ -725,7 +792,9 @@
         </section>
 
         <section aria-labelledby="method-heading" class="mb-6">
-            <label for="methodSelector" id="method-heading" class="block text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">API Method</label>
+            <label for="methodSelector" id="method-heading" class="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">
+                <span class="text-base">⚙️</span> API Method
+            </label>
             <select id="methodSelector" class="w-full bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--text-accent)] focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer" aria-describedby="method-help">
                 <option value="" disabled selected>-- Select a Method --</option>
                 <optgroup label="Keyword Research">
@@ -805,10 +874,15 @@
         </form>
 
         <section id="status-container" class="mt-8" aria-live="polite">
-            <div id="error-message" role="alert" class="hidden bg-[var(--error-bg)] border border-[var(--error-border)] text-[var(--text-error)] px-4 py-3 rounded-lg text-center"></div>
-            <div id="results-container" class="hidden bg-[var(--bg-input)] p-4 md:p-6 rounded-xl border border-[var(--border-primary)]" role="region" aria-labelledby="results-heading">
-                <div class="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
-                    <h2 id="results-heading" class="text-xl font-bold text-[var(--text-heading)]">API Results</h2>
+            <div id="error-message" role="alert" class="hidden bg-[var(--error-bg)] border-l-4 border-[var(--error-border)] text-[var(--text-error)] px-5 py-4 rounded-lg shadow-md flex items-start gap-3">
+                <span class="text-2xl flex-shrink-0">⚠️</span>
+                <div class="flex-1 font-medium"></div>
+            </div>
+            <div id="results-container" class="hidden bg-[var(--bg-container)] p-5 md:p-7 rounded-xl border border-[var(--border-primary)] shadow-lg" role="region" aria-labelledby="results-heading">
+                <div class="flex flex-col sm:flex-row justify-between items-start mb-5 gap-4 pb-4 border-b border-[var(--border-primary)]">
+                    <h2 id="results-heading" class="flex items-center gap-2 text-xl md:text-2xl font-bold text-[var(--text-heading)]">
+                        <span class="text-2xl">📊</span> API Results
+                    </h2>
                     <div class="flex items-center gap-2 flex-wrap justify-end" role="toolbar" aria-label="Results actions">
                         <button id="view-data-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Toggle between table and JSON view">View Table</button>
                         <button id="filter-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Filter table data">Filter</button>
@@ -1976,11 +2050,68 @@
                         btn.classList.toggle('font-bold', btn.dataset.theme === theme);
                     });
                     
+                    // Update theme toggle icon
+                    updateThemeToggleIcon(theme);
+                    
                     // Reset logo filter
                     if (allDOMElements.mozLogo) {
                         allDOMElements.mozLogo.style.filter = 'none';
                     }
                 });
+            };
+            
+            // Theme toggle button functionality
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = document.getElementById('theme-icon');
+            
+            function updateThemeToggleIcon(theme) {
+                if (!themeIcon) return;
+                const icons = {
+                    'light': '☀️',
+                    'dark': '🌙',
+                    'retro': '💜',
+                    'high-contrast': '⚫'
+                };
+                themeIcon.textContent = icons[theme] || '🌓';
+            }
+            
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    const currentTheme = document.documentElement.className.match(/(light|dark|retro|high-contrast)/)?.[0] || 'light';
+                    const themes = ['light', 'dark', 'retro', 'high-contrast'];
+                    const currentIndex = themes.indexOf(currentTheme);
+                    const nextIndex = (currentIndex + 1) % themes.length;
+                    const nextTheme = themes[nextIndex];
+                    
+                    // Trigger theme change
+                    const themeBtn = Array.from(allDOMElements.themeBtns).find(btn => btn.dataset.theme === nextTheme);
+                    if (themeBtn) {
+                        themeBtn.click();
+                    }
+                });
+                
+                // Initialize theme toggle icon on page load
+                const initializeThemeToggle = () => {
+                    const savedTheme = localStorage.getItem('theme') || 'light';
+                    const currentTheme = document.documentElement.className.match(/(light|dark|retro|high-contrast)/)?.[0] || savedTheme;
+                    updateThemeToggleIcon(currentTheme);
+                };
+                
+                // Call on DOMContentLoaded and after theme changes
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', initializeThemeToggle);
+                } else {
+                    initializeThemeToggle();
+                }
+            }
+            
+            // Update icon when theme changes via footer buttons
+            const originalApplyTheme = applyTheme;
+            applyTheme = (theme) => {
+                originalApplyTheme(theme);
+                if (themeIcon) {
+                    updateThemeToggleIcon(theme);
+                }
             };
 
             const fetchQuota = async (apiKey) => {
@@ -7142,7 +7273,13 @@ ${resultsByUrl[url].summary}`;
                  const hints = /quota|limit/i.test(message) ? 'You may be out of rows. Check your API Dashboard.' :
                               /unauthorized|401|403/i.test(message) ? 'Invalid API key. Recheck or regenerate in your dashboard.' :
                               /network|abort/i.test(message) ? 'Network hiccup or request was canceled. Try again.' : '';
-                allDOMElements.errorMessage.innerHTML = `${message}${hints ? `<br><span class="text-[var(--text-secondary)]">${hints}</span>` : ''}`;
+                const errorContent = allDOMElements.errorMessage.querySelector('.flex-1');
+                if (errorContent) {
+                    errorContent.innerHTML = `<div class="font-semibold">${message}</div>${hints ? `<div class="text-sm mt-1 opacity-90">${hints}</div>` : ''}`;
+                } else {
+                    // Fallback for old structure
+                    allDOMElements.errorMessage.innerHTML = `${message}${hints ? `<br><span class="text-[var(--text-secondary)]">${hints}</span>` : ''}`;
+                }
                 allDOMElements.errorMessage.classList.remove('hidden');
             }
             
