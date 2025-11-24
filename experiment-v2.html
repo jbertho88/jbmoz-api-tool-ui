@@ -6904,12 +6904,29 @@ ${resultsByUrl[url].summary}`;
                     allDOMElements.filterBtn.classList.add('hidden');
                     allDOMElements.exportPdfBtn.classList.add('hidden');
                 } else {
+                    // Preserve scroll position to prevent jump
+                    const scrollY = window.scrollY;
+                    const scrollX = window.scrollX;
+                    
+                    // Prevent focus/scroll on table wrapper
+                    allDOMElements.tableWrapper.setAttribute('tabindex', '-1');
+                    
                     allDOMElements.rawWrapper.classList.add('hidden');
                     allDOMElements.tableWrapper.classList.remove('hidden');
                     allDOMElements.viewDataBtn.textContent = 'View JSON';
                     allDOMElements.filterBtn.classList.remove('hidden');
                     allDOMElements.exportPdfBtn.classList.add('hidden');
+                    
+                    // Restore scroll position immediately and prevent auto-scroll
+                    window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
+                    
+                    // Render table and restore scroll again after render completes
                     renderTable(currentResultsData, currentMethod, currentOriginalParams);
+                    
+                    // Ensure scroll position is maintained after table renders
+                    requestAnimationFrame(() => {
+                        window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
+                    });
                 }
             }
             
@@ -7794,6 +7811,10 @@ ${resultsByUrl[url].summary}`;
             }
 
             function renderTable(results, method, originalParams) {
+                // Preserve scroll position to prevent jump during rendering
+                const scrollY = window.scrollY;
+                const scrollX = window.scrollX;
+                
                 // Destroy old table immediately (lightweight operation)
                 if (table) {
                     table.destroy();
@@ -7803,7 +7824,15 @@ ${resultsByUrl[url].summary}`;
                 // Show loading state immediately for better perceived performance
                 const tableElement = document.getElementById('results-table');
                 if (tableElement) {
+                    // Prevent the element from causing scroll jumps
+                    tableElement.setAttribute('tabindex', '-1');
+                    tableElement.style.outline = 'none';
+                    
                     tableElement.innerHTML = '<div class="p-8 text-center text-[var(--text-secondary)]">Loading table...</div>';
+                    // Restore scroll position after DOM update
+                    requestAnimationFrame(() => {
+                        window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
+                    });
                 }
                 
                 // Defer heavy processing to next frame to allow initial paint
@@ -7844,6 +7873,11 @@ ${resultsByUrl[url].summary}`;
                                 resizableRows: false,
                                 virtualDom: true, // Enable virtual DOM for better performance
                                 virtualDomBuffer: 300, // Render buffer for smooth scrolling
+                            });
+                            
+                            // Restore scroll position after table is created
+                            requestAnimationFrame(() => {
+                                window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
                             });
 
                             // Defer filter field creation (non-critical UI)
