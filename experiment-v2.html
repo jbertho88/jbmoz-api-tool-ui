@@ -6933,19 +6933,31 @@ ${resultsByUrl[url].summary}`;
                     delete allDOMElements.clearDataBtn.dataset.originalText;
                 }
                 
-                // Set up JSON view (hidden by default)
+                // Set up JSON view (hidden by default) - defer stringification
                 allDOMElements.rawWrapper.innerHTML = '<pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>';
                 allDOMElements.rawCode = document.querySelector('#raw-wrapper code');
+                // Defer JSON stringification (non-critical, only needed when viewing JSON)
                 if (allDOMElements.rawCode) {
-                    allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                    const stringifyJson = () => {
+                        if (allDOMElements.rawCode) {
+                            allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                        }
+                    };
+                    if (window.requestIdleCallback) {
+                        requestIdleCallback(stringifyJson, { timeout: 2000 });
+                    } else {
+                        setTimeout(stringifyJson, 0);
+                    }
                 }
                 
-                // Default to table view instead of JSON
+                // Show table container immediately for better perceived performance
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 allDOMElements.rawWrapper.classList.add('hidden');
                 allDOMElements.tableWrapper.classList.remove('hidden');
                 allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.add('hidden');
+                
+                // Render table (now optimized with deferred processing)
                 renderTable(data, currentMethod, currentOriginalParams);
             }
 
@@ -7782,43 +7794,84 @@ ${resultsByUrl[url].summary}`;
             }
 
             function renderTable(results, method, originalParams) {
+                // Destroy old table immediately (lightweight operation)
                 if (table) {
                     table.destroy();
+                    table = null;
                 }
                 
-                const rows = DataProcessor.processResults(results, method, originalParams);
+                // Show loading state immediately for better perceived performance
+                const tableElement = document.getElementById('results-table');
+                if (tableElement) {
+                    tableElement.innerHTML = '<div class="p-8 text-center text-[var(--text-secondary)]">Loading table...</div>';
+                }
                 
-                if (rows.length > 0) {
-                    const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
-                    const columns = allKeys.map(key => ({ title: key, field: key }));
+                // Defer heavy processing to next frame to allow initial paint
+                requestAnimationFrame(() => {
+                    // Process data in next frame
+                    const rows = DataProcessor.processResults(results, method, originalParams);
                     
-                    table = new Tabulator("#results-table", {
-                        data: rows,
-                        columns: columns,
-                        layout: "fitDataFill",
-                        pagination: "local",
-                        paginationSize: 100,
-                        movableColumns: true,
-                        resizableRows: false,
-                    });
-
-                    allDOMElements.filterFieldsContainer.innerHTML = '';
-                    columns.forEach(col => {
-                        if (col.field) {
-                            const div = document.createElement('div');
-                            const label = document.createElement('label');
-                            label.textContent = col.title;
-                            label.className = 'block text-sm font-medium text-[var(--text-secondary)]';
-                            const input = document.createElement('input');
-                            input.type = 'text';
-                            input.dataset.field = col.field;
-                            input.className = 'w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
-                            div.appendChild(label);
-                            div.appendChild(input);
-                            allDOMElements.filterFieldsContainer.appendChild(div);
+                    if (rows.length > 0) {
+                        // Use requestIdleCallback if available, otherwise setTimeout for non-critical work
+                        const deferHeavyWork = (callback) => {
+                            if (window.requestIdleCallback) {
+                                requestIdleCallback(callback, { timeout: 100 });
+                            } else {
+                                setTimeout(callback, 0);
+                            }
+                        };
+                        
+                        // Extract column keys efficiently (use Set for O(1) lookups)
+                        const keySet = new Set();
+                        for (let i = 0; i < rows.length; i++) {
+                            const keys = Object.keys(rows[i]);
+                            for (let j = 0; j < keys.length; j++) {
+                                keySet.add(keys[j]);
+                            }
                         }
-                    });
-                }
+                        const allKeys = Array.from(keySet);
+                        const columns = allKeys.map(key => ({ title: key, field: key }));
+                        
+                        // Create table immediately (Tabulator handles rendering efficiently)
+                        requestAnimationFrame(() => {
+                            table = new Tabulator("#results-table", {
+                                data: rows,
+                                columns: columns,
+                                layout: "fitDataFill",
+                                pagination: "local",
+                                paginationSize: 100,
+                                movableColumns: true,
+                                resizableRows: false,
+                                virtualDom: true, // Enable virtual DOM for better performance
+                                virtualDomBuffer: 300, // Render buffer for smooth scrolling
+                            });
+
+                            // Defer filter field creation (non-critical UI)
+                            deferHeavyWork(() => {
+                                allDOMElements.filterFieldsContainer.innerHTML = '';
+                                columns.forEach(col => {
+                                    if (col.field) {
+                                        const div = document.createElement('div');
+                                        const label = document.createElement('label');
+                                        label.textContent = col.title;
+                                        label.className = 'block text-sm font-medium text-[var(--text-secondary)]';
+                                        const input = document.createElement('input');
+                                        input.type = 'text';
+                                        input.dataset.field = col.field;
+                                        input.className = 'w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
+                                        div.appendChild(label);
+                                        div.appendChild(input);
+                                        allDOMElements.filterFieldsContainer.appendChild(div);
+                                    }
+                                });
+                            });
+                        });
+                    } else {
+                        if (tableElement) {
+                            tableElement.innerHTML = '<div class="p-8 text-center text-[var(--text-secondary)]">No data to display</div>';
+                        }
+                    }
+                });
             }
 
             function applyTableFilters() {
