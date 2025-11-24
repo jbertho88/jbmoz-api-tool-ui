@@ -732,6 +732,35 @@
         #results-container button:active {
             transform: translateY(0);
         }
+        
+        /* Fix CCI filter button hover states */
+        .cci-filter-btn.text-white {
+            background-color: var(--text-accent) !important;
+            color: white !important;
+        }
+        
+        .cci-filter-btn.text-white:hover {
+            background-color: var(--text-accent-hover) !important;
+            color: white !important;
+            opacity: 0.9;
+        }
+        
+        .cci-filter-btn:not(.text-white):hover {
+            background-color: var(--bg-container) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Ensure primary intent column shows full text on hover */
+        .tabulator .tabulator-cell[title] {
+            cursor: help;
+        }
+        
+        .tabulator .tabulator-cell .truncate {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData" class="transition-colors duration-300 css-loading">
@@ -5326,9 +5355,15 @@ ${resultsByUrl[url].summary}`;
                                     return (aData.similarityRaw || 0) - (bData.similarityRaw || 0);
                                 }, width: 150, formatter: (cell) => {
                                     const similarity = cell.getRow().getData().similarityRaw || 0;
-                                    const intensity = Math.min(255, Math.round(similarity * 255));
-                                    const bgColor = `rgb(${255 - intensity}, ${255}, ${255 - intensity})`;
-                                    return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center;">${cell.getValue()}</div>`;
+                                    // Green-to-yellow scale: green (high similarity) to yellow (low similarity)
+                                    // Similarity ranges from 0 to 1, so:
+                                    // High similarity (1.0) = green (rgb(34, 197, 94))
+                                    // Low similarity (0.0) = yellow (rgb(234, 179, 8))
+                                    const green = Math.round(34 + (234 - 34) * (1 - similarity));
+                                    const blue = Math.round(94 + (8 - 94) * (1 - similarity));
+                                    const red = Math.round(197 + (234 - 197) * (1 - similarity));
+                                    const bgColor = `rgb(${red}, ${green}, ${blue})`;
+                                    return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center; color: ${similarity > 0.5 ? '#ffffff' : '#000000'};">${cell.getValue()}</div>`;
                                 }},
                                 { title: 'Value Score', field: 'valueScore', sorter: 'number', width: 120, formatter: (cell) => {
                                     const tooltip = cell.getRow().getData().valueScoreTooltip || '';
@@ -5337,7 +5372,9 @@ ${resultsByUrl[url].summary}`;
                                 { title: 'Primary Intent', field: 'primaryIntent', sorter: 'string', width: 150, formatter: (cell) => {
                                     const intent = cell.getValue();
                                     const intentColor = cell.getRow().getData().intentColor;
-                                    return `<div style="background-color: ${intentColor}20; color: ${intentColor}; font-weight: 600; padding: 4px; border-radius: 4px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px;"><span style="background:${intentColor};width:8px;height:8px;border-radius:9999px;display:inline-block"></span>${intent}</div>`;
+                                    return `<div style="background-color: ${intentColor}20; color: ${intentColor}; font-weight: 600; padding: 4px; border-radius: 4px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: help;" title="${intent}"><span style="background:${intentColor};width:8px;height:8px;border-radius:9999px;display:inline-block"></span><span class="truncate">${intent}</span></div>`;
+                                }, tooltip: (cell) => {
+                                    return cell.getValue();
                                 }}
                             ],
                             layout: "fitDataStretch",
@@ -5594,9 +5631,11 @@ ${resultsByUrl[url].summary}`;
                                 filterButtons.forEach(b => {
                                     b.classList.remove('bg-[var(--text-accent)]', 'text-white');
                                     b.classList.add('bg-[var(--bg-input)]', 'text-[var(--text-primary)]');
+                                    b.classList.remove('hover:bg-white', 'hover:text-white');
                                 });
                                 btn.classList.remove('bg-[var(--bg-input)]', 'text-[var(--text-primary)]');
                                 btn.classList.add('bg-[var(--text-accent)]', 'text-white');
+                                btn.classList.remove('hover:bg-white', 'hover:text-white');
                                 
                                 // Filter clusters
                                 const filterType = btn.id.replace('cci-filter-', '');
@@ -6806,16 +6845,13 @@ ${resultsByUrl[url].summary}`;
                     delete allDOMElements.clearDataBtn.dataset.originalText;
                 }
                 
-                // Reset to standard JSON view
-                allDOMElements.rawWrapper.innerHTML = '<pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>';
-                allDOMElements.rawCode = document.querySelector('#raw-wrapper code');
-                
-                allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                // Default to table view instead of JSON
                 allDOMElements.resultsContainer.classList.remove('hidden');
-                allDOMElements.tableWrapper.classList.add('hidden');
-                allDOMElements.rawWrapper.classList.remove('hidden');
-                allDOMElements.viewDataBtn.textContent = 'View Table';
+                allDOMElements.rawWrapper.classList.add('hidden');
+                allDOMElements.tableWrapper.classList.remove('hidden');
+                allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.add('hidden');
+                renderTable(data, currentMethod, currentOriginalParams);
             }
 
             function clearResultsData() {
