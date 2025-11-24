@@ -501,6 +501,20 @@
             box-sizing: border-box !important;
         }
         
+        /* Ensure all nested content respects grid constraints */
+        .metrics-grid-container > * * {
+            min-width: 0 !important;
+            max-width: 100% !important;
+        }
+        
+        /* Specifically fix truncate in grid context */
+        .metrics-grid-container .truncate {
+            min-width: 0 !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+        }
+        
         @media (min-width: 768px) {
             .metrics-grid-container {
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -4907,9 +4921,9 @@ ${resultsByUrl[url].summary}`;
                     const topAnchors = resultsByUrl[u].topAnchors || [];
                     const borderClass = urlSummaryColors[idx % urlSummaryColors.length];
                     
-                    html += `<div class="bg-[var(--bg-container)] ${borderClass} rounded-lg p-4">`;
+                    html += `<div class="bg-[var(--bg-container)] ${borderClass} rounded-lg p-4 min-w-0">`;
                     html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1">URL ${idx + 1}</h4>`;
-                    html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3">${u}</p>`;
+                    html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3 min-w-0">${u}</p>`;
                     
                     html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
                     html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Cluster Analysis Metrics</div>';
@@ -4946,8 +4960,8 @@ ${resultsByUrl[url].summary}`;
                         previewAnchors.forEach((anchor) => {
                             const domainsP = (typeof anchor.external_root_domains === 'number') ? formatNumber(anchor.external_root_domains) : (anchor.external_root_domains ?? 'N/A');
                             const pagesP = (typeof anchor.external_pages === 'number') ? formatNumber(anchor.external_pages) : (anchor.external_pages ?? 'N/A');
-                            html += '<div class="text-sm">';
-                            html += `<div class="font-semibold text-[var(--text-primary)] truncate">${anchor.text || 'N/A'}</div>`;
+                            html += '<div class="text-sm min-w-0">';
+                            html += `<div class="font-semibold text-[var(--text-primary)] truncate min-w-0">${anchor.text || 'N/A'}</div>`;
                             html += `<div class="text-[var(--text-secondary)] text-xs">Linking Domains: <span class="text-[var(--text-primary)]">${domainsP}</span> • Inbound Links: <span class="text-[var(--text-primary)]">${pagesP}</span></div>`;
                             html += '</div>';
                         });
