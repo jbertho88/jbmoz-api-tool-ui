@@ -645,7 +645,7 @@
                 <button id="saveOpenaiApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text" aria-label="Save OpenAI API key">Save</button>
             </div>
             <div id="openai-api-key-help" class="sr-only">Enter your OpenAI API key for Content Cluster Analysis</div>
-            <p class="text-xs text-[var(--text-secondary)] mt-2">Required for Content Cluster Analysis. Get your key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">OpenAI Platform</a></p>
+            <p class="text-xs text-[var(--text-secondary)] mt-2">Required for Content Cluster Endpoints. Get your key from the <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">OpenAI Platform</a></p>
         </section>
 
         <section aria-labelledby="method-heading">
@@ -3784,6 +3784,7 @@ ${JSON.stringify(newContentData, null, 2)}`;
                             summary: '',
                             embedding: null,
                             llmDefinedTopic: '',
+                            llmCluster: '',
                             contentCluster: '',
                             primaryIntent: '',
                             audience: '',
@@ -3798,6 +3799,7 @@ ${JSON.stringify(newContentData, null, 2)}`;
                             summary: '',
                             embedding: null,
                             llmDefinedTopic: '',
+                            llmCluster: '',
                             contentCluster: '',
                             primaryIntent: '',
                             audience: '',
@@ -4008,9 +4010,11 @@ ${resultsByUrl[url].summary}`;
                             const clusterIdx = urlToClusterIndex[url];
                             if (clusterIdx !== undefined && clusterLabels[clusterIdx]) {
                                 const clusterLabel = clusterLabels[clusterIdx];
+                                resultsByUrl[url].llmCluster = clusterLabel.clusterName || `Cluster ${clusterIdx + 1}`;
                                 resultsByUrl[url].contentCluster = clusterLabel.clusterName || `Cluster ${clusterIdx + 1}`;
                                 resultsByUrl[url].topicTags = clusterLabel.topicTags || [];
                             } else {
+                                resultsByUrl[url].llmCluster = 'Unassigned';
                                 resultsByUrl[url].contentCluster = 'Unassigned';
                                 resultsByUrl[url].topicTags = [];
                             }
@@ -4037,9 +4041,11 @@ ${resultsByUrl[url].summary}`;
                         const clusterIdx = urlToClusterIndex[url];
                         if (clusterIdx !== undefined && clusterLabels[clusterIdx]) {
                             const clusterLabel = clusterLabels[clusterIdx];
+                            resultsByUrl[url].llmCluster = clusterLabel.clusterName || `Cluster ${clusterIdx + 1}`;
                             resultsByUrl[url].contentCluster = clusterLabel.clusterName || `Cluster ${clusterIdx + 1}`;
                             resultsByUrl[url].topicTags = clusterLabel.topicTags || [];
                         } else {
+                            resultsByUrl[url].llmCluster = 'Unassigned';
                             resultsByUrl[url].contentCluster = 'Unassigned';
                             resultsByUrl[url].topicTags = [];
                         }
@@ -5331,6 +5337,7 @@ ${resultsByUrl[url].summary}`;
                                 return {
                                     url: url,
                                     llmDefinedTopic: result.llmDefinedTopic || 'N/A',
+                                    llmCluster: result.llmCluster || 'Unassigned',
                                     contentCluster: result.contentCluster || 'Unassigned',
                                     primaryIntent: result.primaryIntent || 'N/A',
                                     audience: result.audience || 'N/A',
@@ -5344,6 +5351,7 @@ ${resultsByUrl[url].summary}`;
                                 columns: [
                                     { title: 'URL', field: 'url', sorter: 'string', widthGrow: 2 },
                                     { title: 'LLM-Defined Topic', field: 'llmDefinedTopic', sorter: 'string' },
+                                    { title: 'LLM Cluster', field: 'llmCluster', sorter: 'string' },
                                     { title: 'Content Cluster', field: 'contentCluster', sorter: 'string' },
                                     { title: 'Primary Intent', field: 'primaryIntent', sorter: 'string' },
                                     { title: 'Audience', field: 'audience', sorter: 'string' },
