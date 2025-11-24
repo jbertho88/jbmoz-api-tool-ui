@@ -934,7 +934,7 @@
                     <button id="history-btn" type="button" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-200 btn-inverted-text hover:scale-105 active:scale-95 shadow-md hover:shadow-lg" aria-label="View recent API calls">
                         📋 Recent API Calls
                     </button>
-                    <button id="saved-results-btn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-200 btn-inverted-text hover:scale-105 active:scale-95 shadow-md hover:shadow-lg" aria-label="View saved results">
+                    <button id="saved-results-btn" type="button" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-200 btn-inverted-text hover:scale-105 active:scale-95 shadow-md hover:shadow-lg" aria-label="View saved results">
                         💾 Saved Results
                     </button>
                 </div>
@@ -958,7 +958,7 @@
                         <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Copy JSON data to clipboard">Copy JSON</button>
                         <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Export data as CSV file">Export to CSV</button>
                         <button id="export-pdf-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Export dashboard as PDF">Export to PDF</button>
-                        <button id="save-results-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Save results for later reload">💾 Save Results</button>
+                        <button id="save-results-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Save results for later reload">💾 Save Results</button>
                         <button id="clear-data-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Clear results data">Clear Data</button>
                     </div>
                 </div>
@@ -7502,14 +7502,14 @@ ${resultsByUrl[url].summary}`;
                             <h3 class="font-semibold text-[var(--text-primary)]">${methodName}</h3>
                             <div class="flex items-center gap-2">
                                 <span class="text-sm text-[var(--text-secondary)]">${date}</span>
-                                <button class="text-green-600 hover:text-green-700 text-sm font-semibold" data-load="${entry.id}">Load</button>
+                                <button class="text-[var(--btn-export-bg)] hover:text-[var(--btn-export-hover)] text-sm font-semibold" data-load="${entry.id}">Load</button>
                                 <button class="text-[var(--text-error)] hover:text-red-600 text-sm" data-delete-saved="${entry.id}">Delete</button>
                             </div>
                         </div>
                         <p class="text-sm text-[var(--text-secondary)] mb-2">${paramsSummary}</p>
                         <div class="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
                             <span>Results: ${entry.resultCount}</span>
-                            <span class="text-green-600">💾 Saved</span>
+                            <span class="text-[var(--btn-export-bg)]">💾 Saved</span>
                         </div>
                     `;
                     
@@ -7601,7 +7601,7 @@ ${resultsByUrl[url].summary}`;
             function displaySuccess(message) {
                 // Create a temporary success message
                 const successDiv = document.createElement('div');
-                successDiv.className = 'bg-green-600 border-l-4 border-green-800 text-white px-5 py-4 rounded-lg shadow-md flex items-start gap-3 mb-4';
+                successDiv.className = 'bg-[var(--btn-export-bg)] border-l-4 border-[var(--btn-export-hover)] text-white px-5 py-4 rounded-lg shadow-md flex items-start gap-3 mb-4';
                 successDiv.innerHTML = `
                     <span class="text-2xl flex-shrink-0">✓</span>
                     <div class="flex-1 font-medium">${message}</div>
