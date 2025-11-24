@@ -6845,6 +6845,13 @@ ${resultsByUrl[url].summary}`;
                     delete allDOMElements.clearDataBtn.dataset.originalText;
                 }
                 
+                // Set up JSON view (hidden by default)
+                allDOMElements.rawWrapper.innerHTML = '<pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>';
+                allDOMElements.rawCode = document.querySelector('#raw-wrapper code');
+                if (allDOMElements.rawCode) {
+                    allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                }
+                
                 // Default to table view instead of JSON
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 allDOMElements.rawWrapper.classList.add('hidden');
