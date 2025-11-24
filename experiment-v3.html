@@ -2152,10 +2152,13 @@
                         try {
                             localStorage.setItem('mozApiKey', key);
                             loadApiKey();
+                            displaySuccess('Moz API key saved successfully!');
                         } catch (e) {
                             console.warn('Could not save API key to localStorage:', e);
                             displayError('Could not save API key. Please try again.');
                         }
+                    } else {
+                        displayError('Please enter an API key.');
                     }
                 });
                 allDOMElements.editApiKeyBtn.addEventListener('click', () => {
@@ -2169,10 +2172,13 @@
                         try {
                             localStorage.setItem('openaiApiKey', key);
                             loadOpenaiApiKey();
+                            displaySuccess('OpenAI API key saved successfully!');
                         } catch (e) {
                             console.warn('Could not save OpenAI API key to localStorage:', e);
                             displayError('Could not save OpenAI API key. Please try again.');
                         }
+                    } else {
+                        displayError('Please enter an API key.');
                     }
                 });
                 allDOMElements.editOpenaiApiKeyBtn.addEventListener('click', () => {
@@ -2384,7 +2390,7 @@
                 }
             };
             
-            const loadApiKey = () => {
+            function loadApiKey() {
                 try {
                     const savedKey = localStorage.getItem('mozApiKey');
                     if (savedKey) {
@@ -2407,7 +2413,7 @@
                 }
             };
 
-            const loadOpenaiApiKey = () => {
+            function loadOpenaiApiKey() {
                 try {
                     const savedKey = localStorage.getItem('openaiApiKey');
                     if (savedKey) {
@@ -2880,11 +2886,12 @@
                     autoSaveToHistory();
                 } catch (error) {
                     if (error.name !== 'AbortError') {
-                        displayError(error.message);
+                        displayErrorWithSuggestions(error.message, error);
                     }
                 } finally {
                     resetSubmitButton();
                     inFlightRequest = null;
+                    hideProgress(); // Ensure progress bar is hidden for regular API calls
                 }
             }
 
@@ -8136,7 +8143,7 @@ ${resultsByUrl[url].summary}`;
             
             function resetSubmitButton() {
                 allDOMElements.submitBtn.disabled = allDOMElements.methodSelector.value === "";
-                allDOMElements.submitBtn.innerHTML = 'Run Request';
+                allDOMElements.submitBtn.innerHTML = '<span class="mr-2">▶</span> Run Request';
                 allDOMElements.submitBtn.removeAttribute('aria-busy');
             }
 
