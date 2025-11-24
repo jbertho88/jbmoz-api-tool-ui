@@ -3339,18 +3339,21 @@ If outputting natural language (not JSON), keep it under 3 sentences unless othe
             }
 
             async function runContentClusterAnalysis(apiKey, openaiApiKey, params, proxyUrl, opensignal) {
+                // Extract params outside try block so they're available in catch
                 const { seedTopic, urls, locale, similarityThreshold, limit, model = 'gpt-3.5-turbo' } = params;
-                const resultsByUrl = {};
                 
-                // Calculate total steps for progress tracking
-                const totalSteps = 5 + urls.length * 3; // Steps: related keywords, moz data, anchors, content/embeddings, analysis, + per-URL operations
-                let currentStep = 0;
-                
-                // Setup progress tracking
-                showProgress('Content Cluster Analysis', totalSteps);
-                partialResults = { urls: [], resultsByUrl: {} }; // Initialize partial results
+                try {
+                    const resultsByUrl = {};
+                    
+                    // Calculate total steps for progress tracking
+                    const totalSteps = 5 + urls.length * 3; // Steps: related keywords, moz data, anchors, content/embeddings, analysis, + per-URL operations
+                    let currentStep = 0;
+                    
+                    // Setup progress tracking
+                    showProgress('Content Cluster Analysis', totalSteps);
+                    partialResults = { urls: [], resultsByUrl: {} }; // Initialize partial results
 
-                // Step 1: Get related keywords for seed topic
+                    // Step 1: Get related keywords for seed topic
                 updateProgress(++currentStep, 'Fetching related keywords...');
                 allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching related keywords...</span>';
                 let relatedKeywords = [];
