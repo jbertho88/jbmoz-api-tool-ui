@@ -617,28 +617,90 @@
             box-sizing: border-box !important;
             overflow: hidden !important;
         }
+        
+        /* Modern UI Enhancements */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+        
+        select:focus {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%230284c7' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        }
+        
+        .dark select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        }
+        
+        .dark select:focus {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2338bdf8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        }
+        
+        /* Smooth transitions for all interactive elements */
+        input, select, button, textarea {
+            transition: all 0.2s ease;
+        }
+        
+        /* Better focus states */
+        input:focus, select:focus, textarea:focus {
+            transform: translateY(-1px);
+        }
+        
+        /* Subtle hover effects for cards */
+        section[aria-labelledby] {
+            transition: all 0.2s ease;
+        }
+        
+        /* Improved button states */
+        button:not(:disabled):hover {
+            transform: translateY(-1px);
+        }
+        
+        button:not(:disabled):active {
+            transform: translateY(0);
+        }
+        
+        /* Better spacing for form elements */
+        .input-section label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        /* Modern card hover effect */
+        .bg-\[var\(--bg-container\)\] {
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        
+        .bg-\[var\(--bg-container\)\]:hover {
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body data-proxy="https://mozapi-proxy-server.vercel.app/api/getMozData" class="transition-colors duration-300 css-loading">
 
     <div class="w-full max-w-4xl mx-auto bg-[var(--bg-container-translucent)] backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-[var(--border-primary)] my-8">
         
-        <header class="relative text-center mb-6">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz Logo" class="mx-auto h-12 mb-4" id="moz-logo" loading="lazy" decoding="async" width="177" height="48">
-            <h1 class="text-3xl font-bold text-[var(--text-heading)]">Advanced Moz API Tool</h1>
-            <p class="text-[var(--text-primary)] mt-2">Add your key and select an API method to get started.</p>
+        <header class="relative text-center mb-8 pb-6 border-b border-[var(--border-primary)]">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz Logo" class="mx-auto h-12 mb-5 opacity-90" id="moz-logo" loading="lazy" decoding="async" width="177" height="48">
+            <h1 class="text-3xl md:text-4xl font-bold text-[var(--text-heading)] mb-2 tracking-tight">Advanced Moz API Tool</h1>
+            <p class="text-[var(--text-secondary)] text-sm md:text-base">Connect to the Moz API and analyze SEO data with ease</p>
         </header>
         
-        <section class="mb-6 bg-[var(--bg-input)] p-4 rounded-lg border border-[var(--border-secondary)]" aria-labelledby="api-key-heading">
-            <h2 id="api-key-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Moz API Key</h2>
+        <section class="mb-5 bg-[var(--bg-container)] p-5 rounded-xl border border-[var(--border-primary)] shadow-sm hover:shadow-md transition-shadow duration-200" aria-labelledby="api-key-heading">
+            <h2 id="api-key-heading" class="block text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">Moz API Key</h2>
             <div id="apiKeyDisplay" class="hidden items-center justify-between" role="status" aria-live="polite">
                 <span id="apiKeyText" class="text-[var(--text-secondary)] font-mono"></span>
                 <button id="editApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold" aria-label="Edit API key">Edit</button>
             </div>
-            <div id="apiKeyInputArea" class="flex items-center gap-2">
+            <div id="apiKeyInputArea" class="flex items-center gap-3">
                 <label for="apiKeyInput" class="sr-only">Enter your Moz API key</label>
-                <input type="password" id="apiKeyInput" class="w-full bg-[var(--bg-body)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 ring-[var(--text-accent)]" placeholder="mozscape-1234abcd..." autocomplete="off" aria-describedby="api-key-help">
-                <button id="saveApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text" aria-label="Save API key">Save</button>
+                <input type="password" id="apiKeyInput" class="flex-1 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--text-accent)] focus:border-transparent transition-all duration-200" placeholder="mozscape-1234abcd..." autocomplete="off" aria-describedby="api-key-help">
+                <button id="saveApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-5 py-2.5 text-sm rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md btn-inverted-text" aria-label="Save API key">Save</button>
             </div>
             <div id="api-key-help" class="sr-only">Enter your Moz API key to access the API services</div>
             <!-- Quota Display Area -->
@@ -647,24 +709,24 @@
             </div>
         </section>
 
-        <section class="mb-6 bg-[var(--bg-input)] p-4 rounded-lg border border-[var(--border-secondary)]" aria-labelledby="openai-api-key-heading">
-            <h2 id="openai-api-key-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">OpenAI API Key</h2>
+        <section class="mb-5 bg-[var(--bg-container)] p-5 rounded-xl border border-[var(--border-primary)] shadow-sm hover:shadow-md transition-shadow duration-200" aria-labelledby="openai-api-key-heading">
+            <h2 id="openai-api-key-heading" class="block text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">OpenAI API Key</h2>
             <div id="openaiApiKeyDisplay" class="hidden items-center justify-between" role="status" aria-live="polite">
                 <span id="openaiApiKeyText" class="text-[var(--text-secondary)] font-mono"></span>
                 <button id="editOpenaiApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold" aria-label="Edit OpenAI API key">Edit</button>
             </div>
-            <div id="openaiApiKeyInputArea" class="flex items-center gap-2">
+            <div id="openaiApiKeyInputArea" class="flex items-center gap-3">
                 <label for="openaiApiKeyInput" class="sr-only">Enter your OpenAI API key</label>
-                <input type="password" id="openaiApiKeyInput" class="w-full bg-[var(--bg-body)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 ring-[var(--text-accent)]" placeholder="sk-..." autocomplete="off" aria-describedby="openai-api-key-help">
-                <button id="saveOpenaiApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text" aria-label="Save OpenAI API key">Save</button>
+                <input type="password" id="openaiApiKeyInput" class="flex-1 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--text-accent)] focus:border-transparent transition-all duration-200" placeholder="sk-..." autocomplete="off" aria-describedby="openai-api-key-help">
+                <button id="saveOpenaiApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-5 py-2.5 text-sm rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md btn-inverted-text" aria-label="Save OpenAI API key">Save</button>
             </div>
             <div id="openai-api-key-help" class="sr-only">Enter your OpenAI API key for Content Cluster Analysis</div>
             <p class="text-xs text-[var(--text-secondary)] mt-2">Required for Content Cluster Endpoints. Get your key from the <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">OpenAI Platform</a></p>
         </section>
 
-        <section aria-labelledby="method-heading">
-            <label for="methodSelector" id="method-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">API Method</label>
-            <select id="methodSelector" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 ring-[var(--text-accent)]" aria-describedby="method-help">
+        <section aria-labelledby="method-heading" class="mb-6">
+            <label for="methodSelector" id="method-heading" class="block text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">API Method</label>
+            <select id="methodSelector" class="w-full bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--text-accent)] focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer" aria-describedby="method-help">
                 <option value="" disabled selected>-- Select a Method --</option>
                 <optgroup label="Keyword Research">
                     <option value="searchIntent">Fetch Search Intent</option>
@@ -730,11 +792,11 @@
                 <fieldset id="contentClustersIdentificationInputs" class="input-section space-y-4"><legend class="sr-only">Content Clusters Identification Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text" aria-describedby="submit-help">
-                        Run Request
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-200 flex items-center justify-center w-full md:w-auto md:min-w-[200px] disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl" aria-describedby="submit-help">
+                        <span class="mr-2">▶</span> Run Request
                     </button>
-                    <button id="history-btn" type="button" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 btn-inverted-text" aria-label="View recent API calls">
+                    <button id="history-btn" type="button" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-200 btn-inverted-text hover:scale-105 active:scale-95 shadow-md hover:shadow-lg" aria-label="View recent API calls">
                         📋 Recent API Calls
                     </button>
                 </div>
