@@ -2596,6 +2596,7 @@
                         currentOriginalParams = payload.params;
                         currentMethod = selectedMethod;
                         showCompetitiveDashboard(competitiveData);
+                        updateSaveButtonVisibility();
                         autoSaveToHistory();
                     } catch (error) {
                         if (error.name !== 'AbortError') {
@@ -2624,6 +2625,7 @@
                         currentOriginalParams = payload.params;
                         currentMethod = selectedMethod;
                         showKeywordTargetingDashboard(ktaData);
+                        updateSaveButtonVisibility();
                         autoSaveToHistory();
                     } catch (error) {
                         if (error.name !== 'AbortError') {
@@ -2658,6 +2660,7 @@
                         currentOriginalParams = payload.params;
                         currentMethod = selectedMethod;
                         showContentClusterDashboard(ccaData);
+                        updateSaveButtonVisibility();
                         autoSaveToHistory();
                     } catch (error) {
                         if (error.name !== 'AbortError') {
@@ -2691,6 +2694,7 @@
                         currentOriginalParams = payload.params;
                         currentMethod = selectedMethod;
                         showContentClustersIdentificationDashboard(cciData);
+                        updateSaveButtonVisibility();
                         autoSaveToHistory();
                     } catch (error) {
                         if (error.name !== 'AbortError') {
