@@ -7160,14 +7160,16 @@ ${resultsByUrl[url].summary}`;
                 allDOMElements.methodSelector.value = entry.method;
                 allDOMElements.methodSelector.dispatchEvent(new Event('change'));
 
-                // Populate form fields
+                // Populate form fields - use longer timeout to ensure form fields are created
                 setTimeout(() => {
+                    let fieldsPopulated = 0;
                     Object.entries(entry.params).forEach(([key, value]) => {
                         // Map parameter names to field IDs
                         const fieldId = getFieldIdForParam(entry.method, key);
                         const element = document.getElementById(fieldId);
                         
                         if (element) {
+                            fieldsPopulated++;
                             if (element.type === 'checkbox') {
                                 element.checked = value;
                             } else if (Array.isArray(value)) {
@@ -7189,16 +7191,20 @@ ${resultsByUrl[url].summary}`;
                             } else {
                                 element.value = value;
                             }
+                        } else {
+                            console.warn(`Field not found for ${entry.method}.${key} (expected ID: ${fieldId})`);
                         }
                     });
                     
-                    // Auto-submit for dashboard methods
-                    if (entry.method === 'contentClusterAnalysis' || entry.method === 'competitiveAnalysis' || entry.method === 'keywordTargetingAnalysis') {
+                    // Auto-submit for all methods (dashboard and single endpoints)
+                    if (fieldsPopulated > 0) {
                         setTimeout(() => {
                             allDOMElements.form.dispatchEvent(new Event('submit'));
-                        }, 200);
+                        }, 300);
+                    } else {
+                        displayError('Could not populate form fields. Please check the console for details.');
                     }
-                }, 100);
+                }, 200);
 
                 allDOMElements.historyModal.classList.add('hidden');
             }
@@ -7218,12 +7224,14 @@ ${resultsByUrl[url].summary}`;
 
                 // Populate form fields (same as replay, but don't auto-submit)
                 setTimeout(() => {
+                    let fieldsPopulated = 0;
                     Object.entries(entry.params).forEach(([key, value]) => {
                         // Map parameter names to field IDs
                         const fieldId = getFieldIdForParam(entry.method, key);
                         const element = document.getElementById(fieldId);
                         
                         if (element) {
+                            fieldsPopulated++;
                             if (element.type === 'checkbox') {
                                 element.checked = value;
                             } else if (Array.isArray(value)) {
@@ -7245,10 +7253,16 @@ ${resultsByUrl[url].summary}`;
                             } else {
                                 element.value = value;
                             }
+                        } else {
+                            console.warn(`Field not found for ${entry.method}.${key} (expected ID: ${fieldId})`);
                         }
                     });
+                    
+                    if (fieldsPopulated === 0) {
+                        displayError('Could not populate form fields. Please check the console for details.');
+                    }
                     // Don't auto-submit - let user edit and submit manually
-                }, 100);
+                }, 200);
 
                 allDOMElements.historyModal.classList.add('hidden');
             }
