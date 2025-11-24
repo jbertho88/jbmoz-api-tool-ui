@@ -641,6 +641,20 @@
             max-width: 100% !important;
         }
         
+        /* Specifically fix ranking keywords to prevent grid breakage */
+        #url-metrics-grid > div .break-words {
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+            hyphens: auto !important;
+        }
+        
+        /* Ensure ranking keywords container doesn't expand */
+        #url-metrics-grid > div > div > div.space-y-1 {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+        }
+        
         /* Modern UI Enhancements */
         select {
             appearance: none;
@@ -5280,9 +5294,10 @@ ${resultsByUrl[url].summary}`;
                         html += '<div class="text-sm text-[var(--text-secondary)]">No keywords ranking in the top 50 positions</div>';
                     } else {
                         html += '<div class="text-sm text-[var(--text-secondary)]">Top 5:</div>';
-                        html += '<div class="space-y-1 text-sm mt-1">';
+                        html += '<div class="space-y-1 text-sm mt-1 min-w-0">';
                         rkList.slice(0, 5).forEach(k => {
-                            html += `<div><span class="text-[var(--text-primary)]">${k.keyword || 'N/A'}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
+                            const keyword = k.keyword || 'N/A';
+                            html += `<div class="min-w-0 break-words"><span class="text-[var(--text-primary)] break-words">${keyword}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
                         });
                         html += '</div>';
                         
