@@ -2771,18 +2771,22 @@
                         const isRateLimit = /rate limit|429|TPM|RPM/i.test(errorMessage);
                         
                         if (isRateLimit && attempt < maxRetries - 1) {
-                            // Extract retry-after time if available
+                            // Extract retry-after time if available (OpenAI provides this in seconds)
                             let retryAfter = baseDelay;
                             const retryAfterMatch = errorMessage.match(/try again in ([\d.]+)s/i);
                             if (retryAfterMatch) {
-                                retryAfter = parseFloat(retryAfterMatch[1]) * 1000;
+                                // Add 10% buffer to the retry time to be safe
+                                retryAfter = parseFloat(retryAfterMatch[1]) * 1000 * 1.1;
                             } else {
                                 // Exponential backoff: 2s, 4s, 8s, 16s, 32s
                                 retryAfter = baseDelay * Math.pow(2, attempt);
                             }
                             
-                            // Add some jitter to avoid thundering herd
-                            retryAfter += Math.random() * 1000;
+                            // Ensure minimum delay of 2 seconds for rate limits
+                            retryAfter = Math.max(retryAfter, 2000);
+                            
+                            // Add some jitter to avoid thundering herd (10% random variation)
+                            retryAfter += Math.random() * retryAfter * 0.1;
                             
                             console.log(`Rate limit hit. Retrying in ${(retryAfter / 1000).toFixed(1)}s... (attempt ${attempt + 1}/${maxRetries})`);
                             await new Promise(resolve => setTimeout(resolve, retryAfter));
@@ -2883,21 +2887,22 @@ If outputting natural language (not JSON), keep it under 3 sentences unless othe
             // Process items in batches with delays
             async function processInBatches(items, batchSize, delayMs, processFn, progressCallback) {
                 const results = [];
-                for (let i = 0; i < items.length; i += batchSize) {
-                    const batch = items.slice(i, i + batchSize);
-                    const batchResults = await Promise.all(
-                        batch.map((item, idx) => processFn(item, i + idx))
-                    );
-                    results.push(...batchResults);
+                // Process items sequentially to avoid rate limits, not in parallel
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    const result = await processFn(item, i);
+                    results.push(result);
                     
                     // Update progress
-                    if (progressCallback) {
-                        progressCallback(i + batch.length, items.length);
+                    if (progressCallback && (i + 1) % batchSize === 0 || i === items.length - 1) {
+                        progressCallback(i + 1, items.length);
                     }
                     
-                    // Delay between batches (except for the last batch)
-                    if (i + batchSize < items.length) {
-                        await new Promise(resolve => setTimeout(resolve, delayMs));
+                    // Add delay between items (except for the last item)
+                    // Use longer delays for larger batches to avoid rate limits
+                    if (i < items.length - 1) {
+                        const delay = items.length > 20 ? Math.max(delayMs, 2000) : delayMs; // Minimum 2s delay for large batches
+                        await new Promise(resolve => setTimeout(resolve, delay));
                     }
                 }
                 return results;
@@ -3117,10 +3122,16 @@ If outputting natural language (not JSON), keep it under 3 sentences unless othe
                 });
 
                 if (urlsNeedingIntentAnalysis.length > 0) {
-                    for (const url of urlsNeedingIntentAnalysis) {
-                        try {
-                            const contentPreview = resultsByUrl[url].content.substring(0, 2000);
-                            const analysisPrompt = `Classify the PRIMARY search intent of the content below.
+                    // Process intent analysis in batches with delays to avoid rate limits
+                    await processInBatches(
+                        urlsNeedingIntentAnalysis,
+                        3, // Process 3 at a time (smaller batch for intent analysis)
+                        3000, // 3 second delay between batches
+                        async (url, index) => {
+                            try {
+                                allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Analyzing intent... ${index + 1}/${urlsNeedingIntentAnalysis.length}</span>`;
+                                const contentPreview = resultsByUrl[url].content.substring(0, 2000);
+                                const analysisPrompt = `Classify the PRIMARY search intent of the content below.
 
 Choose exactly ONE intent: Informational, Commercial, Navigational, Transactional.
 
@@ -3128,18 +3139,24 @@ Return ONLY the intent name.
 
 Content:
 ${contentPreview}`;
-                            
-                            const response = await analyzeWithOpenAI({ analysisData: { prompt: analysisPrompt } }, openaiApiKey, proxyUrl, model);
-                            const intentFromAI = response.trim().split('\n')[0].trim();
-                            const validIntents = ['Informational', 'Commercial', 'Navigational', 'Transactional'];
-                            if (validIntents.includes(intentFromAI)) {
-                                resultsByUrl[url].primaryIntent = intentFromAI;
-                                resultsByUrl[url].primaryIntentSource = 'openai_content_analysis';
+                                
+                                const response = await analyzeWithOpenAI({ analysisData: { prompt: analysisPrompt } }, openaiApiKey, proxyUrl, model);
+                                const intentFromAI = response.trim().split('\n')[0].trim();
+                                const validIntents = ['Informational', 'Commercial', 'Navigational', 'Transactional'];
+                                if (validIntents.includes(intentFromAI)) {
+                                    resultsByUrl[url].primaryIntent = intentFromAI;
+                                    resultsByUrl[url].primaryIntentSource = 'openai_content_analysis';
+                                }
+                            } catch (e) {
+                                console.warn(`Failed to analyze intent for ${url}:`, e);
+                                resultsByUrl[url].errors = resultsByUrl[url].errors || [];
+                                resultsByUrl[url].errors.push('Intent Analysis: ' + e.message);
                             }
-                        } catch (e) {
-                            console.warn(`Failed to analyze intent for ${url}:`, e);
+                        },
+                        (processed, total) => {
+                            allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Analyzing intent... ${processed}/${total}</span>`;
                         }
-                    }
+                    );
                 }
 
                 // Step 7: Group URLs by primary intent
@@ -3829,8 +3846,8 @@ ${JSON.stringify(newContentData, null, 2)}`;
                 const urlsToSummarize = urls.filter(url => resultsByUrl[url].errors.length === 0 && resultsByUrl[url].rawContent);
                 await processInBatches(
                     urlsToSummarize,
-                    5, // Process 5 at a time
-                    2000, // 2 second delay between batches
+                    3, // Process 3 at a time (reduced for rate limit safety)
+                    3000, // 3 second delay between items (increased for rate limit safety)
                     async (url, index) => {
                         try {
                             allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Summarizing pages... ${index + 1}/${urls.length}</span>`;
@@ -3971,8 +3988,8 @@ ${JSON.stringify(clusterPages, null, 2)}`;
                 const urlsToAnalyze = urls.filter(url => resultsByUrl[url].errors.length === 0 && resultsByUrl[url].summary);
                 await processInBatches(
                     urlsToAnalyze,
-                    5, // Process 5 at a time
-                    2000, // 2 second delay between batches
+                    3, // Process 3 at a time (reduced for rate limit safety)
+                    3000, // 3 second delay between items (increased for rate limit safety)
                     async (url, index) => {
                         try {
                             allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Analyzing pages... ${index + 1}/${urls.length}</span>`;
