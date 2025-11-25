@@ -2068,6 +2068,40 @@
                         const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
                         if (sectionToShow) sectionToShow.style.display = 'block';
                         allDOMElements.submitBtn.disabled = false;
+                        
+                        // Add warning for listLinks when limit > 25
+                        if (selectedMethod === 'listLinks') {
+                            setTimeout(() => {
+                                const limitInput = document.getElementById('llLimit');
+                                const warningDiv = document.getElementById('llLimitWarning');
+                                
+                                // Remove existing warning if any
+                                if (warningDiv) warningDiv.remove();
+                                
+                                if (limitInput) {
+                                    const checkLimit = () => {
+                                        const limit = parseInt(limitInput.value, 10);
+                                        const existingWarning = document.getElementById('llLimitWarning');
+                                        
+                                        if (limit > 25) {
+                                            if (!existingWarning) {
+                                                const warning = document.createElement('div');
+                                                warning.id = 'llLimitWarning';
+                                                warning.className = 'mt-2 p-2 bg-yellow-100 dark:bg-yellow-900 border border-yellow-400 dark:border-yellow-600 rounded text-sm text-yellow-800 dark:text-yellow-200';
+                                                warning.innerHTML = '⚠️ Warning: Values above 25 may cause the request to hang or timeout. If you experience issues, try using a limit of 25 or lower.';
+                                                limitInput.parentElement.appendChild(warning);
+                                            }
+                                        } else if (existingWarning) {
+                                            existingWarning.remove();
+                                        }
+                                    };
+                                    
+                                    limitInput.addEventListener('input', checkLimit);
+                                    limitInput.addEventListener('change', checkLimit);
+                                    checkLimit(); // Check initial value
+                                }
+                            }, 100);
+                        }
                     } else {
                         allDOMElements.submitBtn.disabled = true;
                     }
@@ -2731,13 +2765,27 @@
                 const existingCci = document.getElementById('content-clusters-identification-dashboard');
                 if (existingCci) existingCci.remove();
                 
+                // Check if this is listLinks with high limit for timeout handling
+                const isListLinksHighLimit = selectedMethod === 'listLinks' && payload.params.limit > 25;
+                
                 try {
+                    // Add timeout to prevent hanging requests, especially for listLinks with high limits
+                    const timeoutDuration = isListLinksHighLimit ? 120000 : 60000; // 2 minutes for listLinks > 25, 1 minute otherwise
+                    const timeoutId = setTimeout(() => {
+                        if (inFlightRequest) {
+                            inFlightRequest.abort();
+                        }
+                    }, timeoutDuration);
+                    
                     const response = await fetch(PROXY_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload),
                         signal: inFlightRequest.signal
                     });
+                    
+                    clearTimeout(timeoutId);
+                    
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.error || `Request failed with status ${response.status}`);
                     currentResultsData = data;
@@ -2750,7 +2798,14 @@
                     // Auto-save successful search to history
                     autoSaveToHistory();
                 } catch (error) {
-                    if (error.name !== 'AbortError') {
+                    if (error.name === 'AbortError') {
+                        // Check if it was a timeout for listLinks with high limit
+                        if (isListLinksHighLimit) {
+                            displayError('Request timed out. The listLinks method may take longer with limits above 25. Please try with a lower limit or contact support if this persists.');
+                        } else {
+                            displayError('Request was cancelled or timed out. Please try again.');
+                        }
+                    } else {
                         displayError(error.message);
                     }
                 } finally {
