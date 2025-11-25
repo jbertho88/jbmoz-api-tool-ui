@@ -2069,7 +2069,7 @@
                         if (sectionToShow) sectionToShow.style.display = 'block';
                         allDOMElements.submitBtn.disabled = false;
                         
-                        // Add warning for listLinks when limit > 25
+                        // Add warning for listLinks when limit >= 30 (based on testing: 26-29 work, 35+ hangs)
                         if (selectedMethod === 'listLinks') {
                             setTimeout(() => {
                                 const limitInput = document.getElementById('llLimit');
@@ -2083,12 +2083,12 @@
                                         const limit = parseInt(limitInput.value, 10);
                                         const existingWarning = document.getElementById('llLimitWarning');
                                         
-                                        if (limit > 25) {
+                                        if (limit >= 30) {
                                             if (!existingWarning) {
                                                 const warning = document.createElement('div');
                                                 warning.id = 'llLimitWarning';
                                                 warning.className = 'mt-2 p-2 bg-yellow-100 dark:bg-yellow-900 border border-yellow-400 dark:border-yellow-600 rounded text-sm text-yellow-800 dark:text-yellow-200';
-                                                warning.innerHTML = '⚠️ Warning: Values above 25 may cause the request to hang or timeout. If you experience issues, try using a limit of 25 or lower.';
+                                                warning.innerHTML = '⚠️ Warning: Values of 30 and above may cause the request to hang. Values 26-29 typically work fine. If you experience issues, try using a limit of 29 or lower.';
                                                 limitInput.parentElement.appendChild(warning);
                                             }
                                         } else if (existingWarning) {
@@ -2766,13 +2766,18 @@
                 if (existingCci) existingCci.remove();
                 
                 // Check if this is listLinks with high limit for timeout handling
-                const isListLinksHighLimit = selectedMethod === 'listLinks' && payload.params.limit > 25;
+                // Note: OpenAI requests (contentClusterAnalysis, contentClustersIdentification) return early above,
+                // so this timeout only applies to standard API calls
+                const isListLinksHighLimit = selectedMethod === 'listLinks' && payload.params.limit >= 30;
                 
                 try {
-                    // Add timeout to prevent hanging requests, especially for listLinks with high limits
-                    const timeoutDuration = isListLinksHighLimit ? 120000 : 60000; // 2 minutes for listLinks > 25, 1 minute otherwise
+                    // Add timeout to prevent truly hung requests (infinite waits)
+                    // Set to 15 minutes to allow legitimate long-running requests to complete
+                    // This protects against hung requests while allowing massive requests (10+ mins) to finish
+                    const timeoutDuration = 900000; // 15 minutes - long enough for legitimate massive requests
                     const timeoutId = setTimeout(() => {
                         if (inFlightRequest) {
+                            console.warn(`Request timeout after ${timeoutDuration / 1000} seconds - aborting to prevent infinite hang`);
                             inFlightRequest.abort();
                         }
                     }, timeoutDuration);
@@ -2799,12 +2804,12 @@
                     autoSaveToHistory();
                 } catch (error) {
                     if (error.name === 'AbortError') {
-                        // Check if it was a timeout for listLinks with high limit
-                        if (isListLinksHighLimit) {
-                            displayError('Request timed out. The listLinks method may take longer with limits above 25. Please try with a lower limit or contact support if this persists.');
-                        } else {
-                            displayError('Request was cancelled or timed out. Please try again.');
-                        }
+                        // Request was aborted - could be user cancellation or timeout
+                        // Check if it was a timeout (15 minutes elapsed)
+                        const timeoutMessage = isListLinksHighLimit 
+                            ? 'Request timed out after 15 minutes. Large listLinks requests (limit >= 30) may hang on the Moz API side. If you need more results, try using limit 29 or making multiple smaller requests.'
+                            : 'Request timed out after 15 minutes. If this was a large request, it may still be processing on the server. You can try again or contact support if this persists.';
+                        displayError(timeoutMessage);
                     } else {
                         displayError(error.message);
                     }
