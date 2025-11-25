@@ -616,6 +616,187 @@
             width: 100% !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+        }
+        
+        /* Force all content inside URL boxes to respect grid constraints */
+        #url-metrics-grid > div > * {
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+        }
+        
+        /* Ensure SVG charts don't break layout */
+        #url-metrics-grid > div svg {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        
+        /* Ensure all text content wraps */
+        #url-metrics-grid > div p,
+        #url-metrics-grid > div div {
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            max-width: 100% !important;
+        }
+        
+        /* Specifically fix ranking keywords to prevent grid breakage */
+        #url-metrics-grid > div .break-words {
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+            hyphens: auto !important;
+        }
+        
+        /* Ensure ranking keywords container doesn't expand */
+        #url-metrics-grid > div > div > div.space-y-1 {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+        }
+        
+        /* Modern UI Enhancements */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+        
+        select:focus {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%230284c7' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        }
+        
+        .dark select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        }
+        
+        .dark select:focus {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2338bdf8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        }
+        
+        /* Smooth transitions for all interactive elements */
+        input, select, button, textarea {
+            transition: all 0.2s ease;
+        }
+        
+        /* Better focus states */
+        input:focus, select:focus, textarea:focus {
+            transform: translateY(-1px);
+        }
+        
+        /* Subtle hover effects for cards */
+        section[aria-labelledby] {
+            transition: all 0.2s ease;
+        }
+        
+        /* Improved button states */
+        button:not(:disabled):hover {
+            transform: translateY(-1px);
+        }
+        
+        button:not(:disabled):active {
+            transform: translateY(0);
+        }
+        
+        /* Better spacing for form elements */
+        .input-section label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        /* Modern card hover effect */
+        .bg-\[var\(--bg-container\)\] {
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        
+        .bg-\[var\(--bg-container\)\]:hover {
+            transform: translateY(-1px);
+        }
+        
+        /* Loading skeleton states */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-input) 25%, var(--bg-input-secondary) 50%, var(--bg-input) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+            border-radius: 0.5rem;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .skeleton-text {
+            height: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .skeleton-title {
+            height: 1.5rem;
+            width: 60%;
+            margin-bottom: 1rem;
+        }
+        
+        .skeleton-button {
+            height: 2.5rem;
+            width: 120px;
+            border-radius: 0.5rem;
+        }
+        
+        /* Theme toggle button styles */
+        #theme-toggle {
+            position: relative;
+        }
+        
+        #theme-toggle:hover {
+            transform: rotate(15deg);
+        }
+        
+        /* Improved button styles in results */
+        #results-container button {
+            transition: all 0.2s ease;
+        }
+        
+        #results-container button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        #results-container button:active {
+            transform: translateY(0);
+        }
+        
+        /* Fix CCI filter button hover states */
+        .cci-filter-btn.text-white {
+            background-color: var(--text-accent) !important;
+            color: white !important;
+        }
+        
+        .cci-filter-btn.text-white:hover {
+            background-color: var(--text-accent-hover) !important;
+            color: white !important;
+            opacity: 0.9;
+        }
+        
+        .cci-filter-btn:not(.text-white):hover {
+            background-color: var(--bg-container) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Ensure primary intent column shows full text on hover */
+        .tabulator .tabulator-cell[title] {
+            cursor: help;
+        }
+        
+        .tabulator .tabulator-cell .truncate {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -623,22 +804,34 @@
 
     <div class="w-full max-w-4xl mx-auto bg-[var(--bg-container-translucent)] backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-[var(--border-primary)] my-8">
         
-        <header class="relative text-center mb-6">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz Logo" class="mx-auto h-12 mb-4" id="moz-logo" loading="lazy" decoding="async" width="177" height="48">
-            <h1 class="text-3xl font-bold text-[var(--text-heading)]">Advanced Moz API Tool</h1>
-            <p class="text-[var(--text-primary)] mt-2">Add your key and select an API method to get started.</p>
+        <header class="relative text-center mb-8 pb-6 border-b border-[var(--border-primary)] bg-gradient-to-br from-[var(--bg-container)] via-[var(--bg-container)] to-[var(--bg-input)] rounded-t-2xl -mt-6 -mx-6 md:-mx-8 pt-6 px-6 md:px-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex-1"></div>
+                <div class="flex-1 text-center">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Moz_logo.svg/177px-Moz_logo.svg.png" alt="Moz Logo" class="mx-auto h-12 opacity-90" id="moz-logo" loading="lazy" decoding="async" width="177" height="48">
+                </div>
+                <div class="flex-1 flex justify-end">
+                    <button id="theme-toggle" class="p-2 rounded-lg bg-[var(--bg-input)] hover:bg-[var(--bg-input-secondary)] border border-[var(--border-primary)] transition-all duration-200 hover:scale-110 active:scale-95" aria-label="Toggle theme" title="Switch theme">
+                        <span id="theme-icon" class="text-xl">🌓</span>
+                    </button>
+                </div>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-[var(--text-heading)] mb-2 tracking-tight">Advanced Moz API Tool</h1>
+            <p class="text-[var(--text-secondary)] text-sm md:text-base">Connect to the Moz API and analyze SEO data with ease</p>
         </header>
         
-        <section class="mb-6 bg-[var(--bg-input)] p-4 rounded-lg border border-[var(--border-secondary)]" aria-labelledby="api-key-heading">
-            <h2 id="api-key-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">Moz API Key</h2>
+        <section class="mb-5 bg-[var(--bg-container)] p-5 rounded-xl border border-[var(--border-primary)] shadow-sm hover:shadow-md transition-shadow duration-200" aria-labelledby="api-key-heading">
+            <h2 id="api-key-heading" class="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">
+                <span class="text-base">🔑</span> Moz API Key
+            </h2>
             <div id="apiKeyDisplay" class="hidden items-center justify-between" role="status" aria-live="polite">
                 <span id="apiKeyText" class="text-[var(--text-secondary)] font-mono"></span>
                 <button id="editApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold" aria-label="Edit API key">Edit</button>
             </div>
-            <div id="apiKeyInputArea" class="flex items-center gap-2">
+            <div id="apiKeyInputArea" class="flex items-center gap-3">
                 <label for="apiKeyInput" class="sr-only">Enter your Moz API key</label>
-                <input type="password" id="apiKeyInput" class="w-full bg-[var(--bg-body)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 ring-[var(--text-accent)]" placeholder="mozscape-1234abcd..." autocomplete="off" aria-describedby="api-key-help">
-                <button id="saveApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text" aria-label="Save API key">Save</button>
+                <input type="password" id="apiKeyInput" class="flex-1 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--text-accent)] focus:border-transparent transition-all duration-200" placeholder="mozscape-1234abcd..." autocomplete="off" aria-describedby="api-key-help">
+                <button type="button" id="saveApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-5 py-2.5 text-sm rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md btn-inverted-text" aria-label="Save API key">Save</button>
             </div>
             <div id="api-key-help" class="sr-only">Enter your Moz API key to access the API services</div>
             <!-- Quota Display Area -->
@@ -647,24 +840,28 @@
             </div>
         </section>
 
-        <section class="mb-6 bg-[var(--bg-input)] p-4 rounded-lg border border-[var(--border-secondary)]" aria-labelledby="openai-api-key-heading">
-            <h2 id="openai-api-key-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">OpenAI API Key</h2>
+        <section class="mb-5 bg-[var(--bg-container)] p-5 rounded-xl border border-[var(--border-primary)] shadow-sm hover:shadow-md transition-shadow duration-200" aria-labelledby="openai-api-key-heading">
+            <h2 id="openai-api-key-heading" class="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">
+                <span class="text-base">🤖</span> OpenAI API Key
+            </h2>
             <div id="openaiApiKeyDisplay" class="hidden items-center justify-between" role="status" aria-live="polite">
                 <span id="openaiApiKeyText" class="text-[var(--text-secondary)] font-mono"></span>
                 <button id="editOpenaiApiKeyBtn" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold" aria-label="Edit OpenAI API key">Edit</button>
             </div>
-            <div id="openaiApiKeyInputArea" class="flex items-center gap-2">
+            <div id="openaiApiKeyInputArea" class="flex items-center gap-3">
                 <label for="openaiApiKeyInput" class="sr-only">Enter your OpenAI API key</label>
-                <input type="password" id="openaiApiKeyInput" class="w-full bg-[var(--bg-body)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 ring-[var(--text-accent)]" placeholder="sk-..." autocomplete="off" aria-describedby="openai-api-key-help">
-                <button id="saveOpenaiApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition btn-inverted-text" aria-label="Save OpenAI API key">Save</button>
+                <input type="password" id="openaiApiKeyInput" class="flex-1 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--text-accent)] focus:border-transparent transition-all duration-200" placeholder="sk-..." autocomplete="off" aria-describedby="openai-api-key-help">
+                <button type="button" id="saveOpenaiApiKeyBtn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-semibold px-5 py-2.5 text-sm rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md btn-inverted-text" aria-label="Save OpenAI API key">Save</button>
             </div>
             <div id="openai-api-key-help" class="sr-only">Enter your OpenAI API key for Content Cluster Analysis</div>
             <p class="text-xs text-[var(--text-secondary)] mt-2">Required for Content Cluster Endpoints. Get your key from the <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="hover:text-[var(--text-accent-hover)] transition text-[var(--text-accent)]">OpenAI Platform</a></p>
         </section>
 
-        <section aria-labelledby="method-heading">
-            <label for="methodSelector" id="method-heading" class="block text-sm font-medium text-[var(--text-secondary)] mb-2">API Method</label>
-            <select id="methodSelector" class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 ring-[var(--text-accent)]" aria-describedby="method-help">
+        <section aria-labelledby="method-heading" class="mb-6">
+            <label for="methodSelector" id="method-heading" class="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)] mb-3 uppercase tracking-wide">
+                <span class="text-base">⚙️</span> API Method
+            </label>
+            <select id="methodSelector" class="w-full bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--text-accent)] focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer" aria-describedby="method-help">
                 <option value="" disabled selected>-- Select a Method --</option>
                 <optgroup label="Keyword Research">
                     <option value="searchIntent">Fetch Search Intent</option>
@@ -730,12 +927,15 @@
                 <fieldset id="contentClustersIdentificationInputs" class="input-section space-y-4"><legend class="sr-only">Content Clusters Identification Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 flex items-center justify-center w-full md:w-auto md:min-w-[200px] disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text" aria-describedby="submit-help">
-                        Run Request
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <button type="submit" id="submit-btn" class="bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover)] text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-200 flex items-center justify-center w-full md:w-auto md:min-w-[200px] disabled:bg-[var(--bg-disabled)] disabled:cursor-not-allowed btn-inverted-text hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl" aria-describedby="submit-help">
+                        <span class="mr-2">▶</span> Run Request
                     </button>
-                    <button id="history-btn" type="button" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-bold px-8 py-3 rounded-lg transition duration-300 btn-inverted-text" aria-label="View recent API calls">
+                    <button id="history-btn" type="button" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-200 btn-inverted-text hover:scale-105 active:scale-95 shadow-md hover:shadow-lg" aria-label="View recent API calls">
                         📋 Recent API Calls
+                    </button>
+                    <button id="saved-results-btn" type="button" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-200 btn-inverted-text hover:scale-105 active:scale-95 shadow-md hover:shadow-lg" aria-label="View saved results">
+                        💾 Saved Results
                     </button>
                 </div>
                 <div id="submit-help" class="sr-only">Submit your API request with the selected method and parameters</div>
@@ -743,16 +943,22 @@
         </form>
 
         <section id="status-container" class="mt-8" aria-live="polite">
-            <div id="error-message" role="alert" class="hidden bg-[var(--error-bg)] border border-[var(--error-border)] text-[var(--text-error)] px-4 py-3 rounded-lg text-center"></div>
-            <div id="results-container" class="hidden bg-[var(--bg-input)] p-4 md:p-6 rounded-xl border border-[var(--border-primary)]" role="region" aria-labelledby="results-heading">
-                <div class="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
-                    <h2 id="results-heading" class="text-xl font-bold text-[var(--text-heading)]">API Results</h2>
+            <div id="error-message" role="alert" class="hidden bg-[var(--error-bg)] border-l-4 border-[var(--error-border)] text-[var(--text-error)] px-5 py-4 rounded-lg shadow-md flex items-start gap-3">
+                <span class="text-2xl flex-shrink-0">⚠️</span>
+                <div class="flex-1 font-medium"></div>
+            </div>
+            <div id="results-container" class="hidden bg-[var(--bg-container)] p-5 md:p-7 rounded-xl border border-[var(--border-primary)] shadow-lg" role="region" aria-labelledby="results-heading">
+                <div class="flex flex-col sm:flex-row justify-between items-start mb-5 gap-4 pb-4 border-b border-[var(--border-primary)]">
+                    <h2 id="results-heading" class="flex items-center gap-2 text-xl md:text-2xl font-bold text-[var(--text-heading)]">
+                        <span class="text-2xl">📊</span> API Results
+                    </h2>
                     <div class="flex items-center gap-2 flex-wrap justify-end" role="toolbar" aria-label="Results actions">
                         <button id="view-data-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Toggle between table and JSON view">View Table</button>
                         <button id="filter-btn" class="bg-[var(--btn-view-data-bg)] hover:bg-[var(--btn-view-data-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Filter table data">Filter</button>
                         <button id="copy-json-btn" class="bg-[var(--btn-copy-bg)] hover:bg-[var(--btn-copy-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Copy JSON data to clipboard">Copy JSON</button>
                         <button id="export-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Export data as CSV file">Export to CSV</button>
                         <button id="export-pdf-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Export dashboard as PDF">Export to PDF</button>
+                        <button id="save-results-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text hidden" aria-label="Save results for later reload">💾 Save Results</button>
                         <button id="clear-data-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-4 py-2 text-sm rounded-md transition duration-300 btn-inverted-text" aria-label="Clear results data">Clear Data</button>
                     </div>
                 </div>
@@ -826,9 +1032,29 @@
                 <input type="text" id="history-search" placeholder="Search history by method, parameters, or date..." class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)]">
             </div>
             <div id="history-list" class="p-4 overflow-y-auto flex-1">
-                <div id="history-empty" class="text-center text-[var(--text-secondary)] py-8">
-                    <p>No search history yet.</p>
-                    <p class="text-sm mt-2">Your searches will be automatically saved here.</p>
+                <div id="history-empty" class="text-center text-[var(--text-secondary)] py-8">No history found.</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Saved Results Modal -->
+    <div id="saved-results-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-labelledby="saved-results-modal-title" aria-modal="true">
+        <div class="bg-[var(--bg-container)] border border-[var(--border-primary)] w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-[var(--border-primary)]">
+                <h2 id="saved-results-modal-title" class="text-lg font-semibold text-[var(--text-primary)]">💾 Saved Results</h2>
+                <div class="flex items-center gap-2">
+                    <button id="export-saved-results-btn" class="bg-[var(--btn-export-bg)] hover:bg-[var(--btn-export-hover)] text-white font-semibold px-3 py-1 text-sm rounded-md transition btn-inverted-text" aria-label="Export saved results">Export</button>
+                    <button id="clear-saved-results-btn" class="bg-[var(--btn-clear-bg)] hover:bg-[var(--btn-clear-hover)] text-white font-semibold px-3 py-1 text-sm rounded-md transition btn-inverted-text" aria-label="Clear all saved results">Clear All</button>
+                    <button id="close-saved-results-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" aria-label="Close saved results dialog">&times;</button>
+                </div>
+            </div>
+            <div class="p-4 border-b border-[var(--border-primary)]">
+                <input type="text" id="saved-results-search" placeholder="Search saved results by method, URLs, or date..." class="w-full bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-secondary)]">
+            </div>
+            <div id="saved-results-list" class="p-4 overflow-y-auto flex-1">
+                <div id="saved-results-empty" class="text-center text-[var(--text-secondary)] py-8">
+                    <p>No saved results yet.</p>
+                    <p class="text-sm mt-2">Save results from any endpoint to reload them later without making new API calls.</p>
                 </div>
             </div>
         </div>
@@ -1189,7 +1415,16 @@
                 historyEmpty: document.getElementById('history-empty'),
                 exportHistoryBtn: document.getElementById('export-history-btn'),
                 clearHistoryBtn: document.getElementById('clear-history-btn'),
-                exportPdfBtn: document.getElementById('export-pdf-btn')
+                exportPdfBtn: document.getElementById('export-pdf-btn'),
+                savedResultsBtn: document.getElementById('saved-results-btn'),
+                savedResultsModal: document.getElementById('saved-results-modal'),
+                closeSavedResultsBtn: document.getElementById('close-saved-results-btn'),
+                savedResultsSearch: document.getElementById('saved-results-search'),
+                savedResultsList: document.getElementById('saved-results-list'),
+                savedResultsEmpty: document.getElementById('saved-results-empty'),
+                exportSavedResultsBtn: document.getElementById('export-saved-results-btn'),
+                clearSavedResultsBtn: document.getElementById('clear-saved-results-btn'),
+                saveResultsBtn: document.getElementById('save-results-btn')
             };
 
             const populateInputs = () => {
@@ -1833,6 +2068,40 @@
                         const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
                         if (sectionToShow) sectionToShow.style.display = 'block';
                         allDOMElements.submitBtn.disabled = false;
+                        
+                        // Add warning for listLinks when limit >= 30 (based on testing: 26-29 work, 35+ hangs)
+                        if (selectedMethod === 'listLinks') {
+                            setTimeout(() => {
+                                const limitInput = document.getElementById('llLimit');
+                                const warningDiv = document.getElementById('llLimitWarning');
+                                
+                                // Remove existing warning if any
+                                if (warningDiv) warningDiv.remove();
+                                
+                                if (limitInput) {
+                                    const checkLimit = () => {
+                                        const limit = parseInt(limitInput.value, 10);
+                                        const existingWarning = document.getElementById('llLimitWarning');
+                                        
+                                        if (limit >= 30) {
+                                            if (!existingWarning) {
+                                                const warning = document.createElement('div');
+                                                warning.id = 'llLimitWarning';
+                                                warning.className = 'mt-2 p-2 bg-yellow-100 dark:bg-yellow-900 border border-yellow-400 dark:border-yellow-600 rounded text-sm text-yellow-800 dark:text-yellow-200';
+                                                warning.innerHTML = '⚠️ Warning: Values of 30 and above may cause the request to hang. Values 26-29 typically work fine. If you experience issues, try using a limit of 29 or lower.';
+                                                limitInput.parentElement.appendChild(warning);
+                                            }
+                                        } else if (existingWarning) {
+                                            existingWarning.remove();
+                                        }
+                                    };
+                                    
+                                    limitInput.addEventListener('input', checkLimit);
+                                    limitInput.addEventListener('change', checkLimit);
+                                    checkLimit(); // Check initial value
+                                }
+                            }, 100);
+                        }
                     } else {
                         allDOMElements.submitBtn.disabled = true;
                     }
@@ -1845,6 +2114,18 @@
                     allDOMElements.historyModal.classList.remove('hidden');
                     renderHistoryList();
                 });
+                allDOMElements.savedResultsBtn.addEventListener('click', () => {
+                    allDOMElements.savedResultsModal.classList.remove('hidden');
+                    renderSavedResultsList();
+                });
+                allDOMElements.closeSavedResultsBtn.addEventListener('click', () => allDOMElements.savedResultsModal.classList.add('hidden'));
+                allDOMElements.savedResultsModal.addEventListener('click', (e) => {
+                    if (e.target === allDOMElements.savedResultsModal) allDOMElements.savedResultsModal.classList.add('hidden');
+                });
+                allDOMElements.savedResultsSearch.addEventListener('input', debounce(filterSavedResults, 300));
+                allDOMElements.saveResultsBtn.addEventListener('click', saveCurrentResults);
+                allDOMElements.exportSavedResultsBtn.addEventListener('click', exportSavedResults);
+                allDOMElements.clearSavedResultsBtn.addEventListener('click', clearAllSavedResults);
                 allDOMElements.clearDataBtn.addEventListener('click', clearResultsData);
                 allDOMElements.exportPdfBtn.addEventListener('click', handleExportPdf);
                 allDOMElements.filterBtn.addEventListener('click', () => allDOMElements.filterModal.classList.remove('hidden'));
@@ -1914,12 +2195,61 @@
                         btn.classList.toggle('font-bold', btn.dataset.theme === theme);
                     });
                     
+                    // Update theme toggle icon
+                    updateThemeToggleIcon(theme);
+                    
                     // Reset logo filter
                     if (allDOMElements.mozLogo) {
                         allDOMElements.mozLogo.style.filter = 'none';
                     }
                 });
             };
+            
+            // Theme toggle button functionality
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = document.getElementById('theme-icon');
+            
+            function updateThemeToggleIcon(theme) {
+                if (!themeIcon) return;
+                const icons = {
+                    'light': '☀️',
+                    'dark': '🌙',
+                    'retro': '💜',
+                    'high-contrast': '⚫'
+                };
+                themeIcon.textContent = icons[theme] || '🌓';
+            }
+            
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    const currentTheme = document.documentElement.className.match(/(light|dark|retro|high-contrast)/)?.[0] || 'light';
+                    const themes = ['light', 'dark', 'retro', 'high-contrast'];
+                    const currentIndex = themes.indexOf(currentTheme);
+                    const nextIndex = (currentIndex + 1) % themes.length;
+                    const nextTheme = themes[nextIndex];
+                    
+                    // Trigger theme change
+                    const themeBtn = Array.from(allDOMElements.themeBtns).find(btn => btn.dataset.theme === nextTheme);
+                    if (themeBtn) {
+                        themeBtn.click();
+                    }
+                });
+                
+                // Initialize theme toggle icon on page load
+                const initializeThemeToggle = () => {
+                    const savedTheme = localStorage.getItem('theme') || 'light';
+                    const currentTheme = document.documentElement.className.match(/(light|dark|retro|high-contrast)/)?.[0] || savedTheme;
+                    updateThemeToggleIcon(currentTheme);
+                };
+                
+                // Call on DOMContentLoaded and after theme changes
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', initializeThemeToggle);
+                } else {
+                    initializeThemeToggle();
+                }
+            }
+            
 
             const fetchQuota = async (apiKey) => {
                 if (!apiKey) return;
@@ -2314,6 +2644,7 @@
                         currentOriginalParams = payload.params;
                         currentMethod = selectedMethod;
                         showCompetitiveDashboard(competitiveData);
+                        updateSaveButtonVisibility();
                         autoSaveToHistory();
                     } catch (error) {
                         if (error.name !== 'AbortError') {
@@ -2342,6 +2673,7 @@
                         currentOriginalParams = payload.params;
                         currentMethod = selectedMethod;
                         showKeywordTargetingDashboard(ktaData);
+                        updateSaveButtonVisibility();
                         autoSaveToHistory();
                     } catch (error) {
                         if (error.name !== 'AbortError') {
@@ -2376,6 +2708,7 @@
                         currentOriginalParams = payload.params;
                         currentMethod = selectedMethod;
                         showContentClusterDashboard(ccaData);
+                        updateSaveButtonVisibility();
                         autoSaveToHistory();
                     } catch (error) {
                         if (error.name !== 'AbortError') {
@@ -2409,6 +2742,7 @@
                         currentOriginalParams = payload.params;
                         currentMethod = selectedMethod;
                         showContentClustersIdentificationDashboard(cciData);
+                        updateSaveButtonVisibility();
                         autoSaveToHistory();
                     } catch (error) {
                         if (error.name !== 'AbortError') {
@@ -2431,25 +2765,52 @@
                 const existingCci = document.getElementById('content-clusters-identification-dashboard');
                 if (existingCci) existingCci.remove();
                 
+                // Check if this is listLinks with high limit for timeout handling
+                // Note: OpenAI requests (contentClusterAnalysis, contentClustersIdentification) return early above,
+                // so this timeout only applies to standard API calls
+                const isListLinksHighLimit = selectedMethod === 'listLinks' && payload.params.limit >= 30;
+                
                 try {
+                    // Add timeout to prevent truly hung requests (infinite waits)
+                    // Set to 15 minutes to allow legitimate long-running requests to complete
+                    // This protects against hung requests while allowing massive requests (10+ mins) to finish
+                    const timeoutDuration = 900000; // 15 minutes - long enough for legitimate massive requests
+                    const timeoutId = setTimeout(() => {
+                        if (inFlightRequest) {
+                            console.warn(`Request timeout after ${timeoutDuration / 1000} seconds - aborting to prevent infinite hang`);
+                            inFlightRequest.abort();
+                        }
+                    }, timeoutDuration);
+                    
                     const response = await fetch(PROXY_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload),
                         signal: inFlightRequest.signal
                     });
+                    
+                    clearTimeout(timeoutId);
+                    
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.error || `Request failed with status ${response.status}`);
                     currentResultsData = data;
                     currentOriginalParams = payload.params;
                     currentMethod = selectedMethod;
                     showRawJsonResults(data);
+                    updateSaveButtonVisibility();
                     fetchQuota(apiKey);
                     
                     // Auto-save successful search to history
                     autoSaveToHistory();
                 } catch (error) {
-                    if (error.name !== 'AbortError') {
+                    if (error.name === 'AbortError') {
+                        // Request was aborted - could be user cancellation or timeout
+                        // Check if it was a timeout (15 minutes elapsed)
+                        const timeoutMessage = isListLinksHighLimit 
+                            ? 'Request timed out after 15 minutes. Large listLinks requests (limit >= 30) may hang on the Moz API side. If you need more results, try using limit 29 or making multiple smaller requests.'
+                            : 'Request timed out after 15 minutes. If this was a large request, it may still be processing on the server. You can try again or contact support if this persists.';
+                        displayError(timeoutMessage);
+                    } else {
                         displayError(error.message);
                     }
                 } finally {
@@ -4938,9 +5299,9 @@ ${resultsByUrl[url].summary}`;
                     const topAnchors = resultsByUrl[u].topAnchors || [];
                     const borderClass = urlSummaryColors[idx % urlSummaryColors.length];
                     
-                    html += `<div class="bg-[var(--bg-container)] ${borderClass} rounded-lg p-4 min-w-0">`;
-                    html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1">URL ${idx + 1}</h4>`;
-                    html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3 min-w-0">${u}</p>`;
+                    html += `<div class="bg-[var(--bg-container)] ${borderClass} rounded-lg p-4 min-w-0 overflow-hidden" style="max-width: 100%; box-sizing: border-box; word-wrap: break-word;">`;
+                    html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1 truncate min-w-0">URL ${idx + 1}</h4>`;
+                    html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3 min-w-0 overflow-wrap-anywhere">${u}</p>`;
                     
                     html += '<div class="mb-3 pb-3 border-b border-[var(--border-primary)]">';
                     html += '<div class="text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase tracking-wide">Cluster Analysis Metrics</div>';
@@ -4993,9 +5354,10 @@ ${resultsByUrl[url].summary}`;
                         html += '<div class="text-sm text-[var(--text-secondary)]">No keywords ranking in the top 50 positions</div>';
                     } else {
                         html += '<div class="text-sm text-[var(--text-secondary)]">Top 5:</div>';
-                        html += '<div class="space-y-1 text-sm mt-1">';
+                        html += '<div class="space-y-1 text-sm mt-1 min-w-0">';
                         rkList.slice(0, 5).forEach(k => {
-                            html += `<div><span class="text-[var(--text-primary)]">${k.keyword || 'N/A'}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
+                            const keyword = k.keyword || 'N/A';
+                            html += `<div class="min-w-0 break-words"><span class="text-[var(--text-primary)] break-words">${keyword}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
                         });
                         html += '</div>';
                         
@@ -5141,9 +5503,15 @@ ${resultsByUrl[url].summary}`;
                                     return (aData.similarityRaw || 0) - (bData.similarityRaw || 0);
                                 }, width: 150, formatter: (cell) => {
                                     const similarity = cell.getRow().getData().similarityRaw || 0;
-                                    const intensity = Math.min(255, Math.round(similarity * 255));
-                                    const bgColor = `rgb(${255 - intensity}, ${255}, ${255 - intensity})`;
-                                    return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center;">${cell.getValue()}</div>`;
+                                    // Green-to-yellow scale: green (high similarity) to yellow (low similarity)
+                                    // Similarity ranges from 0 to 1, so:
+                                    // High similarity (1.0) = green (rgb(34, 197, 94))
+                                    // Low similarity (0.0) = yellow (rgb(234, 179, 8))
+                                    const green = Math.round(34 + (234 - 34) * (1 - similarity));
+                                    const blue = Math.round(94 + (8 - 94) * (1 - similarity));
+                                    const red = Math.round(197 + (234 - 197) * (1 - similarity));
+                                    const bgColor = `rgb(${red}, ${green}, ${blue})`;
+                                    return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center; color: ${similarity > 0.5 ? '#ffffff' : '#000000'};">${cell.getValue()}</div>`;
                                 }},
                                 { title: 'Value Score', field: 'valueScore', sorter: 'number', width: 120, formatter: (cell) => {
                                     const tooltip = cell.getRow().getData().valueScoreTooltip || '';
@@ -5152,7 +5520,9 @@ ${resultsByUrl[url].summary}`;
                                 { title: 'Primary Intent', field: 'primaryIntent', sorter: 'string', width: 150, formatter: (cell) => {
                                     const intent = cell.getValue();
                                     const intentColor = cell.getRow().getData().intentColor;
-                                    return `<div style="background-color: ${intentColor}20; color: ${intentColor}; font-weight: 600; padding: 4px; border-radius: 4px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px;"><span style="background:${intentColor};width:8px;height:8px;border-radius:9999px;display:inline-block"></span>${intent}</div>`;
+                                    return `<div style="background-color: ${intentColor}20; color: ${intentColor}; font-weight: 600; padding: 4px; border-radius: 4px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: help;" title="${intent}"><span style="background:${intentColor};width:8px;height:8px;border-radius:9999px;display:inline-block"></span><span class="truncate">${intent}</span></div>`;
+                                }, tooltip: (cell) => {
+                                    return cell.getValue();
                                 }}
                             ],
                             layout: "fitDataStretch",
@@ -5409,9 +5779,11 @@ ${resultsByUrl[url].summary}`;
                                 filterButtons.forEach(b => {
                                     b.classList.remove('bg-[var(--text-accent)]', 'text-white');
                                     b.classList.add('bg-[var(--bg-input)]', 'text-[var(--text-primary)]');
+                                    b.classList.remove('hover:bg-white', 'hover:text-white');
                                 });
                                 btn.classList.remove('bg-[var(--bg-input)]', 'text-[var(--text-primary)]');
                                 btn.classList.add('bg-[var(--text-accent)]', 'text-white');
+                                btn.classList.remove('hover:bg-white', 'hover:text-white');
                                 
                                 // Filter clusters
                                 const filterType = btn.id.replace('cci-filter-', '');
@@ -6592,12 +6964,29 @@ ${resultsByUrl[url].summary}`;
                     allDOMElements.filterBtn.classList.add('hidden');
                     allDOMElements.exportPdfBtn.classList.add('hidden');
                 } else {
+                    // Preserve scroll position to prevent jump
+                    const scrollY = window.scrollY;
+                    const scrollX = window.scrollX;
+                    
+                    // Prevent focus/scroll on table wrapper
+                    allDOMElements.tableWrapper.setAttribute('tabindex', '-1');
+                    
                     allDOMElements.rawWrapper.classList.add('hidden');
                     allDOMElements.tableWrapper.classList.remove('hidden');
                     allDOMElements.viewDataBtn.textContent = 'View JSON';
                     allDOMElements.filterBtn.classList.remove('hidden');
                     allDOMElements.exportPdfBtn.classList.add('hidden');
+                    
+                    // Restore scroll position immediately and prevent auto-scroll
+                    window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
+                    
+                    // Render table and restore scroll again after render completes
                     renderTable(currentResultsData, currentMethod, currentOriginalParams);
+                    
+                    // Ensure scroll position is maintained after table renders
+                    requestAnimationFrame(() => {
+                        window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
+                    });
                 }
             }
             
@@ -6621,16 +7010,32 @@ ${resultsByUrl[url].summary}`;
                     delete allDOMElements.clearDataBtn.dataset.originalText;
                 }
                 
-                // Reset to standard JSON view
+                // Set up JSON view (hidden by default) - defer stringification
                 allDOMElements.rawWrapper.innerHTML = '<pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>';
                 allDOMElements.rawCode = document.querySelector('#raw-wrapper code');
+                // Defer JSON stringification (non-critical, only needed when viewing JSON)
+                if (allDOMElements.rawCode) {
+                    const stringifyJson = () => {
+                        if (allDOMElements.rawCode) {
+                            allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                        }
+                    };
+                    if (window.requestIdleCallback) {
+                        requestIdleCallback(stringifyJson, { timeout: 2000 });
+                    } else {
+                        setTimeout(stringifyJson, 0);
+                    }
+                }
                 
-                allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                // Show table container immediately for better perceived performance
                 allDOMElements.resultsContainer.classList.remove('hidden');
-                allDOMElements.tableWrapper.classList.add('hidden');
-                allDOMElements.rawWrapper.classList.remove('hidden');
-                allDOMElements.viewDataBtn.textContent = 'View Table';
+                allDOMElements.rawWrapper.classList.add('hidden');
+                allDOMElements.tableWrapper.classList.remove('hidden');
+                allDOMElements.viewDataBtn.textContent = 'View JSON';
                 allDOMElements.exportPdfBtn.classList.add('hidden');
+                
+                // Render table (now optimized with deferred processing)
+                renderTable(data, currentMethod, currentOriginalParams);
             }
 
             function clearResultsData() {
@@ -6815,14 +7220,16 @@ ${resultsByUrl[url].summary}`;
                 allDOMElements.methodSelector.value = entry.method;
                 allDOMElements.methodSelector.dispatchEvent(new Event('change'));
 
-                // Populate form fields
+                // Populate form fields - use longer timeout to ensure form fields are created
                 setTimeout(() => {
+                    let fieldsPopulated = 0;
                     Object.entries(entry.params).forEach(([key, value]) => {
                         // Map parameter names to field IDs
                         const fieldId = getFieldIdForParam(entry.method, key);
                         const element = document.getElementById(fieldId);
                         
                         if (element) {
+                            fieldsPopulated++;
                             if (element.type === 'checkbox') {
                                 element.checked = value;
                             } else if (Array.isArray(value)) {
@@ -6844,16 +7251,20 @@ ${resultsByUrl[url].summary}`;
                             } else {
                                 element.value = value;
                             }
+                        } else {
+                            console.warn(`Field not found for ${entry.method}.${key} (expected ID: ${fieldId})`);
                         }
                     });
                     
-                    // Auto-submit for dashboard methods
-                    if (entry.method === 'contentClusterAnalysis' || entry.method === 'competitiveAnalysis' || entry.method === 'keywordTargetingAnalysis') {
+                    // Auto-submit for all methods (dashboard and single endpoints)
+                    if (fieldsPopulated > 0) {
                         setTimeout(() => {
                             allDOMElements.form.dispatchEvent(new Event('submit'));
-                        }, 200);
+                        }, 300);
+                    } else {
+                        displayError('Could not populate form fields. Please check the console for details.');
                     }
-                }, 100);
+                }, 200);
 
                 allDOMElements.historyModal.classList.add('hidden');
             }
@@ -6873,12 +7284,14 @@ ${resultsByUrl[url].summary}`;
 
                 // Populate form fields (same as replay, but don't auto-submit)
                 setTimeout(() => {
+                    let fieldsPopulated = 0;
                     Object.entries(entry.params).forEach(([key, value]) => {
                         // Map parameter names to field IDs
                         const fieldId = getFieldIdForParam(entry.method, key);
                         const element = document.getElementById(fieldId);
                         
                         if (element) {
+                            fieldsPopulated++;
                             if (element.type === 'checkbox') {
                                 element.checked = value;
                             } else if (Array.isArray(value)) {
@@ -6900,10 +7313,16 @@ ${resultsByUrl[url].summary}`;
                             } else {
                                 element.value = value;
                             }
+                        } else {
+                            console.warn(`Field not found for ${entry.method}.${key} (expected ID: ${fieldId})`);
                         }
                     });
+                    
+                    if (fieldsPopulated === 0) {
+                        displayError('Could not populate form fields. Please check the console for details.');
+                    }
                     // Don't auto-submit - let user edit and submit manually
-                }, 100);
+                }, 200);
 
                 allDOMElements.historyModal.classList.add('hidden');
             }
@@ -7076,11 +7495,248 @@ ${resultsByUrl[url].summary}`;
                 }
             }
 
+            // ========== SAVED RESULTS FUNCTIONS ==========
+            
+            function getSavedResults() {
+                try {
+                    const saved = localStorage.getItem('mozSavedResults');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) {
+                    console.warn('Could not load saved results:', e);
+                    return [];
+                }
+            }
+            
+            function saveSavedResults(savedResults) {
+                try {
+                    localStorage.setItem('mozSavedResults', JSON.stringify(savedResults));
+                } catch (e) {
+                    console.warn('Could not save results:', e);
+                    if (e.name === 'QuotaExceededError') {
+                        displayError('Storage is full. Please delete some saved results or clear browser data.');
+                    } else {
+                        displayError('Could not save results. Storage may be full.');
+                    }
+                    return false;
+                }
+                return true;
+            }
+            
+            function saveCurrentResults() {
+                if (!currentMethod || !currentResultsData || !currentOriginalParams) {
+                    displayError('No results to save.');
+                    return;
+                }
+                
+                // Generate a unique ID and save
+                const savedEntry = {
+                    id: Date.now(),
+                    timestamp: new Date().toISOString(),
+                    method: currentMethod,
+                    params: { ...currentOriginalParams },
+                    results: JSON.parse(JSON.stringify(currentResultsData)), // Deep copy
+                    resultCount: Array.isArray(currentResultsData) ? currentResultsData.length : 
+                                (currentResultsData.urls ? currentResultsData.urls.length : 
+                                (typeof currentResultsData === 'object' ? Object.keys(currentResultsData).length : 0))
+                };
+                
+                const saved = getSavedResults();
+                saved.unshift(savedEntry);
+                
+                // Keep only last 100 saved entries
+                if (saved.length > 100) {
+                    saved.splice(100);
+                }
+                
+                if (saveSavedResults(saved)) {
+                    displaySuccess(`Results saved! You can reload them anytime from the "Saved Results" button.`);
+                    renderSavedResultsList();
+                }
+            }
+            
+            function renderSavedResultsList(savedResults = null) {
+                const saved = savedResults || getSavedResults();
+                const searchTerm = allDOMElements.savedResultsSearch.value.toLowerCase();
+                
+                const filteredSaved = searchTerm 
+                    ? saved.filter(entry => 
+                        entry.method.toLowerCase().includes(searchTerm) ||
+                        JSON.stringify(entry.params).toLowerCase().includes(searchTerm) ||
+                        new Date(entry.timestamp).toLocaleDateString().includes(searchTerm)
+                      )
+                    : saved;
+                
+                if (filteredSaved.length === 0) {
+                    allDOMElements.savedResultsEmpty.classList.remove('hidden');
+                    allDOMElements.savedResultsList.innerHTML = '';
+                    return;
+                }
+                
+                allDOMElements.savedResultsEmpty.classList.add('hidden');
+                allDOMElements.savedResultsList.innerHTML = '';
+                
+                filteredSaved.forEach(entry => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'border border-[var(--border-primary)] rounded-lg p-4 mb-3 hover:bg-[var(--bg-input)] transition-colors';
+                    
+                    const methodName = entry.method.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    const date = new Date(entry.timestamp).toLocaleString();
+                    const paramsSummary = Object.entries(entry.params)
+                        .filter(([key, value]) => {
+                            if (value === null || value === undefined) return false;
+                            if (Array.isArray(value)) return value.length > 0;
+                            if (typeof value === 'string') return value.length > 0;
+                            if (typeof value === 'number') return true;
+                            return true;
+                        })
+                        .map(([key, value]) => {
+                            if (Array.isArray(value)) {
+                                if (key === 'urls' && value.length > 3) {
+                                    return `${key}: ${value.length} URLs (${value.slice(0, 2).join(', ')}...)`;
+                                }
+                                return `${key}: ${value.join(', ')}`;
+                            }
+                            return `${key}: ${value}`;
+                        })
+                        .join(' | ');
+                    
+                    entryDiv.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-semibold text-[var(--text-primary)]">${methodName}</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-[var(--text-secondary)]">${date}</span>
+                                <button class="text-[var(--btn-export-bg)] hover:text-[var(--btn-export-hover)] text-sm font-semibold" data-load="${entry.id}">Load</button>
+                                <button class="text-[var(--text-error)] hover:text-red-600 text-sm" data-delete-saved="${entry.id}">Delete</button>
+                            </div>
+                        </div>
+                        <p class="text-sm text-[var(--text-secondary)] mb-2">${paramsSummary}</p>
+                        <div class="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+                            <span>Results: ${entry.resultCount}</span>
+                            <span class="text-[var(--btn-export-bg)]">💾 Saved</span>
+                        </div>
+                    `;
+                    
+                    // Add event listeners
+                    entryDiv.querySelector(`[data-load="${entry.id}"]`).addEventListener('click', () => loadSavedResults(entry.id));
+                    entryDiv.querySelector(`[data-delete-saved="${entry.id}"]`).addEventListener('click', () => deleteSavedResult(entry.id));
+                    
+                    allDOMElements.savedResultsList.appendChild(entryDiv);
+                });
+            }
+            
+            function filterSavedResults() {
+                renderSavedResultsList();
+            }
+            
+            function loadSavedResults(entryId) {
+                const saved = getSavedResults();
+                const entry = saved.find(s => s.id.toString() === entryId.toString());
+                
+                if (!entry) {
+                    displayError('Saved result not found.');
+                    return;
+                }
+                
+                // Set current data
+                currentMethod = entry.method;
+                currentOriginalParams = entry.params;
+                currentResultsData = entry.results;
+                
+                // Display results - handle special dashboard endpoints, otherwise use standard display
+                if (currentMethod === 'contentClusterAnalysis') {
+                    showContentClusterDashboard(currentResultsData);
+                } else if (currentMethod === 'contentClustersIdentification') {
+                    showContentClustersIdentificationDashboard(currentResultsData);
+                } else if (currentMethod === 'competitiveAnalysis') {
+                    showCompetitiveDashboard(currentResultsData);
+                } else if (currentMethod === 'keywordTargetingAnalysis') {
+                    showKeywordTargetingDashboard(currentResultsData);
+                } else {
+                    // For all other endpoints, use standard JSON/table view
+                    showRawJsonResults(currentResultsData);
+                }
+                
+                // Update save button visibility
+                updateSaveButtonVisibility();
+                
+                // Close modal
+                allDOMElements.savedResultsModal.classList.add('hidden');
+                
+                displaySuccess(`Loaded saved results from ${new Date(entry.timestamp).toLocaleString()}`);
+            }
+            
+            function deleteSavedResult(entryId) {
+                if (confirm('Are you sure you want to delete this saved result?')) {
+                    const saved = getSavedResults();
+                    const filtered = saved.filter(s => s.id.toString() !== entryId.toString());
+                    saveSavedResults(filtered);
+                    renderSavedResultsList();
+                }
+            }
+            
+            function exportSavedResults() {
+                const saved = getSavedResults();
+                if (saved.length === 0) {
+                    displayError('No saved results to export.');
+                    return;
+                }
+                
+                const dataStr = JSON.stringify(saved, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `saved-results-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+            
+            function clearAllSavedResults() {
+                if (confirm('Are you sure you want to delete ALL saved results? This cannot be undone.')) {
+                    saveSavedResults([]);
+                    renderSavedResultsList();
+                    displaySuccess('All saved results cleared.');
+                }
+            }
+            
+            function displaySuccess(message) {
+                // Create a temporary success message
+                const successDiv = document.createElement('div');
+                successDiv.className = 'bg-[var(--btn-export-bg)] border-l-4 border-[var(--btn-export-hover)] text-white px-5 py-4 rounded-lg shadow-md flex items-start gap-3 mb-4';
+                successDiv.innerHTML = `
+                    <span class="text-2xl flex-shrink-0">✓</span>
+                    <div class="flex-1 font-medium">${message}</div>
+                `;
+                allDOMElements.errorMessage.parentElement.insertBefore(successDiv, allDOMElements.errorMessage);
+                setTimeout(() => successDiv.remove(), 5000);
+            }
+            
+            // Show/hide save button based on method - show for all endpoints when results exist
+            function updateSaveButtonVisibility() {
+                if (currentMethod && currentResultsData) {
+                    allDOMElements.saveResultsBtn.classList.remove('hidden');
+                } else {
+                    allDOMElements.saveResultsBtn.classList.add('hidden');
+                }
+            }
+
             function displayError(message) {
                  const hints = /quota|limit/i.test(message) ? 'You may be out of rows. Check your API Dashboard.' :
                               /unauthorized|401|403/i.test(message) ? 'Invalid API key. Recheck or regenerate in your dashboard.' :
                               /network|abort/i.test(message) ? 'Network hiccup or request was canceled. Try again.' : '';
-                allDOMElements.errorMessage.innerHTML = `${message}${hints ? `<br><span class="text-[var(--text-secondary)]">${hints}</span>` : ''}`;
+                const errorContent = allDOMElements.errorMessage.querySelector('.flex-1');
+                if (errorContent) {
+                    errorContent.innerHTML = `<div class="font-semibold">${message}</div>${hints ? `<div class="text-sm mt-1 opacity-90">${hints}</div>` : ''}`;
+                } else {
+                    // Fallback - ensure structure exists
+                    if (!allDOMElements.errorMessage.querySelector('.flex-1')) {
+                        allDOMElements.errorMessage.innerHTML = `<span class="text-2xl flex-shrink-0">⚠️</span><div class="flex-1 font-medium">${message}${hints ? `<br><span class="text-sm mt-1 opacity-90">${hints}</span>` : ''}</div>`;
+                    } else {
+                        allDOMElements.errorMessage.innerHTML = `${message}${hints ? `<br><span class="text-[var(--text-secondary)]">${hints}</span>` : ''}`;
+                    }
+                }
                 allDOMElements.errorMessage.classList.remove('hidden');
             }
             
@@ -7229,43 +7885,101 @@ ${resultsByUrl[url].summary}`;
             }
 
             function renderTable(results, method, originalParams) {
+                // Preserve scroll position to prevent jump during rendering
+                const scrollY = window.scrollY;
+                const scrollX = window.scrollX;
+                
+                // Destroy old table immediately (lightweight operation)
                 if (table) {
                     table.destroy();
+                    table = null;
                 }
                 
-                const rows = DataProcessor.processResults(results, method, originalParams);
-                
-                if (rows.length > 0) {
-                    const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
-                    const columns = allKeys.map(key => ({ title: key, field: key }));
+                // Show loading state immediately for better perceived performance
+                const tableElement = document.getElementById('results-table');
+                if (tableElement) {
+                    // Prevent the element from causing scroll jumps
+                    tableElement.setAttribute('tabindex', '-1');
+                    tableElement.style.outline = 'none';
                     
-                    table = new Tabulator("#results-table", {
-                        data: rows,
-                        columns: columns,
-                        layout: "fitDataFill",
-                        pagination: "local",
-                        paginationSize: 100,
-                        movableColumns: true,
-                        resizableRows: false,
-                    });
-
-                    allDOMElements.filterFieldsContainer.innerHTML = '';
-                    columns.forEach(col => {
-                        if (col.field) {
-                            const div = document.createElement('div');
-                            const label = document.createElement('label');
-                            label.textContent = col.title;
-                            label.className = 'block text-sm font-medium text-[var(--text-secondary)]';
-                            const input = document.createElement('input');
-                            input.type = 'text';
-                            input.dataset.field = col.field;
-                            input.className = 'w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
-                            div.appendChild(label);
-                            div.appendChild(input);
-                            allDOMElements.filterFieldsContainer.appendChild(div);
-                        }
+                    tableElement.innerHTML = '<div class="p-8 text-center text-[var(--text-secondary)]">Loading table...</div>';
+                    // Restore scroll position after DOM update
+                    requestAnimationFrame(() => {
+                        window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
                     });
                 }
+                
+                // Defer heavy processing to next frame to allow initial paint
+                requestAnimationFrame(() => {
+                    // Process data in next frame
+                    const rows = DataProcessor.processResults(results, method, originalParams);
+                    
+                    if (rows.length > 0) {
+                        // Use requestIdleCallback if available, otherwise setTimeout for non-critical work
+                        const deferHeavyWork = (callback) => {
+                            if (window.requestIdleCallback) {
+                                requestIdleCallback(callback, { timeout: 100 });
+                            } else {
+                                setTimeout(callback, 0);
+                            }
+                        };
+                        
+                        // Extract column keys efficiently (use Set for O(1) lookups)
+                        const keySet = new Set();
+                        for (let i = 0; i < rows.length; i++) {
+                            const keys = Object.keys(rows[i]);
+                            for (let j = 0; j < keys.length; j++) {
+                                keySet.add(keys[j]);
+                            }
+                        }
+                        const allKeys = Array.from(keySet);
+                        const columns = allKeys.map(key => ({ title: key, field: key }));
+                        
+                        // Create table immediately (Tabulator handles rendering efficiently)
+                        requestAnimationFrame(() => {
+                            table = new Tabulator("#results-table", {
+                                data: rows,
+                                columns: columns,
+                                layout: "fitDataFill",
+                                pagination: "local",
+                                paginationSize: 100,
+                                movableColumns: true,
+                                resizableRows: false,
+                                virtualDom: true, // Enable virtual DOM for better performance
+                                virtualDomBuffer: 300, // Render buffer for smooth scrolling
+                            });
+                            
+                            // Restore scroll position after table is created
+                            requestAnimationFrame(() => {
+                                window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
+                            });
+
+                            // Defer filter field creation (non-critical UI)
+                            deferHeavyWork(() => {
+                                allDOMElements.filterFieldsContainer.innerHTML = '';
+                                columns.forEach(col => {
+                                    if (col.field) {
+                                        const div = document.createElement('div');
+                                        const label = document.createElement('label');
+                                        label.textContent = col.title;
+                                        label.className = 'block text-sm font-medium text-[var(--text-secondary)]';
+                                        const input = document.createElement('input');
+                                        input.type = 'text';
+                                        input.dataset.field = col.field;
+                                        input.className = 'w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]';
+                                        div.appendChild(label);
+                                        div.appendChild(input);
+                                        allDOMElements.filterFieldsContainer.appendChild(div);
+                                    }
+                                });
+                            });
+                        });
+                    } else {
+                        if (tableElement) {
+                            tableElement.innerHTML = '<div class="p-8 text-center text-[var(--text-secondary)]">No data to display</div>';
+                        }
+                    }
+                });
             }
 
             function applyTableFilters() {
