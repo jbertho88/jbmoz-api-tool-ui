@@ -4136,7 +4136,11 @@ ${JSON.stringify(newContentData, null, 2)}`;
                     relatedKeywords: relatedKeywords.slice(0, 50),
                     contentRecommendations,
                     newContentToCreate,
-                    urlSimilarityMatrix: includeSimilarityMatrix ? urlSimilarityMatrix : null
+                    urlSimilarityMatrix: includeSimilarityMatrix ? urlSimilarityMatrix : null,
+                    includeConsolidation,
+                    includeRecommendations,
+                    includeNewContent,
+                    includeSimilarityMatrix
                 };
             }
 
@@ -5012,7 +5016,7 @@ ${resultsByUrl[url].summary}`;
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 try {
-                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, relatedKeywords, contentRecommendations, newContentToCreate, urlSimilarityMatrix } = payload;
+                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, relatedKeywords, contentRecommendations, newContentToCreate, urlSimilarityMatrix, includeConsolidation = false, includeRecommendations = false, includeNewContent = false, includeSimilarityMatrix = false } = payload;
                 const formatNumber = (num) => {
                     if (typeof num !== 'number' || num === 'N/A') return num;
                     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -5095,22 +5099,23 @@ ${resultsByUrl[url].summary}`;
                 html += '</div>';
                 html += '</div>';
 
-                // Consolidation Clusters (only show if requested and has clusters)
-                if (consolidationClusters && Array.isArray(consolidationClusters) && consolidationClusters.length > 0) {
+                // Consolidation Clusters (show if requested, even if empty)
+                if (includeConsolidation) {
                     html += '<div id="consolidation-clusters-section" class="mt-6">';
                     html += '<div class="flex items-center justify-between mb-4">';
                     html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Content Consolidation Clusters</h4>';
                     html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="consolidation-clusters-content">Collapse</button>';
                     html += '</div>';
                     html += '<div id="consolidation-clusters-content">';
-                    html += '<div class="space-y-4">';
-                    const consolidationColors = [
-                        'border-2 border-[var(--text-accent)]', // blue
-                        'border-2 border-fuchsia-400', // pink
-                        'border-2 border-emerald-400', // green
-                        'border-2 border-violet-400'  // purple
-                    ];
-                    consolidationClusters.forEach((cluster, idx) => {
+                    if (consolidationClusters && Array.isArray(consolidationClusters) && consolidationClusters.length > 0) {
+                        html += '<div class="space-y-4">';
+                        const consolidationColors = [
+                            'border-2 border-[var(--text-accent)]', // blue
+                            'border-2 border-fuchsia-400', // pink
+                            'border-2 border-emerald-400', // green
+                            'border-2 border-violet-400'  // purple
+                        ];
+                        consolidationClusters.forEach((cluster, idx) => {
                         const aiAnalysis = cluster.aiAnalysis || {};
                         const urlToKeep = aiAnalysis.urlToKeep || cluster.urls[0];
                         const borderClass = consolidationColors[idx % consolidationColors.length];
@@ -5160,6 +5165,9 @@ ${resultsByUrl[url].summary}`;
                         html += '</div>';
                     });
                     html += '</div>';
+                    } else {
+                        html += '<p class="text-[var(--text-secondary)]">No consolidation clusters identified. URLs are sufficiently distinct.</p>';
+                    }
                     html += '</div>';
                     html += '</div>';
                 }
@@ -5616,23 +5624,29 @@ ${resultsByUrl[url].summary}`;
                         const matrixFilterEl = document.getElementById('cca-similarity-matrix-filter');
                         
                         if (matrixTableEl && typeof Tabulator !== 'undefined') {
+                            // Store urls and matrix in closure-safe variables
+                            const matrixUrls = [...urls]; // Copy array to ensure it's available
+                            const matrixData = urlSimilarityMatrix; // Store reference
+                            
                             // Build matrix data
                             const buildMatrixData = (filterUrlIdx = null) => {
-                                const matrixData = [];
-                                const urlsToShow = filterUrlIdx !== null && filterUrlIdx !== '' ? [urls[parseInt(filterUrlIdx)]] : urls;
+                                const data = [];
+                                const urlsToShow = (filterUrlIdx !== null && filterUrlIdx !== '' && !isNaN(filterUrlIdx)) 
+                                    ? [matrixUrls[parseInt(filterUrlIdx)]] 
+                                    : matrixUrls;
                                 
                                 urlsToShow.forEach(url1 => {
-                                    urls.forEach(url2 => {
+                                    matrixUrls.forEach(url2 => {
                                         if (url1 === url2) {
-                                            matrixData.push({
+                                            data.push({
                                                 url1: url1,
                                                 url2: url2,
                                                 similarity: 1.0,
                                                 similarityPercent: '100.0%'
                                             });
                                         } else {
-                                            const similarity = urlSimilarityMatrix[url1]?.[url2] || urlSimilarityMatrix[url2]?.[url1] || 0;
-                                            matrixData.push({
+                                            const similarity = matrixData[url1]?.[url2] || matrixData[url2]?.[url1] || 0;
+                                            data.push({
                                                 url1: url1,
                                                 url2: url2,
                                                 similarity: similarity,
@@ -5641,7 +5655,7 @@ ${resultsByUrl[url].summary}`;
                                         }
                                     });
                                 });
-                                return matrixData;
+                                return data;
                             };
                             
                             let matrixTable = new Tabulator("#cca-similarity-matrix-table", {
@@ -5678,7 +5692,8 @@ ${resultsByUrl[url].summary}`;
                             if (matrixFilterEl) {
                                 matrixFilterEl.addEventListener('change', (e) => {
                                     const filterValue = e.target.value;
-                                    matrixTable.setData(buildMatrixData(filterValue));
+                                    const newData = buildMatrixData(filterValue);
+                                    matrixTable.setData(newData);
                                 });
                             }
                         }
