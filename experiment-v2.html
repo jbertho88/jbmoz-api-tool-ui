@@ -1525,7 +1525,29 @@
                     createSelect('ccaLocaleSelect', localeOptions) +
                     createLabel('Similarity Threshold (Default 0.85; 0-1)') +
                     '<input type="number" id="ccaSimilarityThreshold" value="0.85" min="0" max="1" step="0.01" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">' +
-                    createNumberInput('ccaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze per URL (Default 25; 1-500)');
+                    createNumberInput('ccaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze per URL (Default 25; 1-500)') +
+                    '<div class="mt-4 p-4 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
+                    '<div class="text-sm font-semibold text-[var(--text-primary)] mb-3">Optional Analysis Features</div>' +
+                    '<p class="text-xs text-[var(--text-secondary)] mb-3">By default, the analysis calculates similarity to Seed Topic and URL-to-URL Similarity. Check the boxes below to add additional analysis features:</p>' +
+                    '<div class="space-y-2">' +
+                    '<label class="flex items-center gap-2 cursor-pointer">' +
+                    '<input type="checkbox" id="ccaIncludeConsolidation" class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<span class="text-sm text-[var(--text-primary)]">Content Consolidation (Identify similar pages that should be merged)</span>' +
+                    '</label>' +
+                    '<label class="flex items-center gap-2 cursor-pointer">' +
+                    '<input type="checkbox" id="ccaIncludeRecommendations" class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<span class="text-sm text-[var(--text-primary)]">Recommendations (Content improvement suggestions for existing pages)</span>' +
+                    '</label>' +
+                    '<label class="flex items-center gap-2 cursor-pointer">' +
+                    '<input type="checkbox" id="ccaIncludeNewContent" class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<span class="text-sm text-[var(--text-primary)]">New Content to Create (Identify content gaps and new page opportunities)</span>' +
+                    '</label>' +
+                    '<label class="flex items-center gap-2 cursor-pointer">' +
+                    '<input type="checkbox" id="ccaIncludeSimilarityMatrix" class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<span class="text-sm text-[var(--text-primary)]">Display Semantic Similarity Matrix (Show URL-to-URL similarity scores)</span>' +
+                    '</label>' +
+                    '</div>' +
+                    '</div>';
                 document.getElementById('contentClustersIdentificationInputs').innerHTML = 
                     '<div class="mb-4 p-3 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
@@ -2459,6 +2481,7 @@
                 const resultsByUrl = {};
                 const seedTopicSimilarities = {};
                 const intentGroups = { Informational: [], Commercial: [], Transactional: [] };
+                const { includeConsolidation = false, includeRecommendations = false, includeNewContent = false, includeSimilarityMatrix = false } = params;
                 
                 urls.forEach((url, idx) => {
                     const similarity = 0.7 + Math.random() * 0.25;
@@ -2497,13 +2520,49 @@
                 });
                 
                 const mainTopicPage = urls[0] || '';
-                const consolidationClusters = [
+                const consolidationClusters = includeConsolidation ? [
                     {
                         intent: 'Informational',
                         urls: intentGroups.Informational.slice(0, 3),
                         overlappingKeywords: ['seo basics', 'keyword research', 'on-page optimization']
                     }
-                ];
+                ] : [];
+                
+                const contentRecommendations = includeRecommendations ? {
+                    recommendations: urls.slice(0, 2).map(url => ({
+                        url,
+                        recommendations: ['Improve internal linking', 'Add more relevant keywords', 'Enhance meta descriptions']
+                    })),
+                    generalRecommendations: ['Consolidate similar content', 'Improve keyword targeting']
+                } : null;
+                
+                const newContentToCreate = includeNewContent ? {
+                    newContentIdeas: [
+                        {
+                            title: 'Advanced SEO Techniques',
+                            intent: 'Informational',
+                            targetKeywords: ['advanced seo', 'seo strategies'],
+                            rationale: 'Fill content gap for advanced users'
+                        }
+                    ]
+                } : null;
+                
+                // Generate sample similarity matrix if requested
+                const urlSimilarityMatrix = includeSimilarityMatrix ? {} : null;
+                if (includeSimilarityMatrix && urls.length > 0) {
+                    urls.forEach((url1, i) => {
+                        urls.forEach((url2, j) => {
+                            if (!urlSimilarityMatrix[url1]) urlSimilarityMatrix[url1] = {};
+                            if (i === j) {
+                                urlSimilarityMatrix[url1][url2] = 1.0;
+                            } else {
+                                // Generate random similarity between 0.3 and 0.95
+                                const similarity = 0.3 + Math.random() * 0.65;
+                                urlSimilarityMatrix[url1][url2] = Math.round(similarity * 100) / 100;
+                            }
+                        });
+                    });
+                }
                 
                 return {
                     seedTopic: params.seedTopic || 'Sample Topic',
@@ -2517,23 +2576,9 @@
                     consolidationClusters,
                     mainTopicPage,
                     relatedKeywords: ['related keyword 1', 'related keyword 2', 'related keyword 3'],
-                    contentRecommendations: {
-                        recommendations: urls.slice(0, 2).map(url => ({
-                            url,
-                            recommendations: ['Improve internal linking', 'Add more relevant keywords', 'Enhance meta descriptions']
-                        })),
-                        generalRecommendations: ['Consolidate similar content', 'Improve keyword targeting']
-                    },
-                    newContentToCreate: {
-                        newContentIdeas: [
-                            {
-                                title: 'Advanced SEO Techniques',
-                                intent: 'Informational',
-                                targetKeywords: ['advanced seo', 'seo strategies'],
-                                rationale: 'Fill content gap for advanced users'
-                            }
-                        ]
-                    }
+                    contentRecommendations,
+                    newContentToCreate,
+                    urlSimilarityMatrix
                 };
             }
 
@@ -3270,7 +3315,7 @@ If outputting natural language (not JSON), keep it under 3 sentences unless othe
             }
 
             async function runContentClusterAnalysis(apiKey, openaiApiKey, params, proxyUrl, opensignal) {
-                const { seedTopic, urls, locale, similarityThreshold, limit, model = 'gpt-3.5-turbo' } = params;
+                const { seedTopic, urls, locale, similarityThreshold, limit, model = 'gpt-3.5-turbo', includeConsolidation = false, includeRecommendations = false, includeNewContent = false } = params;
                 const resultsByUrl = {};
 
                 // Step 1: Get related keywords for seed topic
@@ -3564,91 +3609,94 @@ ${contentPreview}`;
                     };
                 });
 
-                // Step 9: Identify consolidation clusters
-                // Only consolidate if: VERY similar to each other (>0.9) AND have keyword overlaps
-                const consolidationClusters = [];
-                const processedUrls = new Set();
-                
-                // Calculate URL-to-URL similarity matrix for consolidation
+                // Step 9: Calculate URL-to-URL similarity matrix (always calculated if similarity matrix or consolidation is requested)
                 const urlSimilarityMatrix = {};
-                for (let i = 0; i < urls.length; i++) {
-                    for (let j = i + 1; j < urls.length; j++) {
-                        const url1 = urls[i];
-                        const url2 = urls[j];
-                        if (resultsByUrl[url1].embedding && resultsByUrl[url2].embedding) {
-                            const similarity = cosineSimilarity(resultsByUrl[url1].embedding, resultsByUrl[url2].embedding);
-                            if (!urlSimilarityMatrix[url1]) urlSimilarityMatrix[url1] = {};
-                            if (!urlSimilarityMatrix[url2]) urlSimilarityMatrix[url2] = {};
-                            urlSimilarityMatrix[url1][url2] = similarity;
-                            urlSimilarityMatrix[url2][url1] = similarity;
+                if (includeSimilarityMatrix || includeConsolidation) {
+                    for (let i = 0; i < urls.length; i++) {
+                        for (let j = i + 1; j < urls.length; j++) {
+                            const url1 = urls[i];
+                            const url2 = urls[j];
+                            if (resultsByUrl[url1].embedding && resultsByUrl[url2].embedding) {
+                                const similarity = cosineSimilarity(resultsByUrl[url1].embedding, resultsByUrl[url2].embedding);
+                                if (!urlSimilarityMatrix[url1]) urlSimilarityMatrix[url1] = {};
+                                if (!urlSimilarityMatrix[url2]) urlSimilarityMatrix[url2] = {};
+                                urlSimilarityMatrix[url1][url2] = similarity;
+                                urlSimilarityMatrix[url2][url1] = similarity;
+                            }
                         }
                     }
                 }
                 
-                // Find keyword overlaps between URLs
-                const keywordOverlaps = {};
-                urls.forEach(u1 => {
-                    urls.forEach(u2 => {
-                        if (u1 === u2) return;
-                        const keywords1 = new Set((resultsByUrl[u1].rankingKeywords || []).map(k => k.keyword?.toLowerCase()).filter(Boolean));
-                        const keywords2 = new Set((resultsByUrl[u2].rankingKeywords || []).map(k => k.keyword?.toLowerCase()).filter(Boolean));
-                        const overlap = [...keywords1].filter(k => keywords2.has(k));
-                        if (overlap.length > 0) {
-                            if (!keywordOverlaps[u1]) keywordOverlaps[u1] = {};
-                            keywordOverlaps[u1][u2] = overlap;
-                        }
-                    });
-                });
+                // Step 9b: Identify consolidation clusters (only if includeConsolidation is enabled)
+                // Only consolidate if: VERY similar to each other (>0.9) AND have keyword overlaps
+                const consolidationClusters = [];
+                const processedUrls = new Set();
                 
-                urls.forEach(u => {
-                    if (processedUrls.has(u)) return;
-                    
-                    const cluster = [u];
-                    const uIntent = resultsByUrl[u].primaryIntent;
-                    
-                    urls.forEach(v => {
-                        if (u === v || processedUrls.has(v)) return;
-                        
-                        const vIntent = resultsByUrl[v].primaryIntent;
-                        const urlToUrlSimilarity = urlSimilarityMatrix[u]?.[v] || 0;
-                        const hasKeywordOverlap = keywordOverlaps[u]?.[v] && keywordOverlaps[u][v].length > 0;
-                        
-                        // VERY similar (>0.9) AND same intent AND have keyword overlaps
-                        if (uIntent === vIntent && urlToUrlSimilarity >= 0.9 && hasKeywordOverlap) {
-                            cluster.push(v);
-                            processedUrls.add(v);
-                        }
+                if (includeConsolidation) {
+                    // Find keyword overlaps between URLs
+                    const keywordOverlaps = {};
+                    urls.forEach(u1 => {
+                        urls.forEach(u2 => {
+                            if (u1 === u2) return;
+                            const keywords1 = new Set((resultsByUrl[u1].rankingKeywords || []).map(k => k.keyword?.toLowerCase()).filter(Boolean));
+                            const keywords2 = new Set((resultsByUrl[u2].rankingKeywords || []).map(k => k.keyword?.toLowerCase()).filter(Boolean));
+                            const overlap = [...keywords1].filter(k => keywords2.has(k));
+                            if (overlap.length > 0) {
+                                if (!keywordOverlaps[u1]) keywordOverlaps[u1] = {};
+                                keywordOverlaps[u1][u2] = overlap;
+                            }
+                        });
                     });
                     
-                    if (cluster.length > 1) {
-                        processedUrls.add(u);
-                        // Collect all overlapping keywords for the cluster
-                        const clusterKeywords = new Set();
-                        cluster.forEach(url1 => {
-                            cluster.forEach(url2 => {
-                                if (url1 !== url2 && keywordOverlaps[url1]?.[url2]) {
-                                    keywordOverlaps[url1][url2].forEach(kw => clusterKeywords.add(kw));
-                                }
-                            });
+                    urls.forEach(u => {
+                        if (processedUrls.has(u)) return;
+                        
+                        const cluster = [u];
+                        const uIntent = resultsByUrl[u].primaryIntent;
+                        
+                        urls.forEach(v => {
+                            if (u === v || processedUrls.has(v)) return;
+                            
+                            const vIntent = resultsByUrl[v].primaryIntent;
+                            const urlToUrlSimilarity = urlSimilarityMatrix[u]?.[v] || 0;
+                            const hasKeywordOverlap = keywordOverlaps[u]?.[v] && keywordOverlaps[u][v].length > 0;
+                            
+                            // VERY similar (>0.9) AND same intent AND have keyword overlaps
+                            if (uIntent === vIntent && urlToUrlSimilarity >= 0.9 && hasKeywordOverlap) {
+                                cluster.push(v);
+                                processedUrls.add(v);
+                            }
                         });
                         
-                        const clusterLength = cluster.length || 1; // Prevent division by zero
-                        const totalVal = cluster.reduce((sum, url) => sum + (resultsByUrl[url]?.valueScore || 0), 0);
-                        consolidationClusters.push({
-                            urls: cluster,
-                            intent: uIntent,
-                            avgSimilarity: cluster.reduce((sum, url) => sum + (seedTopicSimilarities[url] || 0), 0) / clusterLength,
-                            avgValue: totalVal / clusterLength,
-                            totalValue: totalVal,
-                            urlToUrlSimilarity: urlSimilarityMatrix[cluster[0]]?.[cluster[1]] || 0,
-                            overlappingKeywords: Array.from(clusterKeywords)
-                        });
-                    }
-                });
+                        if (cluster.length > 1) {
+                            processedUrls.add(u);
+                            // Collect all overlapping keywords for the cluster
+                            const clusterKeywords = new Set();
+                            cluster.forEach(url1 => {
+                                cluster.forEach(url2 => {
+                                    if (url1 !== url2 && keywordOverlaps[url1]?.[url2]) {
+                                        keywordOverlaps[url1][url2].forEach(kw => clusterKeywords.add(kw));
+                                    }
+                                });
+                            });
+                            
+                            const clusterLength = cluster.length || 1; // Prevent division by zero
+                            const totalVal = cluster.reduce((sum, url) => sum + (resultsByUrl[url]?.valueScore || 0), 0);
+                            consolidationClusters.push({
+                                urls: cluster,
+                                intent: uIntent,
+                                avgSimilarity: cluster.reduce((sum, url) => sum + (seedTopicSimilarities[url] || 0), 0) / clusterLength,
+                                avgValue: totalVal / clusterLength,
+                                totalValue: totalVal,
+                                urlToUrlSimilarity: urlSimilarityMatrix[cluster[0]]?.[cluster[1]] || 0,
+                                overlappingKeywords: Array.from(clusterKeywords)
+                            });
+                        }
+                    });
 
-                // Step 9b: Analyze consolidation clusters with OpenAI
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing consolidation opportunities...</span>';
-                if (consolidationClusters.length > 0) {
+                    // Step 9b: Analyze consolidation clusters with OpenAI
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing consolidation opportunities...</span>';
+                    if (consolidationClusters.length > 0) {
                     for (const cluster of consolidationClusters) {
                         try {
                             const clusterData = cluster.urls.map(url => ({
@@ -3741,6 +3789,7 @@ ${JSON.stringify(clusterData, null, 2)}`;
                         }
                     }
                 }
+                }
 
                 // Step 10: Identify MAIN topic page
                 // Prioritize value score first, then use similarity as tiebreaker
@@ -3765,10 +3814,11 @@ ${JSON.stringify(clusterData, null, 2)}`;
 
                 // Internal linking strategy removed per user request
 
-                // Step 12: Generate Content Recommendations
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Generating content recommendations...</span>';
+                // Step 12: Generate Content Recommendations (only if includeRecommendations is enabled)
                 let contentRecommendations = null;
-                try {
+                if (includeRecommendations) {
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Generating content recommendations...</span>';
+                    try {
                     const recommendationsData = {
                         seedTopic,
                         urls: urls.map(u => ({
@@ -3830,15 +3880,17 @@ ${JSON.stringify(recommendationsData, null, 2)}`;
                             generalRecommendations: lines.length > 0 ? lines : [recommendationsResponse] 
                         };
                     }
-                } catch (e) {
-                    console.warn('Failed to generate content recommendations:', e);
-                    contentRecommendations = { error: e.message };
+                    } catch (e) {
+                        console.warn('Failed to generate content recommendations:', e);
+                        contentRecommendations = { error: e.message };
+                    }
                 }
 
-                // Step 13: Generate New Content to Create
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Identifying new content opportunities...</span>';
+                // Step 13: Generate New Content to Create (only if includeNewContent is enabled)
                 let newContentToCreate = null;
-                try {
+                if (includeNewContent) {
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Identifying new content opportunities...</span>';
+                    try {
                     const newContentData = {
                         seedTopic,
                         existingUrls: urls.map(u => ({
@@ -4064,9 +4116,10 @@ ${JSON.stringify(newContentData, null, 2)}`;
                             }] 
                         };
                     }
-                } catch (e) {
-                    console.warn('Failed to generate new content ideas:', e);
-                    newContentToCreate = { error: e.message };
+                    } catch (e) {
+                        console.warn('Failed to generate new content ideas:', e);
+                        newContentToCreate = { error: e.message };
+                    }
                 }
 
                 return {
@@ -4082,7 +4135,8 @@ ${JSON.stringify(newContentData, null, 2)}`;
                     mainTopicPage,
                     relatedKeywords: relatedKeywords.slice(0, 50),
                     contentRecommendations,
-                    newContentToCreate
+                    newContentToCreate,
+                    urlSimilarityMatrix: includeSimilarityMatrix ? urlSimilarityMatrix : null
                 };
             }
 
@@ -4958,7 +5012,7 @@ ${resultsByUrl[url].summary}`;
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 try {
-                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, relatedKeywords, contentRecommendations, newContentToCreate } = payload;
+                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, relatedKeywords, contentRecommendations, newContentToCreate, urlSimilarityMatrix } = payload;
                 const formatNumber = (num) => {
                     if (typeof num !== 'number' || num === 'N/A') return num;
                     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -5041,14 +5095,14 @@ ${resultsByUrl[url].summary}`;
                 html += '</div>';
                 html += '</div>';
 
-                // Consolidation Clusters
-                html += '<div id="consolidation-clusters-section" class="mt-6">';
-                html += '<div class="flex items-center justify-between mb-4">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Content Consolidation Clusters</h4>';
-                html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="consolidation-clusters-content">Collapse</button>';
-                html += '</div>';
-                html += '<div id="consolidation-clusters-content">';
-                if (consolidationClusters.length > 0) {
+                // Consolidation Clusters (only show if requested and has clusters)
+                if (consolidationClusters && Array.isArray(consolidationClusters) && consolidationClusters.length > 0) {
+                    html += '<div id="consolidation-clusters-section" class="mt-6">';
+                    html += '<div class="flex items-center justify-between mb-4">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Content Consolidation Clusters</h4>';
+                    html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="consolidation-clusters-content">Collapse</button>';
+                    html += '</div>';
+                    html += '<div id="consolidation-clusters-content">';
                     html += '<div class="space-y-4">';
                     const consolidationColors = [
                         'border-2 border-[var(--text-accent)]', // blue
@@ -5106,16 +5160,14 @@ ${resultsByUrl[url].summary}`;
                         html += '</div>';
                     });
                     html += '</div>';
-                } else {
-                    html += `<p class="text-[var(--text-secondary)]">No consolidation clusters identified. URLs are sufficiently distinct.</p>`;
+                    html += '</div>';
+                    html += '</div>';
                 }
-                html += '</div>';
-                html += '</div>';
 
                 // Internal Linking Strategy removed per user request
 
-                // Content Recommendations
-                if (contentRecommendations && !contentRecommendations.error) {
+                // Content Recommendations (only show if requested and has data)
+                if (contentRecommendations && !contentRecommendations.error && (contentRecommendations.recommendations || contentRecommendations.generalRecommendations)) {
                     html += '<div id="content-recommendations-section" class="mt-6">';
                     html += '<div class="flex items-center justify-between mb-4">';
                     html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Recommendations to Update Existing Content</h4>';
@@ -5275,6 +5327,29 @@ ${resultsByUrl[url].summary}`;
                     relatedKeywords.slice(0, 30).forEach(kw => {
                         html += `<span class="px-3 py-1 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-md text-sm text-[var(--text-primary)]">${kw}</span>`;
                     });
+                    html += '</div>';
+                    html += '</div>';
+                }
+
+                // Semantic Similarity Matrix
+                if (urlSimilarityMatrix && Object.keys(urlSimilarityMatrix).length > 0) {
+                    html += '<div id="similarity-matrix-section" class="mt-6">';
+                    html += '<div class="flex items-center justify-between mb-4">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Semantic Similarity Matrix</h4>';
+                    html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="similarity-matrix-content">Collapse</button>';
+                    html += '</div>';
+                    html += '<div id="similarity-matrix-content">';
+                    html += '<p class="text-sm text-[var(--text-secondary)] mb-4">View semantic similarity scores between URLs. Select a URL from the dropdown to filter the table.</p>';
+                    html += '<div class="mb-4">';
+                    html += '<label for="cca-similarity-matrix-filter" class="block text-sm font-semibold text-[var(--text-primary)] mb-2">Filter by URL:</label>';
+                    html += '<select id="cca-similarity-matrix-filter" class="w-full md:w-auto bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 text-[var(--text-primary)]">';
+                    html += '<option value="">All URLs</option>';
+                    urls.forEach((url, idx) => {
+                        html += `<option value="${idx}">URL ${idx + 1}: ${url.length > 60 ? url.substring(0, 60) + '...' : url}</option>`;
+                    });
+                    html += '</select>';
+                    html += '</div>';
+                    html += '<div id="cca-similarity-matrix-table" class="overflow-x-auto"></div>';
                     html += '</div>';
                     html += '</div>';
                 }
@@ -5533,6 +5608,82 @@ ${resultsByUrl[url].summary}`;
                         });
                     }
                 }, 100);
+                
+                // Initialize Semantic Similarity Matrix table
+                if (urlSimilarityMatrix && Object.keys(urlSimilarityMatrix).length > 0) {
+                    setTimeout(() => {
+                        const matrixTableEl = document.getElementById('cca-similarity-matrix-table');
+                        const matrixFilterEl = document.getElementById('cca-similarity-matrix-filter');
+                        
+                        if (matrixTableEl && typeof Tabulator !== 'undefined') {
+                            // Build matrix data
+                            const buildMatrixData = (filterUrlIdx = null) => {
+                                const matrixData = [];
+                                const urlsToShow = filterUrlIdx !== null && filterUrlIdx !== '' ? [urls[parseInt(filterUrlIdx)]] : urls;
+                                
+                                urlsToShow.forEach(url1 => {
+                                    urls.forEach(url2 => {
+                                        if (url1 === url2) {
+                                            matrixData.push({
+                                                url1: url1,
+                                                url2: url2,
+                                                similarity: 1.0,
+                                                similarityPercent: '100.0%'
+                                            });
+                                        } else {
+                                            const similarity = urlSimilarityMatrix[url1]?.[url2] || urlSimilarityMatrix[url2]?.[url1] || 0;
+                                            matrixData.push({
+                                                url1: url1,
+                                                url2: url2,
+                                                similarity: similarity,
+                                                similarityPercent: (similarity * 100).toFixed(1) + '%'
+                                            });
+                                        }
+                                    });
+                                });
+                                return matrixData;
+                            };
+                            
+                            let matrixTable = new Tabulator("#cca-similarity-matrix-table", {
+                                data: buildMatrixData(),
+                                columns: [
+                                    { title: 'URL 1', field: 'url1', sorter: 'string', widthGrow: 2, formatter: (cell) => {
+                                        return `<span class="break-all">${cell.getValue()}</span>`;
+                                    }},
+                                    { title: 'URL 2', field: 'url2', sorter: 'string', widthGrow: 2, formatter: (cell) => {
+                                        return `<span class="break-all">${cell.getValue()}</span>`;
+                                    }},
+                                    { title: 'Similarity Score', field: 'similarityPercent', sorter: (a, b) => {
+                                        const aData = a.getRow().getData();
+                                        const bData = b.getRow().getData();
+                                        return (aData.similarity || 0) - (bData.similarity || 0);
+                                    }, width: 180, formatter: (cell) => {
+                                        const similarity = cell.getRow().getData().similarity || 0;
+                                        // Green-to-yellow scale: green (high similarity) to yellow (low similarity)
+                                        const green = Math.round(34 + (234 - 34) * (1 - similarity));
+                                        const blue = Math.round(94 + (8 - 94) * (1 - similarity));
+                                        const red = Math.round(197 + (234 - 197) * (1 - similarity));
+                                        const bgColor = `rgb(${red}, ${green}, ${blue})`;
+                                        return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center; color: ${similarity > 0.5 ? '#ffffff' : '#000000'};">${cell.getValue()}</div>`;
+                                    }}
+                                ],
+                                layout: "fitDataStretch",
+                                pagination: "local",
+                                paginationSize: 25,
+                                movableColumns: true,
+                                resizableColumns: true
+                            });
+                            
+                            // Set up filter handler
+                            if (matrixFilterEl) {
+                                matrixFilterEl.addEventListener('change', (e) => {
+                                    const filterValue = e.target.value;
+                                    matrixTable.setData(buildMatrixData(filterValue));
+                                });
+                            }
+                        }
+                    }, 150);
+                }
                 
                 // Set up collapse/expand handlers for all sections
                 allDOMElements.rawWrapper.querySelectorAll('.cca-section-toggle').forEach(btn => {
@@ -6721,7 +6872,7 @@ ${resultsByUrl[url].summary}`;
                 script.onload = () => {
                     try {
                         const workbook = XLSX.utils.book_new();
-                        const { seedTopic, urls = [], resultsByUrl = {}, seedTopicSimilarities = {}, intentGroups = {}, consolidationClusters = [], mainTopicPage, relatedKeywords = [] } = data || {};
+                        const { seedTopic, urls = [], resultsByUrl = {}, seedTopicSimilarities = {}, intentGroups = {}, consolidationClusters = [], mainTopicPage, relatedKeywords = [], urlSimilarityMatrix = null } = data || {};
 
                         // Sheet 1: Summary
                         const summary = [
@@ -6793,6 +6944,22 @@ ${resultsByUrl[url].summary}`;
                                 rkRows.push([kw]);
                             });
                             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rkRows), 'Related Keywords');
+                        }
+
+                        // Sheet 6: Semantic Similarity Matrix
+                        if (urlSimilarityMatrix && Object.keys(urlSimilarityMatrix).length > 0) {
+                            const matrixRows = [['URL 1', 'URL 2', 'Similarity Score']];
+                            urls.forEach(url1 => {
+                                urls.forEach(url2 => {
+                                    const similarity = url1 === url2 ? 1.0 : (urlSimilarityMatrix[url1]?.[url2] || urlSimilarityMatrix[url2]?.[url1] || 0);
+                                    matrixRows.push([
+                                        url1,
+                                        url2,
+                                        similarity
+                                    ]);
+                                });
+                            });
+                            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(matrixRows), 'Similarity Matrix');
                         }
 
                         // Sheets: Ranking Keywords per URL
@@ -7820,7 +7987,11 @@ ${resultsByUrl[url].summary}`;
                             locale: getInputValue('ccaLocaleSelect') || 'en-US',
                             similarityThreshold: parseFloat(getInputValue('ccaSimilarityThreshold')) || 0.85,
                             limit: parseInt(getInputValue('ccaLimit'), 10) || 25,
-                            model
+                            model,
+                            includeConsolidation: document.getElementById('ccaIncludeConsolidation')?.checked || false,
+                            includeRecommendations: document.getElementById('ccaIncludeRecommendations')?.checked || false,
+                            includeNewContent: document.getElementById('ccaIncludeNewContent')?.checked || false,
+                            includeSimilarityMatrix: document.getElementById('ccaIncludeSimilarityMatrix')?.checked || false
                         };
                         break;
                     }
