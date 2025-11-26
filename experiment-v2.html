@@ -3315,7 +3315,7 @@ If outputting natural language (not JSON), keep it under 3 sentences unless othe
             }
 
             async function runContentClusterAnalysis(apiKey, openaiApiKey, params, proxyUrl, opensignal) {
-                const { seedTopic, urls, locale, similarityThreshold, limit, model = 'gpt-3.5-turbo', includeConsolidation = false, includeRecommendations = false, includeNewContent = false } = params;
+                const { seedTopic, urls, locale, similarityThreshold, limit, model = 'gpt-3.5-turbo', includeConsolidation = false, includeRecommendations = false, includeNewContent = false, includeSimilarityMatrix = false } = params;
                 const resultsByUrl = {};
 
                 // Step 1: Get related keywords for seed topic
