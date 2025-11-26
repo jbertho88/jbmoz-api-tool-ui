@@ -1528,27 +1528,62 @@
                     '<p class="text-xs text-[var(--text-secondary)] mt-1 mb-2">Content Consolidation options will be recommended if: (1) URL-to-URL similarity >= 0.9, (2) Both URLs have the same search intent, and (3) Both URLs share at least one ranking keyword</p>' +
                     createNumberInput('ccaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze per URL (Default 25; 1-500)') +
                     '<div class="mt-4 p-4 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
-                    '<div class="text-sm font-semibold text-[var(--text-primary)] mb-3">Optional Analysis Features</div>' +
+                    '<div class="flex items-center justify-between mb-3">' +
+                    '<div class="text-sm font-semibold text-[var(--text-primary)]">Optional Analysis Features</div>' +
+                    '<div class="flex gap-2">' +
+                    '<button type="button" id="ccaSelectAll" class="text-xs px-2 py-1 border border-[var(--border-primary)] rounded-md bg-[var(--bg-input-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">Select All</button>' +
+                    '<button type="button" id="ccaDeselectAll" class="text-xs px-2 py-1 border border-[var(--border-primary)] rounded-md bg-[var(--bg-input-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">Deselect All</button>' +
+                    '</div>' +
+                    '</div>' +
                     '<p class="text-xs text-[var(--text-secondary)] mb-3">By default, the analysis calculates similarity to Seed Topic and URL-to-URL Similarity. Check the boxes below to add additional analysis features:</p>' +
                     '<div class="space-y-2">' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
-                    '<input type="checkbox" id="ccaIncludeConsolidation" class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<input type="checkbox" id="ccaIncludeConsolidation" checked class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
                     '<span class="text-sm text-[var(--text-primary)]">Content Consolidation (Identify similar pages that should be merged)</span>' +
                     '</label>' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
-                    '<input type="checkbox" id="ccaIncludeRecommendations" class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<input type="checkbox" id="ccaIncludeRecommendations" checked class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
                     '<span class="text-sm text-[var(--text-primary)]">Recommendations (Content improvement suggestions for existing pages)</span>' +
                     '</label>' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
-                    '<input type="checkbox" id="ccaIncludeNewContent" class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<input type="checkbox" id="ccaIncludeNewContent" checked class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
                     '<span class="text-sm text-[var(--text-primary)]">New Content to Create (Identify content gaps and new page opportunities)</span>' +
                     '</label>' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
-                    '<input type="checkbox" id="ccaIncludeSimilarityMatrix" class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<input type="checkbox" id="ccaIncludeSimilarityMatrix" checked class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
                     '<span class="text-sm text-[var(--text-primary)]">Display Semantic Similarity Matrix (Show URL-to-URL similarity scores)</span>' +
                     '</label>' +
                     '</div>' +
                     '</div>';
+                
+                // Set up select all/deselect all handlers for Optional Analysis Features
+                setTimeout(() => {
+                    const selectAllBtn = document.getElementById('ccaSelectAll');
+                    const deselectAllBtn = document.getElementById('ccaDeselectAll');
+                    const checkboxes = [
+                        document.getElementById('ccaIncludeConsolidation'),
+                        document.getElementById('ccaIncludeRecommendations'),
+                        document.getElementById('ccaIncludeNewContent'),
+                        document.getElementById('ccaIncludeSimilarityMatrix')
+                    ];
+                    
+                    if (selectAllBtn) {
+                        selectAllBtn.addEventListener('click', () => {
+                            checkboxes.forEach(cb => {
+                                if (cb) cb.checked = true;
+                            });
+                        });
+                    }
+                    
+                    if (deselectAllBtn) {
+                        deselectAllBtn.addEventListener('click', () => {
+                            checkboxes.forEach(cb => {
+                                if (cb) cb.checked = false;
+                            });
+                        });
+                    }
+                }, 100);
+                
                 document.getElementById('contentClustersIdentificationInputs').innerHTML = 
                     '<div class="mb-4 p-3 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
@@ -5383,7 +5418,7 @@ ${resultsByUrl[url].summary}`;
                     const topAnchors = resultsByUrl[u].topAnchors || [];
                     const borderClass = urlSummaryColors[idx % urlSummaryColors.length];
                     
-                    html += `<div class="bg-[var(--bg-container)] ${borderClass} rounded-lg p-4 min-w-0 overflow-hidden" style="max-width: 100%; box-sizing: border-box; word-wrap: break-word;">`;
+                    html += `<div class="bg-[var(--bg-container)] ${borderClass} rounded-lg p-4 min-w-0 overflow-hidden" style="max-width: 100%; box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word;">`;
                     html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1 truncate min-w-0">URL ${idx + 1}</h4>`;
                     html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3 min-w-0 overflow-wrap-anywhere">${u}</p>`;
                     
@@ -5438,10 +5473,10 @@ ${resultsByUrl[url].summary}`;
                         html += '<div class="text-sm text-[var(--text-secondary)]">No keywords ranking in the top 50 positions</div>';
                     } else {
                         html += '<div class="text-sm text-[var(--text-secondary)]">Top 5:</div>';
-                        html += '<div class="space-y-1 text-sm mt-1 min-w-0">';
+                        html += '<div class="space-y-1 text-sm mt-1 min-w-0 overflow-hidden">';
                         rkList.slice(0, 5).forEach(k => {
                             const keyword = k.keyword || 'N/A';
-                            html += `<div class="min-w-0 break-words"><span class="text-[var(--text-primary)] break-words">${keyword}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
+                            html += `<div class="min-w-0 break-words overflow-wrap-anywhere"><span class="text-[var(--text-primary)] break-words overflow-wrap-anywhere">${keyword}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
                         });
                         html += '</div>';
                         
@@ -5492,9 +5527,11 @@ ${resultsByUrl[url].summary}`;
                     ccaAnchorModal = document.createElement('div');
                     ccaAnchorModal.id = 'cca-anchor-modal';
                     ccaAnchorModal.className = 'hidden';
+                    ccaAnchorModal.style.position = 'fixed';
+                    ccaAnchorModal.style.zIndex = '9999';
                     ccaAnchorModal.innerHTML = `
-                        <div class="fixed inset-0 z-[9998] bg-black/50" data-overlay></div>
-                        <div class="fixed z-[9999] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--bg-container)] text-[var(--text-primary)] w-[min(92vw,800px)] max-h-[80vh] rounded-lg shadow-xl border border-[var(--border-primary)] p-4 overflow-auto" role="dialog" aria-modal="true">
+                        <div class="fixed inset-0 z-[9998] bg-black/50" data-overlay style="position: fixed !important;"></div>
+                        <div class="fixed z-[9999] bg-[var(--bg-container)] text-[var(--text-primary)] w-[min(92vw,800px)] max-h-[80vh] rounded-lg shadow-xl border border-[var(--border-primary)] p-4 overflow-auto" role="dialog" aria-modal="true" style="position: fixed !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 9999 !important;">
                             <div class="flex items-center justify-between mb-3">
                                 <h5 class="font-semibold">Inbound Anchor Texts</h5>
                                 <button type="button" class="cca-modal-close text-sm px-2 py-1 border border-[var(--border-primary)] rounded-md">Close</button>
@@ -5682,18 +5719,15 @@ ${resultsByUrl[url].summary}`;
                                         { title: 'URL 2', field: 'url2', sorter: 'string', widthGrow: 2, formatter: (cell) => {
                                             return `<span class="break-all">${cell.getValue()}</span>`;
                                         }},
-                                        { title: 'Similarity Score', field: 'similarityPercent', sorter: (a, b) => {
-                                            const aData = a.getRow().getData();
-                                            const bData = b.getRow().getData();
-                                            return (aData.similarity || 0) - (bData.similarity || 0);
-                                        }, width: 180, formatter: (cell) => {
-                                            const similarity = cell.getRow().getData().similarity || 0;
+                                        { title: 'Similarity Score', field: 'similarity', sorter: 'number', width: 180, formatter: (cell) => {
+                                            const similarity = cell.getValue() || 0;
+                                            const similarityPercent = (similarity * 100).toFixed(1) + '%';
                                             // Green-to-yellow scale: green (high similarity) to yellow (low similarity)
                                             const green = Math.round(34 + (234 - 34) * (1 - similarity));
                                             const blue = Math.round(94 + (8 - 94) * (1 - similarity));
                                             const red = Math.round(197 + (234 - 197) * (1 - similarity));
                                             const bgColor = `rgb(${red}, ${green}, ${blue})`;
-                                            return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center; color: ${similarity > 0.5 ? '#ffffff' : '#000000'};">${cell.getValue()}</div>`;
+                                            return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center; color: ${similarity > 0.5 ? '#ffffff' : '#000000'};">${similarityPercent}</div>`;
                                         }}
                                     ];
                                 } else {
@@ -5705,18 +5739,15 @@ ${resultsByUrl[url].summary}`;
                                         { title: 'URL 2', field: 'url2', sorter: 'string', widthGrow: 2, formatter: (cell) => {
                                             return `<span class="break-all">${cell.getValue()}</span>`;
                                         }},
-                                        { title: 'Similarity Score', field: 'similarityPercent', sorter: (a, b) => {
-                                            const aData = a.getRow().getData();
-                                            const bData = b.getRow().getData();
-                                            return (aData.similarity || 0) - (bData.similarity || 0);
-                                        }, width: 180, formatter: (cell) => {
-                                            const similarity = cell.getRow().getData().similarity || 0;
+                                        { title: 'Similarity Score', field: 'similarity', sorter: 'number', width: 180, formatter: (cell) => {
+                                            const similarity = cell.getValue() || 0;
+                                            const similarityPercent = (similarity * 100).toFixed(1) + '%';
                                             // Green-to-yellow scale: green (high similarity) to yellow (low similarity)
                                             const green = Math.round(34 + (234 - 34) * (1 - similarity));
                                             const blue = Math.round(94 + (8 - 94) * (1 - similarity));
                                             const red = Math.round(197 + (234 - 197) * (1 - similarity));
                                             const bgColor = `rgb(${red}, ${green}, ${blue})`;
-                                            return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center; color: ${similarity > 0.5 ? '#ffffff' : '#000000'};">${cell.getValue()}</div>`;
+                                            return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center; color: ${similarity > 0.5 ? '#ffffff' : '#000000'};">${similarityPercent}</div>`;
                                         }}
                                     ];
                                 }
@@ -5740,8 +5771,19 @@ ${resultsByUrl[url].summary}`;
                                     const filterValue = e.target.value;
                                     const isFiltered = filterValue !== null && filterValue !== '' && !isNaN(filterValue);
                                     const newData = buildMatrixData(filterValue);
-                                    matrixTable.setColumns(buildColumns(isFiltered));
-                                    matrixTable.setData(newData);
+                                    const newColumns = buildColumns(isFiltered);
+                                    
+                                    // Destroy and rebuild table to avoid breaking
+                                    matrixTable.destroy();
+                                    matrixTable = new Tabulator("#cca-similarity-matrix-table", {
+                                        data: newData,
+                                        columns: newColumns,
+                                        layout: "fitDataStretch",
+                                        pagination: "local",
+                                        paginationSize: 25,
+                                        movableColumns: true,
+                                        resizableColumns: true
+                                    });
                                 });
                             }
                         }
