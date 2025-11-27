@@ -8582,16 +8582,23 @@ ${resultsByUrl[url].summary}`;
                 const rows = DataProcessor.processResults(results, method, originalParams);
                 if (rows.length === 0) { displayError("No valid data to export."); return; }
                 
+                // Helper function to sanitize CSV values - removes newlines, tabs, and handles quotes
+                const sanitizeCsvValue = (value) => {
+                    if (value === undefined || value === null) return '';
+                    const stringValue = String(value);
+                    // Replace newlines (\n), carriage returns (\r), and tabs (\t) with spaces, then trim
+                    // This prevents CSV row breaks while preserving text content
+                    const sanitized = stringValue.replace(/[\n\r\t]+/g, ' ').trim();
+                    // Handle commas and quotes by wrapping in quotes and escaping internal quotes
+                    if (sanitized.includes(',') || sanitized.includes('"')) {
+                        return `"${sanitized.replace(/"/g, '""')}"`;
+                    }
+                    return sanitized;
+                };
+                
                 const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
                 const header = allKeys.join(',');
-                const csvRows = rows.map(row => allKeys.map(key => {
-                    const value = row[key] === undefined || row[key] === null ? '' : row[key];
-                    const stringValue = String(value);
-                    if (stringValue.includes(',') || stringValue.includes('"')) {
-                        return `"${stringValue.replace(/"/g, '""')}"`;
-                    }
-                    return stringValue;
-                }).join(','));
+                const csvRows = rows.map(row => allKeys.map(key => sanitizeCsvValue(row[key])).join(','));
                 const csvString = '\uFEFF' + [header, ...csvRows].join('\n');
                 const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
