@@ -1478,7 +1478,7 @@
                 document.getElementById('linkingDomainsInputs').innerHTML = createDescription('Get a list of linking root domains to a target.') + createLabel('Scope') + createSelect('ldScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('ldSortSelect', linkingDomainsSortOptions) + createLabel('Filters') + createMultiSelect('ldFilterSelect', linkingDomainsFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('ldLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('ldUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('finalRedirectInputs').innerHTML = createDescription('See the final redirect target of a page.') + createLabel('Scope') + createSelect('frScopeSelect', scopeOptions) + createLabel('Domains / URLs') + createTextarea('frUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('topPagesInputs').innerHTML = createDescription('Return a list of the top pages on a target domain.') + createLabel('Scope') + createSelect('tpScopeSelect', scopeOptions) + createLabel('Filter') + createSelect('tpFilterSelect', topPagesFilterOptions) + createLabel('Sort') + createSelect('tpSortSelect', topPagesSortOptions) + createNumberInput('tpLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('tpUrlsInput', 'One per line or comma-separated.');
-                document.getElementById('linkIntersectInputs').innerHTML = createDescription('Find sites that link to some domains but not others.') + createLabel('Scope') + createSelect('liScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('liSortSelect', linkIntersectSortOptions) + createNumberInput('liMinMatch', 1, 1, 6, 'Minimum Matching Targets') + createNumberInput('liLimit', 25, 1, 50, limitLabel) + createLabel('Linking To') + createTextarea('liIsLinkingTo', 'One per line...') + createLabel('NOT Linking To (Optional)') + createTextarea('liNotLinkingTo', 'One per line...');
+                document.getElementById('linkIntersectInputs').innerHTML = createDescription('Find sites that link to some domains but not others. You can choose up to 6 total targets between "Linking To" and "NOT Linking To" combined.') + createLabel('Scope') + createSelect('liScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('liSortSelect', linkIntersectSortOptions) + createNumberInput('liMinMatch', 1, 1, 6, 'Minimum Matching Targets') + createNumberInput('liLimit', 25, 1, 50, limitLabel) + createLabel('Linking To') + createTextarea('liIsLinkingTo', 'One per line...') + createLabel('NOT Linking To (Optional)') + createTextarea('liNotLinkingTo', 'One per line...');
                 document.getElementById('listLinksInputs').innerHTML = createDescription('Get a list of links to a target.') + createLabel('Scope') + createSelect('llScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('llSortSelect', listLinksSortOptions) + createLabel('Filters') + createMultiSelect('llFilterSelect', listLinksFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('llLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('llUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('linkStatusInputs').innerHTML = createDescription('Get the status of a link from a source to a target.') + createLabel('Target Scope') + createSelect('lsTargetScopeSelect', scopeOptions) + createLabel('Target URL') + createTextarea('lsTargetUrl', 'Target URL') + createLabel('Source Scope') + createSelect('lsSourceScopeSelect', scopeOptions) + createLabel('Source URL') + createTextarea('lsSourceUrl', 'Source URL');
                 document.getElementById('filterLinksByAnchorInputs').innerHTML = createDescription('Get a list of links to a target where the anchor text exactly matches a string.') + createLabel('Scope') + createSelect('flaScopeSelect', scopeOptions) + createLabel('Anchor Text') + createTextarea('flaAnchorText', 'Enter exact anchor text...') + createLabel('Sort') + createSelect('flaSortSelect', filterAnchorSortOptions) + createLabel('Filters') + createMultiSelect('flaFilterSelect', filterAnchorFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('flaLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('flaUrlsInput', 'One per line or comma-separated.');
@@ -1995,7 +1995,7 @@
                 
                 <div class="readme-method mb-4">
                     <h4><strong><u>Fetch Link Intersects</u></strong></h4>
-                    <p><strong>Description:</strong> Find sites that link to some domains but not others, useful for competitive analysis.</p>
+                    <p><strong>Description:</strong> Find sites that link to some domains but not others, useful for competitive analysis. You can choose up to 6 total targets between "Linking To" and "NOT Linking To" combined.</p>
                     <p><strong>Inputs Required:</strong></p>
                     <ul>
                         <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
@@ -8457,11 +8457,22 @@ ${resultsByUrl[url].summary}`;
                         const intersectScope = getInputValue('liScopeSelect');
                         const sortValue = getInputValue('liSortSelect');
                         const validSortValues = ['matching_target_count', 'source_spam_score', 'source_domain_authority'];
+                        const isLinkingTo = getCleanedList('liIsLinkingTo');
+                        const notLinkingTo = getCleanedList('liNotLinkingTo');
+                        const totalTargets = isLinkingTo.length + notLinkingTo.length;
+                        
+                        if (isLinkingTo.length === 0) {
+                            throw new Error('Please enter at least one target in "Linking To".');
+                        }
+                        if (totalTargets > 6) {
+                            throw new Error(`Total targets cannot exceed 6. You have ${totalTargets} targets (${isLinkingTo.length} in "Linking To" + ${notLinkingTo.length} in "NOT Linking To"). Please reduce the number of targets.`);
+                        }
+                        
                         payload.params = { 
                             scope: intersectScope, 
                             limit: parseInt(getInputValue('liLimit'), 10) || 25, 
-                            is_linking_to: getCleanedList('liIsLinkingTo').map(q => ({query: q, scope: intersectScope})), 
-                            not_linking_to: getCleanedList('liNotLinkingTo').map(q => ({query: q, scope: intersectScope})), 
+                            is_linking_to: isLinkingTo.map(q => ({query: q, scope: intersectScope})), 
+                            not_linking_to: notLinkingTo.map(q => ({query: q, scope: intersectScope})), 
                             sort: validSortValues.includes(sortValue) ? sortValue : 'matching_target_count', 
                             minimum_matching_targets: parseInt(getInputValue('liMinMatch'), 10) || 1 
                         }; 
