@@ -3109,7 +3109,12 @@
                         });
                         const liData = await liResp.json();
                         if (liResp.ok && Array.isArray(liData) && liData[0]?.status === 'success') {
-                            results._linkIntersect = liData[0].data;
+                            // Store the data even if link_intersects is empty (this is valid - just means no results found)
+                            results._linkIntersect = liData[0].data || { link_intersects: [] };
+                            // Ensure link_intersects is always an array
+                            if (!Array.isArray(results._linkIntersect.link_intersects)) {
+                                results._linkIntersect.link_intersects = [];
+                            }
                         } else {
                             results._linkIntersect = { link_intersects: [], error: liData[0]?.reason || 'Failed' };
                         }
@@ -6581,14 +6586,14 @@ ${resultsByUrl[url].summary}`;
                     dashboardHTML += '<p class="text-sm text-[var(--text-secondary)] mb-4">Pages that link to competitors but not to your domain.</p>';
                     dashboardHTML += '<div id="link-intersect-content">';
                     
-                    if (linkIntersectData.length > 0) {
-                        dashboardHTML += '<div id="comp-link-intersect-table"></div>';
-                    } else {
-                        dashboardHTML += '<p class="text-[var(--text-secondary)]">No link opportunities found.</p>';
-                    }
-                    
                     if (data._linkIntersect.error) {
                         dashboardHTML += `<p class="text-[var(--text-error)] text-sm mt-2">Error: ${data._linkIntersect.error}</p>`;
+                    } else if (linkIntersectData.length > 0) {
+                        dashboardHTML += '<div id="comp-link-intersect-table"></div>';
+                    } else {
+                        const sortValue = data._linkIntersect?.options?.sort || 'unknown';
+                        dashboardHTML += '<p class="text-[var(--text-secondary)]">No link opportunities found with the current search criteria.</p>';
+                        dashboardHTML += `<p class="text-xs text-[var(--text-secondary)] mt-2 opacity-75">Sort: ${sortValue} | Try a different sort option or adjust your search parameters.</p>`;
                     }
                     
                     dashboardHTML += '</div>';
@@ -6682,57 +6687,67 @@ ${resultsByUrl[url].summary}`;
                                 : (Array.isArray(data._linkIntersect) ? data._linkIntersect : []))
                             : [];
                         
-                        if (linkIntersectData.length > 0 && document.getElementById('comp-link-intersect-table')) {
-                            const linkIntersectTableData = linkIntersectData.map(intersect => {
-                                const sourcePages = intersect.matching_source_pages || [];
-                                // If no source pages, create one row with N/A for source page fields
-                                if (sourcePages.length === 0) {
-                                    return [{
+                        const linkIntersectTableElement = document.getElementById('comp-link-intersect-table');
+                        if (linkIntersectData.length > 0 && linkIntersectTableElement) {
+                            try {
+                                const linkIntersectTableData = linkIntersectData.map(intersect => {
+                                    if (!intersect || typeof intersect !== 'object') {
+                                        console.warn('Invalid intersect data:', intersect);
+                                        return [];
+                                    }
+                                    const sourcePages = intersect.matching_source_pages || [];
+                                    // If no source pages, create one row with N/A for source page fields
+                                    if (sourcePages.length === 0) {
+                                        return [{
+                                            page: intersect.page || 'N/A',
+                                            title: intersect.title || 'N/A',
+                                            domainAuthority: intersect.domain_authority ?? 'N/A',
+                                            spamScore: intersect.spam_score ?? 'N/A',
+                                            matchingTargetIndexes: (intersect.matching_target_indexes || []).join(', ') || 'N/A',
+                                            sourcePage: 'N/A',
+                                            sourcePageAuthority: 'N/A'
+                                        }];
+                                    }
+                                    return sourcePages.map(sourcePage => ({
                                         page: intersect.page || 'N/A',
                                         title: intersect.title || 'N/A',
                                         domainAuthority: intersect.domain_authority ?? 'N/A',
                                         spamScore: intersect.spam_score ?? 'N/A',
                                         matchingTargetIndexes: (intersect.matching_target_indexes || []).join(', ') || 'N/A',
-                                        sourcePage: 'N/A',
-                                        sourcePageAuthority: 'N/A'
-                                    }];
+                                        sourcePage: sourcePage?.page || 'N/A',
+                                        sourcePageAuthority: sourcePage?.page_authority ?? 'N/A'
+                                    }));
+                                }).flat().filter(Boolean); // Filter out any null/undefined entries
+                                
+                                if (linkIntersectTableData.length === 0) {
+                                    console.warn('Link Intersect table data is empty after processing');
+                                    return;
                                 }
-                                return sourcePages.map(sourcePage => ({
-                                    page: intersect.page || 'N/A',
-                                    title: intersect.title || 'N/A',
-                                    domainAuthority: intersect.domain_authority ?? 'N/A',
-                                    spamScore: intersect.spam_score ?? 'N/A',
-                                    matchingTargetIndexes: (intersect.matching_target_indexes || []).join(', ') || 'N/A',
-                                    sourcePage: sourcePage.page || 'N/A',
-                                    sourcePageAuthority: sourcePage.page_authority ?? 'N/A'
-                                }));
-                            }).flat();
-                            
-                            console.log('Link Intersect Table Data:', linkIntersectTableData);
-                            console.log('Link Intersect Raw Data:', data._linkIntersect);
-                            
-                            if (linkIntersectTableData.length === 0) {
-                                console.warn('Link Intersect table data is empty after processing');
-                                return;
+                                
+                                new Tabulator('#comp-link-intersect-table', {
+                                    data: linkIntersectTableData,
+                                    columns: [
+                                        { title: 'Intersecting Page', field: 'page', sorter: 'string', widthGrow: 2 },
+                                        { title: 'Title', field: 'title', sorter: 'string', widthGrow: 2 },
+                                        { title: 'Domain Authority', field: 'domainAuthority', sorter: 'number' },
+                                        { title: 'Spam Score', field: 'spamScore', sorter: 'number' },
+                                        { title: 'Matching Target Indexes', field: 'matchingTargetIndexes', sorter: 'string' },
+                                        { title: 'Source Page', field: 'sourcePage', sorter: 'string', widthGrow: 2 },
+                                        { title: 'Source PA', field: 'sourcePageAuthority', sorter: 'number' }
+                                    ],
+                                    layout: "fitDataStretch",
+                                    pagination: "local",
+                                    paginationSize: 25,
+                                    movableColumns: true,
+                                    resizableColumns: true
+                                });
+                            } catch (e) {
+                                console.error('Error initializing Link Intersect table:', e);
+                                const errorMsg = document.createElement('p');
+                                errorMsg.className = 'text-[var(--text-error)] text-sm mt-2';
+                                errorMsg.textContent = `Error displaying link opportunities: ${e.message}`;
+                                linkIntersectTableElement.parentNode?.appendChild(errorMsg);
                             }
-                            
-                            new Tabulator('#comp-link-intersect-table', {
-                                data: linkIntersectTableData,
-                                columns: [
-                                    { title: 'Intersecting Page', field: 'page', sorter: 'string', widthGrow: 2 },
-                                    { title: 'Title', field: 'title', sorter: 'string', widthGrow: 2 },
-                                    { title: 'Domain Authority', field: 'domainAuthority', sorter: 'number' },
-                                    { title: 'Spam Score', field: 'spamScore', sorter: 'number' },
-                                    { title: 'Matching Target Indexes', field: 'matchingTargetIndexes', sorter: 'string' },
-                                    { title: 'Source Page', field: 'sourcePage', sorter: 'string', widthGrow: 2 },
-                                    { title: 'Source PA', field: 'sourcePageAuthority', sorter: 'number' }
-                                ],
-                                layout: "fitDataStretch",
-                                pagination: "local",
-                                paginationSize: 25,
-                                movableColumns: true,
-                                resizableColumns: true
-                            });
                         }
                         
                         // Initialize overlapping keywords table
