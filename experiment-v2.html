@@ -3084,8 +3084,8 @@
                 domainEntriesForIntent.forEach(domainData => {
                     const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                     keywords.forEach(kw => {
-                        if (kw?.keyword && !allKeywords.includes(kw.keyword.toLowerCase())) {
-                            allKeywords.push(kw.keyword.toLowerCase());
+                        if (kw?.keyword && !allKeywords.includes(kw.keyword)) {
+                            allKeywords.push(kw.keyword);
                         }
                     });
                 });
@@ -3093,6 +3093,13 @@
                 if (allKeywords.length > 0) {
                     allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching search intent for ' + allKeywords.length + ' keywords...</span>';
                     try {
+                        // Normalize intent helper function (same as Keyword Targeting Analysis)
+                        const titleCase = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : 'Unknown');
+                        const normalizeIntent = (val) => {
+                            const t = titleCase(val);
+                            return ['Informational','Transactional','Commercial','Navigational','Unknown'].includes(t) ? t : 'Unknown';
+                        };
+                        
                         const siResp = await fetch(proxyUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -3105,24 +3112,21 @@
                         });
                         const siData = await siResp.json();
                         if (siResp.ok && Array.isArray(siData)) {
-                            const intentMap = {};
+                            const intentMapGlobal = {};
                             siData.forEach(entry => {
                                 if (entry.status === 'success' && entry.data?.keyword_intent) {
-                                    const kw = entry.data.serp_query?.keyword?.toLowerCase();
+                                    const kw = entry.data.serp_query?.keyword;
                                     if (kw) {
-                                        const primaryIntents = entry.data.keyword_intent?.primary_intents || [];
-                                        // Normalize intent to match our expected values
-                                        const primaryIntent = primaryIntents.length > 0 ? primaryIntents[0] : null;
-                                        if (primaryIntent) {
-                                            // Normalize case: capitalize first letter, rest lowercase
-                                            const normalized = primaryIntent.charAt(0).toUpperCase() + primaryIntent.slice(1).toLowerCase();
-                                            intentMap[kw] = ['Informational', 'Transactional', 'Commercial', 'Navigational'].includes(normalized) ? normalized : 'Unknown';
-                                        } else {
-                                            intentMap[kw] = 'Unknown';
-                                        }
+                                        const primary = (entry.data.keyword_intent?.primary_intents || [])[0] || 'Unknown';
+                                        intentMapGlobal[kw] = normalizeIntent(primary);
                                     }
                                 }
                             });
+                            
+                            // Debug: Log intent map to help diagnose issues
+                            console.log('Search Intent Map:', intentMapGlobal);
+                            console.log('Total keywords processed:', allKeywords.length);
+                            console.log('Intents mapped:', Object.keys(intentMapGlobal).length);
                             
                             // Map intents to each domain's keywords and calculate distribution
                             domainEntriesForIntent.forEach(domainData => {
@@ -3130,10 +3134,9 @@
                                 const intentCounts = { Informational: 0, Transactional: 0, Commercial: 0, Navigational: 0, Unknown: 0 };
                                 
                                 keywords.forEach(kw => {
-                                    const kwLower = kw.keyword?.toLowerCase();
-                                    const intent = intentMap[kwLower] || 'Unknown';
-                                    const normalizedIntent = ['Informational', 'Transactional', 'Commercial', 'Navigational', 'Unknown'].includes(intent) ? intent : 'Unknown';
-                                    domainData.searchIntent[kwLower] = normalizedIntent;
+                                    const intent = intentMapGlobal[kw.keyword] || 'Unknown';
+                                    const normalizedIntent = normalizeIntent(intent);
+                                    domainData.searchIntent[kw.keyword] = normalizedIntent;
                                     intentCounts[normalizedIntent] = (intentCounts[normalizedIntent] || 0) + 1;
                                 });
                                 
@@ -6273,8 +6276,8 @@ ${resultsByUrl[url].summary}`;
                 let maxLinkingDomains = -Infinity, maxLinkingDomainsDomain = null;
                 let maxLinks = -Infinity, maxLinksDomain = null;
                 let maxKeywords = -Infinity, maxKeywordsDomain = null;
-                const yourDomainWins = { ba: 0, da: 0, linkingDomains: 0, links: 0, keywords: 0 };
                 
+                // First pass: find the maximum values for each metric
                 domainArray.forEach((domainData, idx) => {
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score;
@@ -6289,15 +6292,25 @@ ${resultsByUrl[url].summary}`;
                     if (typeof linkingDomains === 'number' && linkingDomains > maxLinkingDomains) { maxLinkingDomains = linkingDomains; maxLinkingDomainsDomain = idx === 0 ? 'Your Domain' : domainName; }
                     if (typeof links === 'number' && links > maxLinks) { maxLinks = links; maxLinksDomain = idx === 0 ? 'Your Domain' : domainName; }
                     if (kc > maxKeywords) { maxKeywords = kc; maxKeywordsDomain = idx === 0 ? 'Your Domain' : domainName; }
-                    
-                    if (idx === 0) {
-                        if (typeof ba === 'number' && ba === maxBA) yourDomainWins.ba = 1;
-                        if (typeof da === 'number' && da === maxDA) yourDomainWins.da = 1;
-                        if (typeof linkingDomains === 'number' && linkingDomains === maxLinkingDomains) yourDomainWins.linkingDomains = 1;
-                        if (typeof links === 'number' && links === maxLinks) yourDomainWins.links = 1;
-                        if (kc === maxKeywords) yourDomainWins.keywords = 1;
-                    }
                 });
+                
+                // Second pass: check if "Your Domain" (idx 0) wins each category
+                const yourDomainWins = { ba: 0, da: 0, linkingDomains: 0, links: 0, keywords: 0 };
+                if (domainArray.length > 0) {
+                    const yourDomainData = domainArray[0];
+                    const sm = yourDomainData.siteMetrics?.data?.site_metrics || {};
+                    const yourBA = yourDomainData.brandAuthority?.data?.site_metrics?.brand_authority_score;
+                    const yourDA = sm.domain_authority;
+                    const yourLinkingDomains = sm.root_domains_to_root_domain;
+                    const yourLinks = sm.external_pages_to_root_domain;
+                    const yourKC = yourDomainData.keywordCount?.data?.ranking_keyword_count?.total || 0;
+                    
+                    if (typeof yourBA === 'number' && yourBA === maxBA && maxBADomain === 'Your Domain') yourDomainWins.ba = 1;
+                    if (typeof yourDA === 'number' && yourDA === maxDA && maxDADomain === 'Your Domain') yourDomainWins.da = 1;
+                    if (typeof yourLinkingDomains === 'number' && yourLinkingDomains === maxLinkingDomains && maxLinkingDomainsDomain === 'Your Domain') yourDomainWins.linkingDomains = 1;
+                    if (typeof yourLinks === 'number' && yourLinks === maxLinks && maxLinksDomain === 'Your Domain') yourDomainWins.links = 1;
+                    if (yourKC === maxKeywords && maxKeywordsDomain === 'Your Domain') yourDomainWins.keywords = 1;
+                }
                 
                 const totalWins = yourDomainWins.ba + yourDomainWins.da + yourDomainWins.linkingDomains + yourDomainWins.links + yourDomainWins.keywords;
                 
@@ -6588,7 +6601,11 @@ ${resultsByUrl[url].summary}`;
                 
                 // Add Link Intersect section if available
                 if (data._linkIntersect) {
-                    const linkIntersectData = data._linkIntersect.link_intersects || [];
+                    // Check both possible data structures: link_intersects array or direct array
+                    const linkIntersectData = Array.isArray(data._linkIntersect.link_intersects) 
+                        ? data._linkIntersect.link_intersects 
+                        : (Array.isArray(data._linkIntersect) ? data._linkIntersect : []);
+                    
                     dashboardHTML += '<div id="link-intersect-section" class="mt-6">';
                     dashboardHTML += '<div class="flex items-center justify-between mb-4">';
                     dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Link Opportunity Analysis</h4>';
@@ -6639,8 +6656,8 @@ ${resultsByUrl[url].summary}`;
                             if (keywords.length > 0 && document.getElementById(`comp-keywords-table-${idx}`)) {
                                 const limit = currentOriginalParams?.limit || 25;
                                 const tableData = keywords.slice(0, limit).map(kw => {
-                                    const kwLower = kw.keyword?.toLowerCase();
-                                    const intent = domainData.searchIntent?.[kwLower] || 'Unknown';
+                                    // Use original keyword case for lookup (matching how we stored it)
+                                    const intent = domainData.searchIntent?.[kw.keyword] || 'Unknown';
                                     return {
                                         keyword: kw.keyword || 'N/A',
                                         rank: kw.rank_position ?? 'N/A',
@@ -6696,9 +6713,27 @@ ${resultsByUrl[url].summary}`;
                         }
                         
                         // Initialize link intersect table
-                        if (data._linkIntersect && data._linkIntersect.link_intersects && data._linkIntersect.link_intersects.length > 0 && document.getElementById('comp-link-intersect-table')) {
-                            const linkIntersectTableData = data._linkIntersect.link_intersects.map(intersect => {
+                        const linkIntersectData = data._linkIntersect 
+                            ? (Array.isArray(data._linkIntersect.link_intersects) 
+                                ? data._linkIntersect.link_intersects 
+                                : (Array.isArray(data._linkIntersect) ? data._linkIntersect : []))
+                            : [];
+                        
+                        if (linkIntersectData.length > 0 && document.getElementById('comp-link-intersect-table')) {
+                            const linkIntersectTableData = linkIntersectData.map(intersect => {
                                 const sourcePages = intersect.matching_source_pages || [];
+                                // If no source pages, create one row with N/A for source page fields
+                                if (sourcePages.length === 0) {
+                                    return [{
+                                        page: intersect.page || 'N/A',
+                                        title: intersect.title || 'N/A',
+                                        domainAuthority: intersect.domain_authority ?? 'N/A',
+                                        spamScore: intersect.spam_score ?? 'N/A',
+                                        matchingTargetIndexes: (intersect.matching_target_indexes || []).join(', ') || 'N/A',
+                                        sourcePage: 'N/A',
+                                        sourcePageAuthority: 'N/A'
+                                    }];
+                                }
                                 return sourcePages.map(sourcePage => ({
                                     page: intersect.page || 'N/A',
                                     title: intersect.title || 'N/A',
@@ -6709,6 +6744,14 @@ ${resultsByUrl[url].summary}`;
                                     sourcePageAuthority: sourcePage.page_authority ?? 'N/A'
                                 }));
                             }).flat();
+                            
+                            console.log('Link Intersect Table Data:', linkIntersectTableData);
+                            console.log('Link Intersect Raw Data:', data._linkIntersect);
+                            
+                            if (linkIntersectTableData.length === 0) {
+                                console.warn('Link Intersect table data is empty after processing');
+                                return;
+                            }
                             
                             new Tabulator('#comp-link-intersect-table', {
                                 data: linkIntersectTableData,
@@ -6841,6 +6884,22 @@ ${resultsByUrl[url].summary}`;
                         } else {
                             overlappingContent.classList.add('hidden');
                             toggleOverlapping.textContent = 'Expand';
+                        }
+                    });
+                }
+                
+                // Add event listener for link intersect toggle
+                const toggleLinkIntersect = document.getElementById('toggle-link-intersect');
+                const linkIntersectContent = document.getElementById('link-intersect-content');
+                if (toggleLinkIntersect && linkIntersectContent) {
+                    toggleLinkIntersect.addEventListener('click', () => {
+                        const isHidden = linkIntersectContent.classList.contains('hidden');
+                        if (isHidden) {
+                            linkIntersectContent.classList.remove('hidden');
+                            toggleLinkIntersect.textContent = 'Collapse';
+                        } else {
+                            linkIntersectContent.classList.add('hidden');
+                            toggleLinkIntersect.textContent = 'Expand';
                         }
                     });
                 }
@@ -7028,11 +7087,14 @@ ${resultsByUrl[url].summary}`;
                     try {
                         const workbook = XLSX.utils.book_new();
                         
+                        // Filter out _linkIntersect which is not a domain entry
+                        const domainEntries = Object.values(data).filter(item => item.domain && !item._linkIntersect);
+                        
                         // Sheet 1: Domain Metrics Summary
                         const metricsData = [];
                         metricsData.push(['Domain', 'Brand Authority', 'Domain Authority', 'Total Links', 'Linking Domains', 'Spam Score', 'Ranks 1-3', 'Ranks 4-10', 'Ranks 11-20', 'Ranks 21-50', 'Total Keywords']);
                         
-                        Object.values(data).forEach((domainData) => {
+                        domainEntries.forEach((domainData) => {
                             const sm = domainData.siteMetrics?.data?.site_metrics || {};
                             const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
                             const da = sm.domain_authority ?? 'N/A';
@@ -7067,19 +7129,22 @@ ${resultsByUrl[url].summary}`;
                         XLSX.utils.book_append_sheet(workbook, metricsSheet, 'Domain Metrics');
                         
                         // Sheet 2: Ranking Keywords (one per domain)
-                        Object.values(data).forEach((domainData, idx) => {
+                        domainEntries.forEach((domainData, idx) => {
                             const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                             const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                             const sheetName = idx === 0 ? 'Your Domain Keywords' : `${domainName} Keywords`;
                             
-                            const keywordsData = [['Keyword', 'Rank', 'Page', 'Difficulty', 'Volume']];
+                            const keywordsData = [['Keyword', 'Rank', 'Page', 'Difficulty', 'Volume', 'Search Intent']];
                             keywords.forEach(kw => {
+                                const kwLower = kw.keyword?.toLowerCase();
+                                const intent = domainData.searchIntent?.[kwLower] || 'Unknown';
                                 keywordsData.push([
                                     kw.keyword || 'N/A',
                                     kw.rank_position ?? 'N/A',
                                     kw.ranking_page || 'N/A',
                                     kw.difficulty ?? 'N/A',
-                                    kw.volume || 'N/A'
+                                    kw.volume || 'N/A',
+                                    intent
                                 ]);
                             });
                             
@@ -7089,7 +7154,7 @@ ${resultsByUrl[url].summary}`;
                         
                         // Sheet 3: Overlapping Keywords
                         const domainKeywords = {};
-                        Object.values(data).forEach((domainData) => {
+                        domainEntries.forEach((domainData) => {
                             const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                             const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                             domainKeywords[domainName] = keywords.map(kw => kw.keyword?.toLowerCase()).filter(Boolean);
@@ -7114,7 +7179,7 @@ ${resultsByUrl[url].summary}`;
                                 .map(([keyword, domains]) => {
                                     const keywordData = {};
                                     domainNames.forEach(domain => {
-                                        const domainEntry = Object.values(data).find(d => {
+                                        const domainEntry = domainEntries.find(d => {
                                             const dName = d.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                                             return dName === domain;
                                         });
@@ -7144,11 +7209,11 @@ ${resultsByUrl[url].summary}`;
                         }
                         
                         // Sheet 4: Keyword Gap Snapshot
-                        const yourDomainData = Object.values(data)[0];
+                        const yourDomainData = domainEntries[0];
                         const yourKeywords = new Set((yourDomainData.rankingKeywords?.data?.ranking_keywords || []).map(kw => kw.keyword?.toLowerCase()).filter(Boolean));
                         
                         const gapKeywords = [];
-                        Object.values(data).slice(1).forEach((competitorData) => {
+                        domainEntries.slice(1).forEach((competitorData) => {
                             const competitorKeywords = competitorData.rankingKeywords?.data?.ranking_keywords || [];
                             competitorKeywords.forEach(kw => {
                                 const kwLower = kw.keyword?.toLowerCase();
@@ -7181,6 +7246,40 @@ ${resultsByUrl[url].summary}`;
                             
                             const gapSheet = XLSX.utils.aoa_to_sheet(gapData);
                             XLSX.utils.book_append_sheet(workbook, gapSheet, 'Keyword Gap Opportunities');
+                        }
+                        
+                        // Sheet 5: Link Intersect (if available)
+                        if (data._linkIntersect && data._linkIntersect.link_intersects && data._linkIntersect.link_intersects.length > 0) {
+                            const linkIntersectData = [['Intersecting Page', 'Title', 'Domain Authority', 'Spam Score', 'Matching Target Indexes', 'Source Page', 'Source Page Authority']];
+                            data._linkIntersect.link_intersects.forEach(intersect => {
+                                const sourcePages = intersect.matching_source_pages || [];
+                                if (sourcePages.length === 0) {
+                                    linkIntersectData.push([
+                                        intersect.page || 'N/A',
+                                        intersect.title || 'N/A',
+                                        intersect.domain_authority ?? 'N/A',
+                                        intersect.spam_score ?? 'N/A',
+                                        (intersect.matching_target_indexes || []).join(', ') || 'N/A',
+                                        'N/A',
+                                        'N/A'
+                                    ]);
+                                } else {
+                                    sourcePages.forEach(sourcePage => {
+                                        linkIntersectData.push([
+                                            intersect.page || 'N/A',
+                                            intersect.title || 'N/A',
+                                            intersect.domain_authority ?? 'N/A',
+                                            intersect.spam_score ?? 'N/A',
+                                            (intersect.matching_target_indexes || []).join(', ') || 'N/A',
+                                            sourcePage.page || 'N/A',
+                                            sourcePage.page_authority ?? 'N/A'
+                                        ]);
+                                    });
+                                }
+                            });
+                            
+                            const linkIntersectSheet = XLSX.utils.aoa_to_sheet(linkIntersectData);
+                            XLSX.utils.book_append_sheet(workbook, linkIntersectSheet, 'Link Opportunities');
                         }
                         
                         // Export the workbook
