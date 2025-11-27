@@ -7444,6 +7444,18 @@ ${resultsByUrl[url].summary}`;
                         })
                         .map(([key, value]) => {
                             if (Array.isArray(value)) {
+                                // Handle arrays of objects (like is_linking_to, not_linking_to)
+                                if (value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
+                                    if (key === 'is_linking_to' || key === 'not_linking_to') {
+                                        const queries = value.map(item => item.query || (typeof item === 'string' ? item : JSON.stringify(item))).filter(Boolean);
+                                        if (queries.length > 3) {
+                                            return `${key}: ${queries.length} items (${queries.slice(0, 2).join(', ')}...)`;
+                                        }
+                                        return `${key}: ${queries.join(', ')}`;
+                                    }
+                                    // For other object arrays, show count
+                                    return `${key}: ${value.length} items`;
+                                }
                                 // For URLs arrays, show count and first few
                                 if (key === 'urls' && value.length > 3) {
                                     return `${key}: ${value.length} URLs (${value.slice(0, 2).join(', ')}...)`;
@@ -7505,10 +7517,13 @@ ${resultsByUrl[url].summary}`;
                             if (element.type === 'checkbox') {
                                 element.checked = value;
                             } else if (Array.isArray(value)) {
-                                // For competitive analysis competitors array, content cluster URLs, or any array value
-                                if (entry.method === 'contentClusterAnalysis' && key === 'urls') {
-                                    element.value = value.join('\n');
+                                // Handle arrays of objects (like is_linking_to, not_linking_to)
+                                if ((key === 'is_linking_to' || key === 'not_linking_to') && value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
+                                    // Extract query values from objects
+                                    const queries = value.map(item => item.query || (typeof item === 'string' ? item : '')).filter(Boolean);
+                                    element.value = queries.join('\n');
                                 } else {
+                                    // For regular arrays (URLs, keywords, etc.)
                                     element.value = value.join('\n');
                                 }
                             } else if (element.type === 'select-one' || element.type === 'select-multiple') {
@@ -7567,10 +7582,13 @@ ${resultsByUrl[url].summary}`;
                             if (element.type === 'checkbox') {
                                 element.checked = value;
                             } else if (Array.isArray(value)) {
-                                // For competitive analysis competitors array, content cluster URLs, or any array value
-                                if (entry.method === 'contentClusterAnalysis' && key === 'urls') {
-                                    element.value = value.join('\n');
+                                // Handle arrays of objects (like is_linking_to, not_linking_to)
+                                if ((key === 'is_linking_to' || key === 'not_linking_to') && value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
+                                    // Extract query values from objects
+                                    const queries = value.map(item => item.query || (typeof item === 'string' ? item : '')).filter(Boolean);
+                                    element.value = queries.join('\n');
                                 } else {
+                                    // For regular arrays (URLs, keywords, etc.)
                                     element.value = value.join('\n');
                                 }
                             } else if (element.type === 'select-one' || element.type === 'select-multiple') {
@@ -7675,10 +7693,10 @@ ${resultsByUrl[url].summary}`;
                     'linkIntersect': {
                         'scope': 'liScopeSelect',
                         'sort': 'liSortSelect',
-                        'minMatch': 'liMinMatch',
+                        'minimum_matching_targets': 'liMinMatch',
                         'limit': 'liLimit',
-                        'isLinkingTo': 'liIsLinkingTo',
-                        'notLinkingTo': 'liNotLinkingTo'
+                        'is_linking_to': 'liIsLinkingTo',
+                        'not_linking_to': 'liNotLinkingTo'
                     },
                     'listLinks': {
                         'scope': 'llScopeSelect',
