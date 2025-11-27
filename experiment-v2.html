@@ -963,6 +963,15 @@
                     </div>
                 </div>
                 <div id="active-filters-container" class="hidden mb-4 space-x-2" role="status" aria-live="polite"></div>
+                <div id="intent-errors-notification" class="hidden mb-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 text-yellow-800 dark:text-yellow-200 px-4 py-3 rounded-lg shadow-sm" role="alert">
+                    <div class="flex items-start gap-3">
+                        <span class="text-xl flex-shrink-0">⚠️</span>
+                        <div class="flex-1">
+                            <div class="font-semibold mb-1">Search Intent API Errors</div>
+                            <div id="intent-errors-content" class="text-sm"></div>
+                        </div>
+                    </div>
+                </div>
                 <div id="raw-wrapper">
                     <pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>
                 </div>
@@ -3262,21 +3271,31 @@
                 };
 
                 const intentMapGlobal = {};
+                const intentErrors = []; // Track failed keywords
                 if (uniqueKeywords.length > 0) {
                     allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching search intent...</span>';
                     try {
                         const siResp = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey, method: 'searchIntent', params: { locale, keywords: uniqueKeywords } }), signal: opensignal.signal });
                         const siData = await siResp.json();
                         if (siResp.ok && Array.isArray(siData)) {
-                            siData.forEach(entry => {
+                            siData.forEach((entry, index) => {
                                 if (entry.status === 'success') {
                                     const kw = entry?.data?.serp_query?.keyword;
                                     const primary = (entry?.data?.keyword_intent?.primary_intents || [])[0] || 'Unknown';
                                     intentMapGlobal[kw] = normalizeIntent(primary);
+                                } else if (entry.status === 'error') {
+                                    // Track which keyword failed
+                                    const keyword = uniqueKeywords[index] || `Index ${index}`;
+                                    intentErrors.push({ keyword, reason: entry.reason || 'Unknown error' });
                                 }
                             });
+                            // Log errors for visibility
+                            if (intentErrors.length > 0) {
+                                console.warn(`Search Intent API errors for ${intentErrors.length} keywords:`, intentErrors);
+                            }
                         }
                     } catch (e) {
+                        console.error('Failed to fetch search intent:', e);
                         // Non-fatal; leave intents empty
                     }
                 }
@@ -3323,7 +3342,7 @@
                     })
                     .sort((a, b) => b.urls.length - a.urls.length || a.keyword.localeCompare(b.keyword));
 
-                return { urls, locale, limit, resultsByUrl, overlaps };
+                return { urls, locale, limit, resultsByUrl, overlaps, intentErrors };
             }
 
             // Content extraction helper function (via proxy)
@@ -3670,6 +3689,7 @@ If outputting natural language (not JSON), keep it under 3 sentences unless othe
                 });
                 const uniqueKeywords = Array.from(new Set(allKeywords));
                 const intentMapGlobal = {};
+                const intentErrors = []; // Track failed keywords
                 if (uniqueKeywords.length > 0) {
                     try {
                         const siResp = await fetch(proxyUrl, {
@@ -3680,16 +3700,24 @@ If outputting natural language (not JSON), keep it under 3 sentences unless othe
                         });
                         const siData = await siResp.json();
                         if (siResp.ok && Array.isArray(siData)) {
-                            siData.forEach(entry => {
+                            siData.forEach((entry, index) => {
                                 if (entry.status === 'success') {
                                     const kw = entry?.data?.serp_query?.keyword;
                                     const primary = (entry?.data?.keyword_intent?.primary_intents || [])[0] || 'Unknown';
                                     intentMapGlobal[kw] = primary.charAt(0).toUpperCase() + primary.slice(1).toLowerCase();
+                                } else if (entry.status === 'error') {
+                                    // Track which keyword failed
+                                    const keyword = uniqueKeywords[index] || `Index ${index}`;
+                                    intentErrors.push({ keyword, reason: entry.reason || 'Unknown error' });
                                 }
                             });
+                            // Log errors for visibility
+                            if (intentErrors.length > 0) {
+                                console.warn(`Search Intent API errors for ${intentErrors.length} keywords:`, intentErrors);
+                            }
                         }
                     } catch (e) {
-                        console.warn('Failed to fetch search intent:', e);
+                        console.error('Failed to fetch search intent:', e);
                     }
                 }
 
@@ -4759,7 +4787,8 @@ ${resultsByUrl[url].summary}`;
                         clusterIndex: idx,
                         urls: cluster.map(urlIdx => validUrls[urlIdx]),
                         label: clusterLabels[idx] || null
-                    }))
+                    })),
+                    intentErrors: intentErrors || []
                 };
             }
 
@@ -4768,6 +4797,34 @@ ${resultsByUrl[url].summary}`;
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
+                
+                // Show/hide intent errors notification
+                const intentErrorsNotification = document.getElementById('intent-errors-notification');
+                const intentErrorsContent = document.getElementById('intent-errors-content');
+                if (payload.intentErrors && payload.intentErrors.length > 0) {
+                    const errorCount = payload.intentErrors.length;
+                    const errorReasons = {};
+                    payload.intentErrors.forEach(err => {
+                        const reason = err.reason || 'Unknown error';
+                        errorReasons[reason] = (errorReasons[reason] || 0) + 1;
+                    });
+                    
+                    let errorSummary = `<strong>${errorCount}</strong> keyword${errorCount !== 1 ? 's' : ''} failed to get search intent data from the API.`;
+                    if (Object.keys(errorReasons).length > 0) {
+                        errorSummary += '<br><br><strong>Error breakdown:</strong><ul class="list-disc list-inside mt-1 space-y-1">';
+                        Object.entries(errorReasons).forEach(([reason, count]) => {
+                            errorSummary += `<li>${reason}: ${count} keyword${count !== 1 ? 's' : ''}</li>`;
+                        });
+                        errorSummary += '</ul>';
+                    }
+                    errorSummary += '<br><span class="text-xs opacity-75">These keywords will show as "Unknown" intent in the analysis.</span>';
+                    
+                    intentErrorsContent.innerHTML = errorSummary;
+                    intentErrorsNotification.classList.remove('hidden');
+                } else {
+                    intentErrorsNotification.classList.add('hidden');
+                }
+                
                 try {
                 const { urls, locale, limit, resultsByUrl, overlaps } = payload;
                 const formatNumber = (num) => {
@@ -5218,6 +5275,33 @@ ${resultsByUrl[url].summary}`;
             }
 
             function showContentClusterDashboard(payload) {
+                // Show/hide intent errors notification
+                const intentErrorsNotification = document.getElementById('intent-errors-notification');
+                const intentErrorsContent = document.getElementById('intent-errors-content');
+                if (payload.intentErrors && payload.intentErrors.length > 0) {
+                    const errorCount = payload.intentErrors.length;
+                    const errorReasons = {};
+                    payload.intentErrors.forEach(err => {
+                        const reason = err.reason || 'Unknown error';
+                        errorReasons[reason] = (errorReasons[reason] || 0) + 1;
+                    });
+                    
+                    let errorSummary = `<strong>${errorCount}</strong> keyword${errorCount !== 1 ? 's' : ''} failed to get search intent data from the API.`;
+                    if (Object.keys(errorReasons).length > 0) {
+                        errorSummary += '<br><br><strong>Error breakdown:</strong><ul class="list-disc list-inside mt-1 space-y-1">';
+                        Object.entries(errorReasons).forEach(([reason, count]) => {
+                            errorSummary += `<li>${reason}: ${count} keyword${count !== 1 ? 's' : ''}</li>`;
+                        });
+                        errorSummary += '</ul>';
+                    }
+                    errorSummary += '<br><span class="text-xs opacity-75">These keywords will show as "Unknown" intent in the analysis.</span>';
+                    
+                    intentErrorsContent.innerHTML = errorSummary;
+                    intentErrorsNotification.classList.remove('hidden');
+                } else {
+                    intentErrorsNotification.classList.add('hidden');
+                }
+                
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
@@ -7728,6 +7812,11 @@ ${resultsByUrl[url].summary}`;
             }
 
             function clearResultsData() {
+                // Hide intent errors notification
+                const intentErrorsNotification = document.getElementById('intent-errors-notification');
+                if (intentErrorsNotification) {
+                    intentErrorsNotification.classList.add('hidden');
+                }
                 currentResultsData = null;
                 currentOriginalParams = null;
                 currentMethod = null;
