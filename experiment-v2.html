@@ -3078,8 +3078,10 @@
                 }
                 
                 // Fetch search intent for all ranking keywords across all domains
+                // Filter out _linkIntersect which is not a domain entry
+                const domainEntriesForIntent = Object.values(results).filter(item => item.domain && !item._linkIntersect);
                 const allKeywords = [];
-                Object.values(results).forEach(domainData => {
+                domainEntriesForIntent.forEach(domainData => {
                     const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                     keywords.forEach(kw => {
                         if (kw?.keyword && !allKeywords.includes(kw.keyword.toLowerCase())) {
@@ -3089,7 +3091,7 @@
                 });
                 
                 if (allKeywords.length > 0) {
-                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching search intent...</span>';
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching search intent for ' + allKeywords.length + ' keywords...</span>';
                     try {
                         const siResp = await fetch(proxyUrl, {
                             method: 'POST',
@@ -3109,13 +3111,21 @@
                                     const kw = entry.data.serp_query?.keyword?.toLowerCase();
                                     if (kw) {
                                         const primaryIntents = entry.data.keyword_intent?.primary_intents || [];
-                                        intentMap[kw] = primaryIntents.length > 0 ? primaryIntents[0] : 'Unknown';
+                                        // Normalize intent to match our expected values
+                                        const primaryIntent = primaryIntents.length > 0 ? primaryIntents[0] : null;
+                                        if (primaryIntent) {
+                                            // Normalize case: capitalize first letter, rest lowercase
+                                            const normalized = primaryIntent.charAt(0).toUpperCase() + primaryIntent.slice(1).toLowerCase();
+                                            intentMap[kw] = ['Informational', 'Transactional', 'Commercial', 'Navigational'].includes(normalized) ? normalized : 'Unknown';
+                                        } else {
+                                            intentMap[kw] = 'Unknown';
+                                        }
                                     }
                                 }
                             });
                             
                             // Map intents to each domain's keywords and calculate distribution
-                            Object.values(results).forEach(domainData => {
+                            domainEntriesForIntent.forEach(domainData => {
                                 const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                                 const intentCounts = { Informational: 0, Transactional: 0, Commercial: 0, Navigational: 0, Unknown: 0 };
                                 
@@ -3137,6 +3147,8 @@
                                     Unknown: Math.round((intentCounts.Unknown / total) * 100)
                                 };
                             });
+                        } else {
+                            console.warn('Search intent API returned non-array response:', siData);
                         }
                     } catch (e) {
                         console.warn('Failed to fetch search intent:', e);
@@ -6254,7 +6266,8 @@ ${resultsByUrl[url].summary}`;
                 dashboardHTML += '</div>';
                 
                 // Calculate winners for high-level summary
-                const domainArray = Object.values(data);
+                // Filter out _linkIntersect which is not a domain entry
+                const domainArray = Object.values(data).filter(item => item.domain && !item._linkIntersect);
                 let maxBA = -Infinity, maxBADomain = null;
                 let maxDA = -Infinity, maxDADomain = null;
                 let maxLinkingDomains = -Infinity, maxLinkingDomainsDomain = null;
@@ -6302,10 +6315,12 @@ ${resultsByUrl[url].summary}`;
                 dashboardHTML += '</div>';
                 
                 // Create metrics grid - ensure all boxes in one row
-                const domainCount = Object.keys(data).length;
+                // Filter out _linkIntersect which is not a domain entry
+                const domainEntries = Object.values(data).filter(item => item.domain && !item._linkIntersect);
+                const domainCount = domainEntries.length;
                 const initialColumns = domainCount <= 2 ? domainCount : 2; // Start with 2 columns if 2+ domains, else show all
                 dashboardHTML += `<div id=\"competitive-metrics-grid\" class=\"metrics-grid-container\">`;
-                Object.values(data).forEach((domainData, idx) => {
+                domainEntries.forEach((domainData, idx) => {
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
                     const da = sm.domain_authority ?? 'N/A';
@@ -6430,13 +6445,13 @@ ${resultsByUrl[url].summary}`;
                 // Move domain selector here
                 dashboardHTML += '<div><label for="domain-selector" class="inline-block text-sm font-medium text-[var(--text-secondary)] mr-2">View Details For:</label>';
                 dashboardHTML += '<select id="domain-selector" class="inline-block bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)]">';
-                Object.values(data).forEach((domainData, idx) => {
+                domainEntries.forEach((domainData, idx) => {
                     dashboardHTML += `<option value="${idx}">${domainData.label}: ${domainData.domain}</option>`;
                 });
                 dashboardHTML += '</select></div></div>';
                 
                 // Render Top Ranking Keywords tables
-                Object.values(data).forEach((domainData, idx) => {
+                domainEntries.forEach((domainData, idx) => {
                     dashboardHTML += `<div id="keywords-${idx}" class="keywords-panel ${idx === 0 ? '' : 'hidden'}">`;
                     dashboardHTML += `<h5 class="font-semibold text-[var(--text-heading)] mb-2">${domainData.label}</h5>`;
                     
@@ -6452,13 +6467,13 @@ ${resultsByUrl[url].summary}`;
                 
                 // Add Keyword Gap Snapshot section - SECOND
                 // Get your domain's keywords
-                const yourDomainData = Object.values(data)[0];
+                const yourDomainData = domainEntries[0];
                 const yourDomainName = yourDomainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                 const yourKeywords = new Set((yourDomainData.rankingKeywords?.data?.ranking_keywords || []).map(kw => kw.keyword?.toLowerCase()).filter(Boolean));
                 
                 // Find keywords competitors rank for that your domain doesn't
                 const gapKeywords = [];
-                Object.values(data).slice(1).forEach((competitorData) => {
+                domainEntries.slice(1).forEach((competitorData) => {
                     const competitorKeywords = competitorData.rankingKeywords?.data?.ranking_keywords || [];
                     competitorKeywords.forEach(kw => {
                         const kwLower = kw.keyword?.toLowerCase();
@@ -6513,7 +6528,7 @@ ${resultsByUrl[url].summary}`;
                 
                 // Extract all keywords for each domain
                 const domainKeywords = {};
-                Object.values(data).forEach((domainData, idx) => {
+                domainEntries.forEach((domainData, idx) => {
                     const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                     const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                     domainKeywords[domainName] = keywords.map(kw => kw.keyword?.toLowerCase()).filter(Boolean);
@@ -6542,7 +6557,7 @@ ${resultsByUrl[url].summary}`;
                             const keywordData = {};
                             domainNames.forEach(domain => {
                                 // Find the domain data entry that matches this domain name
-                                const domainEntry = Object.values(data).find(d => {
+                                const domainEntry = domainEntries.find(d => {
                                     const dName = d.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                                     return dName === domain;
                                 });
@@ -6619,7 +6634,7 @@ ${resultsByUrl[url].summary}`;
                 setTimeout(() => {
                     if (typeof Tabulator !== 'undefined') {
                         // Initialize ranking keywords tables
-                        Object.values(data).forEach((domainData, idx) => {
+                        domainEntries.forEach((domainData, idx) => {
                             const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                             if (keywords.length > 0 && document.getElementById(`comp-keywords-table-${idx}`)) {
                                 const limit = currentOriginalParams?.limit || 25;
@@ -6754,7 +6769,7 @@ ${resultsByUrl[url].summary}`;
                     if (gridContainer) {
                         const updateGrid = () => {
                             const width = window.innerWidth;
-                            const domainCount = Object.keys(data).length;
+                            const domainCount = domainEntries.length;
                             
                             // Always try to show all domains in one row
                             if (width >= 1280) {
