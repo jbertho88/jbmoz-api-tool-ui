@@ -5814,7 +5814,7 @@ ${resultsByUrl[url].summary}`;
                                     const tooltip = cell.getRow().getData().valueScoreTooltip || '';
                                     return `<span title="${tooltip}">${cell.getValue()}</span>`;
                                 }},
-                                { title: 'Primary Intent', field: 'primaryIntent', sorter: 'string', width: 150, formatter: (cell) => {
+                                { title: 'Primary Intent', field: 'primaryIntent', sorter: 'string', width: 220, formatter: (cell) => {
                                     const intent = cell.getValue();
                                     const intentColor = cell.getRow().getData().intentColor;
                                     return `<div style="background-color: ${intentColor}20; color: ${intentColor}; font-weight: 600; padding: 4px; border-radius: 4px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: help;" title="${intent}"><span style="background:${intentColor};width:8px;height:8px;border-radius:9999px;display:inline-block"></span><span class="truncate">${intent}</span></div>`;
