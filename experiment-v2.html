@@ -7967,6 +7967,7 @@ ${resultsByUrl[url].summary}`;
                 allDOMElements.methodSelector.dispatchEvent(new Event('change'));
 
                 // Populate form fields (same as replay, but don't auto-submit)
+                // Use longer timeout to ensure form fields are created after method change
                 setTimeout(() => {
                     let fieldsPopulated = 0;
                     Object.entries(entry.params).forEach(([key, value]) => {
@@ -8009,7 +8010,7 @@ ${resultsByUrl[url].summary}`;
                         displayError('Could not populate form fields. Please check the console for details.');
                     }
                     // Don't auto-submit - let user edit and submit manually
-                }, 200);
+                }, 300);
 
                 allDOMElements.historyModal.classList.add('hidden');
             }
@@ -8019,7 +8020,8 @@ ${resultsByUrl[url].summary}`;
                 const mappings = {
                     'siteMetrics': {
                         'scope': 'smScopeSelect',
-                        'urls': 'smUrlsInput'
+                        'urls': 'smUrlsInput',
+                        'targets': 'smUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'keywordMetrics': {
                         'metricType': 'kmMetricTypeSelect',
@@ -8029,7 +8031,8 @@ ${resultsByUrl[url].summary}`;
                         'keywords': 'kmKeywordsInput'
                     },
                     'brandAuthority': {
-                        'urls': 'baUrlsInput'
+                        'urls': 'baUrlsInput',
+                        'targets': 'baUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'searchIntent': {
                         'locale': 'siLocaleSelect',
@@ -8039,7 +8042,8 @@ ${resultsByUrl[url].summary}`;
                         'scope': 'rkScopeSelect',
                         'locale': 'rkLocaleSelect',
                         'limit': 'rkLimit',
-                        'urls': 'rkUrlsInput'
+                        'urls': 'rkUrlsInput',
+                        'targets': 'rkUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'relatedKeywords': {
                         'locale': 'rlLocaleSelect',
@@ -8048,44 +8052,51 @@ ${resultsByUrl[url].summary}`;
                     'keywordCount': {
                         'scope': 'kcScopeSelect',
                         'locale': 'kcLocaleSelect',
-                        'urls': 'kcUrlsInput'
+                        'urls': 'kcUrlsInput',
+                        'targets': 'kcUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'anchorText': {
                         'scope': 'atScopeSelect',
                         'limit': 'atLimit',
-                        'urls': 'atUrlsInput'
+                        'urls': 'atUrlsInput',
+                        'targets': 'atUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'recentlyGainedLinks': {
                         'scope': 'rglScopeSelect',
                         'limit': 'rglLimit',
                         'beginDate': 'rglBeginDate',
                         'endDate': 'rglEndDate',
-                        'urls': 'rglUrlsInput'
+                        'urls': 'rglUrlsInput',
+                        'targets': 'rglUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'recentlyLostLinks': {
                         'scope': 'rllScopeSelect',
                         'limit': 'rllLimit',
                         'beginDate': 'rllBeginDate',
                         'endDate': 'rllEndDate',
-                        'urls': 'rllUrlsInput'
+                        'urls': 'rllUrlsInput',
+                        'targets': 'rllUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'linkingDomains': {
                         'scope': 'ldScopeSelect',
                         'sort': 'ldSortSelect',
                         'filters': 'ldFilterSelect',
                         'limit': 'ldLimit',
-                        'urls': 'ldUrlsInput'
+                        'urls': 'ldUrlsInput',
+                        'targets': 'ldUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'finalRedirect': {
                         'scope': 'frScopeSelect',
-                        'urls': 'frUrlsInput'
+                        'urls': 'frUrlsInput',
+                        'targets': 'frUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'topPages': {
                         'scope': 'tpScopeSelect',
                         'filter': 'tpFilterSelect',
                         'sort': 'tpSortSelect',
                         'limit': 'tpLimit',
-                        'urls': 'tpUrlsInput'
+                        'urls': 'tpUrlsInput',
+                        'targets': 'tpUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'linkIntersect': {
                         'scope': 'liScopeSelect',
@@ -8100,7 +8111,8 @@ ${resultsByUrl[url].summary}`;
                         'sort': 'llSortSelect',
                         'filters': 'llFilterSelect',
                         'limit': 'llLimit',
-                        'urls': 'llUrlsInput'
+                        'urls': 'llUrlsInput',
+                        'targets': 'llUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'linkStatus': {
                         'targetScope': 'lsTargetScopeSelect',
@@ -8112,13 +8124,15 @@ ${resultsByUrl[url].summary}`;
                         'scope': 'flaScopeSelect',
                         'anchor': 'flaAnchor',
                         'limit': 'flaLimit',
-                        'urls': 'flaUrlsInput'
+                        'urls': 'flaUrlsInput',
+                        'targets': 'flaUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'filterLinksByDomain': {
                         'scope': 'fldScopeSelect',
                         'domain': 'fldDomain',
                         'limit': 'fldLimit',
-                        'urls': 'fldUrlsInput'
+                        'urls': 'fldUrlsInput',
+                        'targets': 'fldUrlsInput'  // API uses 'targets' but field is 'urls'
                     },
                     'competitiveAnalysis': {
                         'yourDomain': 'caYourDomain',
