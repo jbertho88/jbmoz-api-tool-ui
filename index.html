@@ -963,6 +963,15 @@
                     </div>
                 </div>
                 <div id="active-filters-container" class="hidden mb-4 space-x-2" role="status" aria-live="polite"></div>
+                <div id="intent-errors-notification" class="hidden mb-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 text-yellow-800 dark:text-yellow-200 px-4 py-3 rounded-lg shadow-sm" role="alert">
+                    <div class="flex items-start gap-3">
+                        <span class="text-xl flex-shrink-0">⚠️</span>
+                        <div class="flex-1">
+                            <div class="font-semibold mb-1">Search Intent API Errors</div>
+                            <div id="intent-errors-content" class="text-sm"></div>
+                        </div>
+                    </div>
+                </div>
                 <div id="raw-wrapper">
                     <pre class="whitespace-pre-wrap break-all text-sm bg-[var(--bg-code)] text-[var(--text-primary)] p-4 rounded-lg" role="region" aria-label="Raw JSON data"><code></code></pre>
                 </div>
@@ -1228,7 +1237,7 @@
                                     (intersect.matching_source_pages || [{page: 'N/A', page_authority: 'N/A'}]).forEach(sourcePage => {
                                         intersects.push({
                                             ...baseInfo,
-                                            'Intersecting Domain': intersect.page,
+                                            'Intersecting Page': intersect.page,
                                             'Intersecting Title': intersect.title,
                                             'Intersecting DA': intersect.domain_authority,
                                             'Intersecting Spam Score': intersect.spam_score,
@@ -1469,7 +1478,7 @@
                 document.getElementById('linkingDomainsInputs').innerHTML = createDescription('Get a list of linking root domains to a target.') + createLabel('Scope') + createSelect('ldScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('ldSortSelect', linkingDomainsSortOptions) + createLabel('Filters') + createMultiSelect('ldFilterSelect', linkingDomainsFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('ldLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('ldUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('finalRedirectInputs').innerHTML = createDescription('See the final redirect target of a page.') + createLabel('Scope') + createSelect('frScopeSelect', scopeOptions) + createLabel('Domains / URLs') + createTextarea('frUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('topPagesInputs').innerHTML = createDescription('Return a list of the top pages on a target domain.') + createLabel('Scope') + createSelect('tpScopeSelect', scopeOptions) + createLabel('Filter') + createSelect('tpFilterSelect', topPagesFilterOptions) + createLabel('Sort') + createSelect('tpSortSelect', topPagesSortOptions) + createNumberInput('tpLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('tpUrlsInput', 'One per line or comma-separated.');
-                document.getElementById('linkIntersectInputs').innerHTML = createDescription('Find sites that link to some domains but not others.') + createLabel('Scope') + createSelect('liScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('liSortSelect', linkIntersectSortOptions) + createNumberInput('liMinMatch', 1, 1, 6, 'Minimum Matching Targets') + createNumberInput('liLimit', 25, 1, 50, limitLabel) + createLabel('Linking To') + createTextarea('liIsLinkingTo', 'One per line...') + createLabel('NOT Linking To (Optional)') + createTextarea('liNotLinkingTo', 'One per line...');
+                document.getElementById('linkIntersectInputs').innerHTML = createDescription('Find sites that link to some domains but not others. You can choose up to 6 total targets between "Linking To" and "NOT Linking To" combined.') + createLabel('Scope') + createSelect('liScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('liSortSelect', linkIntersectSortOptions) + createNumberInput('liMinMatch', 1, 1, 6, 'Minimum Matching Targets') + createNumberInput('liLimit', 25, 1, 50, limitLabel) + createLabel('Linking To') + createTextarea('liIsLinkingTo', 'One per line...') + createLabel('NOT Linking To (Optional)') + createTextarea('liNotLinkingTo', 'One per line...');
                 document.getElementById('listLinksInputs').innerHTML = createDescription('Get a list of links to a target.') + createLabel('Scope') + createSelect('llScopeSelect', scopeOptions) + createLabel('Sort') + createSelect('llSortSelect', listLinksSortOptions) + createLabel('Filters') + createMultiSelect('llFilterSelect', listLinksFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('llLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('llUrlsInput', 'One per line or comma-separated.');
                 document.getElementById('linkStatusInputs').innerHTML = createDescription('Get the status of a link from a source to a target.') + createLabel('Target Scope') + createSelect('lsTargetScopeSelect', scopeOptions) + createLabel('Target URL') + createTextarea('lsTargetUrl', 'Target URL') + createLabel('Source Scope') + createSelect('lsSourceScopeSelect', scopeOptions) + createLabel('Source URL') + createTextarea('lsSourceUrl', 'Source URL');
                 document.getElementById('filterLinksByAnchorInputs').innerHTML = createDescription('Get a list of links to a target where the anchor text exactly matches a string.') + createLabel('Scope') + createSelect('flaScopeSelect', scopeOptions) + createLabel('Anchor Text') + createTextarea('flaAnchorText', 'Enter exact anchor text...') + createLabel('Sort') + createSelect('flaSortSelect', filterAnchorSortOptions) + createLabel('Filters') + createMultiSelect('flaFilterSelect', filterAnchorFilterOptions) + createDescription('If providing multiple filters, "external" must be one of them.') + createNumberInput('flaLimit', 25, 1, 50, limitLabel) + createLabel('Domains / URLs') + createTextarea('flaUrlsInput', 'One per line or comma-separated.');
@@ -1489,7 +1498,20 @@
                     createTextarea('caCompetitors', 'Enter competitor domains, one per line (e.g., https://competitor1.com)') + 
                     createLabel('Locale') + 
                     createSelect('caLocaleSelect', localeOptions) + 
-                    createNumberInput('caLimit', 25, 1, 500, 'Number of Ranking Keywords to Display (Default 25; Choose from 1 to 500)');
+                    createNumberInput('caLimit', 25, 1, 500, 'Number of Ranking Keywords to Display (Default 25; Choose from 1 to 500)') +
+                    '<div class="mt-4 p-3 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
+                    '<label class="flex items-center gap-2 cursor-pointer">' +
+                    '<input type="checkbox" id="caIncludeLinkIntersect" class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<span class="text-sm font-semibold text-[var(--text-primary)]">🔗 Include Link Opportunity Analysis (OPTIONAL)</span>' +
+                    '</label>' +
+                    '<p class="text-xs text-[var(--text-secondary)] mt-1 ml-6">Find pages that link to competitors but not to your domain.</p>' +
+                    '</div>' +
+                    '<div id="caLinkIntersectInputs" class="hidden mt-3 space-y-3 pl-6 border-l-2 border-[var(--border-primary)]">' +
+                    createNumberInput('caLinkIntersectLimit', 25, 1, 50, 'Link Opportunity Results (Default 25; Choose from 1 to 50)') +
+                    createNumberInput('caLinkIntersectMinMatch', 1, 1, 3, 'Link Opportunity Min. Matching Targets (Default 1; Max = number of competitors)') +
+                    createLabel('Sort') +
+                    createSelect('caLinkIntersectSort', linkIntersectSortOptions) +
+                    '</div>';
                 document.getElementById('keywordTargetingAnalysisInputs').innerHTML = 
                     '<div class="mb-4 p-3 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
@@ -1523,9 +1545,67 @@
                     createTextarea('ccaUrls', 'Enter URLs to analyze, one per line (e.g., https://example.com/page1)') +
                     createLabel('Locale') +
                     createSelect('ccaLocaleSelect', localeOptions) +
-                    createLabel('Similarity Threshold (Default 0.85; 0-1)') +
-                    '<input type="number" id="ccaSimilarityThreshold" value="0.85" min="0" max="1" step="0.01" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">' +
-                    createNumberInput('ccaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze per URL (Default 25; 1-500)');
+                    createLabel('Semantic Similarity Threshold') +
+                    '<input type="number" id="ccaSimilarityThreshold" value="0.9" min="0" max="1" step="0.01" class="w-full bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 mt-1 text-[var(--text-primary)]">' +
+                    '<p class="text-xs text-[var(--text-secondary)] mt-1 mb-2">Content Consolidation options will be recommended if: (1) URL-to-URL similarity >= 0.9, (2) Both URLs have the same search intent, and (3) Both URLs share at least one ranking keyword</p>' +
+                    createNumberInput('ccaLimit', 25, 1, 500, 'Number of Ranking Keywords to Analyze per URL (Default 25; 1-500)') +
+                    '<div class="mt-4 p-4 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
+                    '<div class="flex items-center justify-between mb-3">' +
+                    '<div class="text-sm font-semibold text-[var(--text-primary)]">Optional Analysis Features</div>' +
+                    '<div class="flex gap-2">' +
+                    '<button type="button" id="ccaSelectAll" class="text-xs px-2 py-1 border border-[var(--border-primary)] rounded-md bg-[var(--bg-input-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">Select All</button>' +
+                    '<button type="button" id="ccaDeselectAll" class="text-xs px-2 py-1 border border-[var(--border-primary)] rounded-md bg-[var(--bg-input-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]">Deselect All</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '<p class="text-xs text-[var(--text-secondary)] mb-3">By default, the analysis calculates similarity to Seed Topic and URL-to-URL Similarity. Check the boxes below to add additional analysis features:</p>' +
+                    '<div class="space-y-2">' +
+                    '<label class="flex items-center gap-2 cursor-pointer">' +
+                    '<input type="checkbox" id="ccaIncludeConsolidation" checked class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<span class="text-sm text-[var(--text-primary)]">Content Consolidation (Identify similar pages that should be merged)</span>' +
+                    '</label>' +
+                    '<label class="flex items-center gap-2 cursor-pointer">' +
+                    '<input type="checkbox" id="ccaIncludeRecommendations" checked class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<span class="text-sm text-[var(--text-primary)]">Recommendations (Content improvement suggestions for existing pages)</span>' +
+                    '</label>' +
+                    '<label class="flex items-center gap-2 cursor-pointer">' +
+                    '<input type="checkbox" id="ccaIncludeNewContent" checked class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<span class="text-sm text-[var(--text-primary)]">New Content to Create (Identify content gaps and new page opportunities)</span>' +
+                    '</label>' +
+                    '<label class="flex items-center gap-2 cursor-pointer">' +
+                    '<input type="checkbox" id="ccaIncludeSimilarityMatrix" checked class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<span class="text-sm text-[var(--text-primary)]">Display Semantic Similarity Matrix (Show URL-to-URL similarity scores)</span>' +
+                    '</label>' +
+                    '</div>' +
+                    '</div>';
+                
+                // Set up select all/deselect all handlers for Optional Analysis Features
+                setTimeout(() => {
+                    const selectAllBtn = document.getElementById('ccaSelectAll');
+                    const deselectAllBtn = document.getElementById('ccaDeselectAll');
+                    const checkboxes = [
+                        document.getElementById('ccaIncludeConsolidation'),
+                        document.getElementById('ccaIncludeRecommendations'),
+                        document.getElementById('ccaIncludeNewContent'),
+                        document.getElementById('ccaIncludeSimilarityMatrix')
+                    ];
+                    
+                    if (selectAllBtn) {
+                        selectAllBtn.addEventListener('click', () => {
+                            checkboxes.forEach(cb => {
+                                if (cb) cb.checked = true;
+                            });
+                        });
+                    }
+                    
+                    if (deselectAllBtn) {
+                        deselectAllBtn.addEventListener('click', () => {
+                            checkboxes.forEach(cb => {
+                                if (cb) cb.checked = false;
+                            });
+                        });
+                    }
+                }, 100);
+                
                 document.getElementById('contentClustersIdentificationInputs').innerHTML = 
                     '<div class="mb-4 p-3 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">' +
                     '<label class="flex items-center gap-2 cursor-pointer">' +
@@ -1709,7 +1789,7 @@
                         <li><strong>Seed Topic:</strong> The main keyword/topic to analyze pages against</li>
                         <li><strong>URLs:</strong> Enter URLs to analyze (1-25 URLs, one per line)</li>
                         <li><strong>Locale:</strong> Select geographic region/language for keyword analysis</li>
-                        <li><strong>Similarity Threshold:</strong> Threshold for consolidation recommendations (default 0.85)</li>
+                        <li><strong>Semantic Similarity Threshold:</strong> Threshold for consolidation recommendations (default 0.9)</li>
                         <li><strong>Limit:</strong> Number of related keywords to fetch (default 25)</li>
                         <li><strong>OpenAI API Key:</strong> Required for content analysis and embeddings</li>
                     </ul>
@@ -1915,7 +1995,7 @@
                 
                 <div class="readme-method mb-4">
                     <h4><strong><u>Fetch Link Intersects</u></strong></h4>
-                    <p><strong>Description:</strong> Find sites that link to some domains but not others, useful for competitive analysis.</p>
+                    <p><strong>Description:</strong> Find sites that link to some domains but not others, useful for competitive analysis. You can choose up to 6 total targets between "Linking To" and "NOT Linking To" combined.</p>
                     <p><strong>Inputs Required:</strong></p>
                     <ul>
                         <li><strong>Scope:</strong> Choose analysis scope (page or domain level)</li>
@@ -2068,6 +2148,46 @@
                         const sectionToShow = document.getElementById(selectedMethod + 'Inputs');
                         if (sectionToShow) sectionToShow.style.display = 'block';
                         allDOMElements.submitBtn.disabled = false;
+                        
+                        // Set up Link Intersect toggle for Competitive Analysis
+                        if (selectedMethod === 'competitiveAnalysis') {
+                            setTimeout(() => {
+                                const linkIntersectCheckbox = document.getElementById('caIncludeLinkIntersect');
+                                const linkIntersectInputs = document.getElementById('caLinkIntersectInputs');
+                                const competitorsInput = document.getElementById('caCompetitors');
+                                const minMatchInput = document.getElementById('caLinkIntersectMinMatch');
+                                
+                                if (linkIntersectCheckbox && linkIntersectInputs) {
+                                    const toggleLinkIntersect = () => {
+                                        if (linkIntersectCheckbox.checked) {
+                                            linkIntersectInputs.classList.remove('hidden');
+                                        } else {
+                                            linkIntersectInputs.classList.add('hidden');
+                                        }
+                                    };
+                                    linkIntersectCheckbox.addEventListener('change', toggleLinkIntersect);
+                                    
+                                    // Validate min matching targets against competitor count
+                                    if (competitorsInput && minMatchInput) {
+                                        const validateMinMatch = () => {
+                                            const competitors = competitorsInput.value.split(/[\n,]/).map(item => item.trim()).filter(Boolean).slice(0, 3);
+                                            const competitorCount = competitors.length;
+                                            const currentValue = parseInt(minMatchInput.value, 10) || 1;
+                                            if (currentValue > competitorCount) {
+                                                minMatchInput.setCustomValidity(`Minimum matching targets cannot exceed the number of competitors (${competitorCount})`);
+                                                minMatchInput.reportValidity();
+                                            } else {
+                                                minMatchInput.setCustomValidity('');
+                                            }
+                                            minMatchInput.max = competitorCount;
+                                        };
+                                        competitorsInput.addEventListener('input', validateMinMatch);
+                                        minMatchInput.addEventListener('input', validateMinMatch);
+                                        validateMinMatch(); // Initial validation
+                                    }
+                                }
+                            }, 100);
+                        }
                         
                         // Add warning for listLinks when limit >= 30 (based on testing: 26-29 work, 35+ hangs)
                         if (selectedMethod === 'listLinks') {
@@ -2459,6 +2579,7 @@
                 const resultsByUrl = {};
                 const seedTopicSimilarities = {};
                 const intentGroups = { Informational: [], Commercial: [], Transactional: [] };
+                const { includeConsolidation = false, includeRecommendations = false, includeNewContent = false, includeSimilarityMatrix = false } = params;
                 
                 urls.forEach((url, idx) => {
                     const similarity = 0.7 + Math.random() * 0.25;
@@ -2497,43 +2618,65 @@
                 });
                 
                 const mainTopicPage = urls[0] || '';
-                const consolidationClusters = [
+                const consolidationClusters = includeConsolidation ? [
                     {
                         intent: 'Informational',
                         urls: intentGroups.Informational.slice(0, 3),
                         overlappingKeywords: ['seo basics', 'keyword research', 'on-page optimization']
                     }
-                ];
+                ] : [];
+                
+                const contentRecommendations = includeRecommendations ? {
+                    recommendations: urls.slice(0, 2).map(url => ({
+                        url,
+                        recommendations: ['Improve internal linking', 'Add more relevant keywords', 'Enhance meta descriptions']
+                    })),
+                    generalRecommendations: ['Consolidate similar content', 'Improve keyword targeting']
+                } : null;
+                
+                const newContentToCreate = includeNewContent ? {
+                    newContentIdeas: [
+                        {
+                            title: 'Advanced SEO Techniques',
+                            intent: 'Informational',
+                            targetKeywords: ['advanced seo', 'seo strategies'],
+                            rationale: 'Fill content gap for advanced users'
+                        }
+                    ]
+                } : null;
+                
+                // Generate sample similarity matrix if requested
+                const urlSimilarityMatrix = includeSimilarityMatrix ? {} : null;
+                if (includeSimilarityMatrix && urls.length > 0) {
+                    urls.forEach((url1, i) => {
+                        urls.forEach((url2, j) => {
+                            if (!urlSimilarityMatrix[url1]) urlSimilarityMatrix[url1] = {};
+                            if (i === j) {
+                                urlSimilarityMatrix[url1][url2] = 1.0;
+                            } else {
+                                // Generate random similarity between 0.3 and 0.95
+                                const similarity = 0.3 + Math.random() * 0.65;
+                                urlSimilarityMatrix[url1][url2] = Math.round(similarity * 100) / 100;
+                            }
+                        });
+                    });
+                }
                 
                 return {
                     seedTopic: params.seedTopic || 'Sample Topic',
                     urls,
                     locale: params.locale || 'en-US',
                     limit: params.limit || 25,
-                    similarityThreshold: params.similarityThreshold || 0.85,
+                    similarityThreshold: params.similarityThreshold || 0.9,
                     resultsByUrl,
                     seedTopicSimilarities,
                     intentGroups,
                     consolidationClusters,
                     mainTopicPage,
                     relatedKeywords: ['related keyword 1', 'related keyword 2', 'related keyword 3'],
-                    contentRecommendations: {
-                        recommendations: urls.slice(0, 2).map(url => ({
-                            url,
-                            recommendations: ['Improve internal linking', 'Add more relevant keywords', 'Enhance meta descriptions']
-                        })),
-                        generalRecommendations: ['Consolidate similar content', 'Improve keyword targeting']
-                    },
-                    newContentToCreate: {
-                        newContentIdeas: [
-                            {
-                                title: 'Advanced SEO Techniques',
-                                intent: 'Informational',
-                                targetKeywords: ['advanced seo', 'seo strategies'],
-                                rationale: 'Fill content gap for advanced users'
-                            }
-                        ]
-                    }
+                    contentRecommendations,
+                    newContentToCreate,
+                    urlSimilarityMatrix
                 };
             }
 
@@ -2941,6 +3084,45 @@
                     }
                 }
                 
+                // Fetch Link Intersect if enabled
+                if (params.includeLinkIntersect && params.linkIntersectParams) {
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching link opportunities...</span>';
+                    try {
+                        const linkIntersectParams = {
+                            scope: 'domain',
+                            limit: params.linkIntersectParams.limit || 25,
+                            is_linking_to: params.competitors.map(q => ({query: q, scope: 'domain'})),
+                            not_linking_to: [{query: params.yourDomain, scope: 'domain'}],
+                            sort: params.linkIntersectParams.sort || 'matching_target_count',
+                            minimum_matching_targets: params.linkIntersectParams.minimum_matching_targets || 1
+                        };
+                        
+                        const liResp = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                apiKey,
+                                method: 'linkIntersect',
+                                params: linkIntersectParams
+                            }),
+                            signal: opensignal.signal
+                        });
+                        const liData = await liResp.json();
+                        if (liResp.ok && Array.isArray(liData) && liData[0]?.status === 'success') {
+                            // Store the data even if link_intersects is empty (this is valid - just means no results found)
+                            results._linkIntersect = liData[0].data || { link_intersects: [] };
+                            // Ensure link_intersects is always an array
+                            if (!Array.isArray(results._linkIntersect.link_intersects)) {
+                                results._linkIntersect.link_intersects = [];
+                            }
+                        } else {
+                            results._linkIntersect = { link_intersects: [], error: liData[0]?.reason || 'Failed' };
+                        }
+                    } catch (e) {
+                        results._linkIntersect = { link_intersects: [], error: e.message };
+                    }
+                }
+                
                 return results;
             }
 
@@ -3011,21 +3193,31 @@
                 };
 
                 const intentMapGlobal = {};
+                const intentErrors = []; // Track failed keywords
                 if (uniqueKeywords.length > 0) {
                     allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Fetching search intent...</span>';
                     try {
                         const siResp = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey, method: 'searchIntent', params: { locale, keywords: uniqueKeywords } }), signal: opensignal.signal });
                         const siData = await siResp.json();
                         if (siResp.ok && Array.isArray(siData)) {
-                            siData.forEach(entry => {
+                            siData.forEach((entry, index) => {
                                 if (entry.status === 'success') {
                                     const kw = entry?.data?.serp_query?.keyword;
                                     const primary = (entry?.data?.keyword_intent?.primary_intents || [])[0] || 'Unknown';
                                     intentMapGlobal[kw] = normalizeIntent(primary);
+                                } else if (entry.status === 'error') {
+                                    // Track which keyword failed
+                                    const keyword = uniqueKeywords[index] || `Index ${index}`;
+                                    intentErrors.push({ keyword, reason: entry.reason || 'Unknown error' });
                                 }
                             });
+                            // Log errors for visibility
+                            if (intentErrors.length > 0) {
+                                console.warn(`Search Intent API errors for ${intentErrors.length} keywords:`, intentErrors);
+                            }
                         }
                     } catch (e) {
+                        console.error('Failed to fetch search intent:', e);
                         // Non-fatal; leave intents empty
                     }
                 }
@@ -3072,7 +3264,7 @@
                     })
                     .sort((a, b) => b.urls.length - a.urls.length || a.keyword.localeCompare(b.keyword));
 
-                return { urls, locale, limit, resultsByUrl, overlaps };
+                return { urls, locale, limit, resultsByUrl, overlaps, intentErrors };
             }
 
             // Content extraction helper function (via proxy)
@@ -3270,7 +3462,7 @@ If outputting natural language (not JSON), keep it under 3 sentences unless othe
             }
 
             async function runContentClusterAnalysis(apiKey, openaiApiKey, params, proxyUrl, opensignal) {
-                const { seedTopic, urls, locale, similarityThreshold, limit, model = 'gpt-3.5-turbo' } = params;
+                const { seedTopic, urls, locale, similarityThreshold, limit, model = 'gpt-3.5-turbo', includeConsolidation = false, includeRecommendations = false, includeNewContent = false, includeSimilarityMatrix = false } = params;
                 const resultsByUrl = {};
 
                 // Step 1: Get related keywords for seed topic
@@ -3419,6 +3611,7 @@ If outputting natural language (not JSON), keep it under 3 sentences unless othe
                 });
                 const uniqueKeywords = Array.from(new Set(allKeywords));
                 const intentMapGlobal = {};
+                const intentErrors = []; // Track failed keywords
                 if (uniqueKeywords.length > 0) {
                     try {
                         const siResp = await fetch(proxyUrl, {
@@ -3429,16 +3622,24 @@ If outputting natural language (not JSON), keep it under 3 sentences unless othe
                         });
                         const siData = await siResp.json();
                         if (siResp.ok && Array.isArray(siData)) {
-                            siData.forEach(entry => {
+                            siData.forEach((entry, index) => {
                                 if (entry.status === 'success') {
                                     const kw = entry?.data?.serp_query?.keyword;
                                     const primary = (entry?.data?.keyword_intent?.primary_intents || [])[0] || 'Unknown';
                                     intentMapGlobal[kw] = primary.charAt(0).toUpperCase() + primary.slice(1).toLowerCase();
+                                } else if (entry.status === 'error') {
+                                    // Track which keyword failed
+                                    const keyword = uniqueKeywords[index] || `Index ${index}`;
+                                    intentErrors.push({ keyword, reason: entry.reason || 'Unknown error' });
                                 }
                             });
+                            // Log errors for visibility
+                            if (intentErrors.length > 0) {
+                                console.warn(`Search Intent API errors for ${intentErrors.length} keywords:`, intentErrors);
+                            }
                         }
                     } catch (e) {
-                        console.warn('Failed to fetch search intent:', e);
+                        console.error('Failed to fetch search intent:', e);
                     }
                 }
 
@@ -3564,91 +3765,94 @@ ${contentPreview}`;
                     };
                 });
 
-                // Step 9: Identify consolidation clusters
-                // Only consolidate if: VERY similar to each other (>0.9) AND have keyword overlaps
-                const consolidationClusters = [];
-                const processedUrls = new Set();
-                
-                // Calculate URL-to-URL similarity matrix for consolidation
+                // Step 9: Calculate URL-to-URL similarity matrix (always calculated if similarity matrix or consolidation is requested)
                 const urlSimilarityMatrix = {};
-                for (let i = 0; i < urls.length; i++) {
-                    for (let j = i + 1; j < urls.length; j++) {
-                        const url1 = urls[i];
-                        const url2 = urls[j];
-                        if (resultsByUrl[url1].embedding && resultsByUrl[url2].embedding) {
-                            const similarity = cosineSimilarity(resultsByUrl[url1].embedding, resultsByUrl[url2].embedding);
-                            if (!urlSimilarityMatrix[url1]) urlSimilarityMatrix[url1] = {};
-                            if (!urlSimilarityMatrix[url2]) urlSimilarityMatrix[url2] = {};
-                            urlSimilarityMatrix[url1][url2] = similarity;
-                            urlSimilarityMatrix[url2][url1] = similarity;
+                if (includeSimilarityMatrix || includeConsolidation) {
+                    for (let i = 0; i < urls.length; i++) {
+                        for (let j = i + 1; j < urls.length; j++) {
+                            const url1 = urls[i];
+                            const url2 = urls[j];
+                            if (resultsByUrl[url1].embedding && resultsByUrl[url2].embedding) {
+                                const similarity = cosineSimilarity(resultsByUrl[url1].embedding, resultsByUrl[url2].embedding);
+                                if (!urlSimilarityMatrix[url1]) urlSimilarityMatrix[url1] = {};
+                                if (!urlSimilarityMatrix[url2]) urlSimilarityMatrix[url2] = {};
+                                urlSimilarityMatrix[url1][url2] = similarity;
+                                urlSimilarityMatrix[url2][url1] = similarity;
+                            }
                         }
                     }
                 }
                 
-                // Find keyword overlaps between URLs
-                const keywordOverlaps = {};
-                urls.forEach(u1 => {
-                    urls.forEach(u2 => {
-                        if (u1 === u2) return;
-                        const keywords1 = new Set((resultsByUrl[u1].rankingKeywords || []).map(k => k.keyword?.toLowerCase()).filter(Boolean));
-                        const keywords2 = new Set((resultsByUrl[u2].rankingKeywords || []).map(k => k.keyword?.toLowerCase()).filter(Boolean));
-                        const overlap = [...keywords1].filter(k => keywords2.has(k));
-                        if (overlap.length > 0) {
-                            if (!keywordOverlaps[u1]) keywordOverlaps[u1] = {};
-                            keywordOverlaps[u1][u2] = overlap;
-                        }
-                    });
-                });
+                // Step 9b: Identify consolidation clusters (only if includeConsolidation is enabled)
+                // Only consolidate if: VERY similar to each other (>0.9) AND have keyword overlaps
+                const consolidationClusters = [];
+                const processedUrls = new Set();
                 
-                urls.forEach(u => {
-                    if (processedUrls.has(u)) return;
-                    
-                    const cluster = [u];
-                    const uIntent = resultsByUrl[u].primaryIntent;
-                    
-                    urls.forEach(v => {
-                        if (u === v || processedUrls.has(v)) return;
-                        
-                        const vIntent = resultsByUrl[v].primaryIntent;
-                        const urlToUrlSimilarity = urlSimilarityMatrix[u]?.[v] || 0;
-                        const hasKeywordOverlap = keywordOverlaps[u]?.[v] && keywordOverlaps[u][v].length > 0;
-                        
-                        // VERY similar (>0.9) AND same intent AND have keyword overlaps
-                        if (uIntent === vIntent && urlToUrlSimilarity >= 0.9 && hasKeywordOverlap) {
-                            cluster.push(v);
-                            processedUrls.add(v);
-                        }
+                if (includeConsolidation) {
+                    // Find keyword overlaps between URLs
+                    const keywordOverlaps = {};
+                    urls.forEach(u1 => {
+                        urls.forEach(u2 => {
+                            if (u1 === u2) return;
+                            const keywords1 = new Set((resultsByUrl[u1].rankingKeywords || []).map(k => k.keyword?.toLowerCase()).filter(Boolean));
+                            const keywords2 = new Set((resultsByUrl[u2].rankingKeywords || []).map(k => k.keyword?.toLowerCase()).filter(Boolean));
+                            const overlap = [...keywords1].filter(k => keywords2.has(k));
+                            if (overlap.length > 0) {
+                                if (!keywordOverlaps[u1]) keywordOverlaps[u1] = {};
+                                keywordOverlaps[u1][u2] = overlap;
+                            }
+                        });
                     });
                     
-                    if (cluster.length > 1) {
-                        processedUrls.add(u);
-                        // Collect all overlapping keywords for the cluster
-                        const clusterKeywords = new Set();
-                        cluster.forEach(url1 => {
-                            cluster.forEach(url2 => {
-                                if (url1 !== url2 && keywordOverlaps[url1]?.[url2]) {
-                                    keywordOverlaps[url1][url2].forEach(kw => clusterKeywords.add(kw));
-                                }
-                            });
+                    urls.forEach(u => {
+                        if (processedUrls.has(u)) return;
+                        
+                        const cluster = [u];
+                        const uIntent = resultsByUrl[u].primaryIntent;
+                        
+                        urls.forEach(v => {
+                            if (u === v || processedUrls.has(v)) return;
+                            
+                            const vIntent = resultsByUrl[v].primaryIntent;
+                            const urlToUrlSimilarity = urlSimilarityMatrix[u]?.[v] || 0;
+                            const hasKeywordOverlap = keywordOverlaps[u]?.[v] && keywordOverlaps[u][v].length > 0;
+                            
+                            // Use similarityThreshold parameter: VERY similar (>=threshold) AND same intent AND have keyword overlaps
+                            if (uIntent === vIntent && urlToUrlSimilarity >= similarityThreshold && hasKeywordOverlap) {
+                                cluster.push(v);
+                                processedUrls.add(v);
+                            }
                         });
                         
-                        const clusterLength = cluster.length || 1; // Prevent division by zero
-                        const totalVal = cluster.reduce((sum, url) => sum + (resultsByUrl[url]?.valueScore || 0), 0);
-                        consolidationClusters.push({
-                            urls: cluster,
-                            intent: uIntent,
-                            avgSimilarity: cluster.reduce((sum, url) => sum + (seedTopicSimilarities[url] || 0), 0) / clusterLength,
-                            avgValue: totalVal / clusterLength,
-                            totalValue: totalVal,
-                            urlToUrlSimilarity: urlSimilarityMatrix[cluster[0]]?.[cluster[1]] || 0,
-                            overlappingKeywords: Array.from(clusterKeywords)
-                        });
-                    }
-                });
+                        if (cluster.length > 1) {
+                            processedUrls.add(u);
+                            // Collect all overlapping keywords for the cluster
+                            const clusterKeywords = new Set();
+                            cluster.forEach(url1 => {
+                                cluster.forEach(url2 => {
+                                    if (url1 !== url2 && keywordOverlaps[url1]?.[url2]) {
+                                        keywordOverlaps[url1][url2].forEach(kw => clusterKeywords.add(kw));
+                                    }
+                                });
+                            });
+                            
+                            const clusterLength = cluster.length || 1; // Prevent division by zero
+                            const totalVal = cluster.reduce((sum, url) => sum + (resultsByUrl[url]?.valueScore || 0), 0);
+                            consolidationClusters.push({
+                                urls: cluster,
+                                intent: uIntent,
+                                avgSimilarity: cluster.reduce((sum, url) => sum + (seedTopicSimilarities[url] || 0), 0) / clusterLength,
+                                avgValue: totalVal / clusterLength,
+                                totalValue: totalVal,
+                                urlToUrlSimilarity: urlSimilarityMatrix[cluster[0]]?.[cluster[1]] || 0,
+                                overlappingKeywords: Array.from(clusterKeywords)
+                            });
+                        }
+                    });
 
-                // Step 9b: Analyze consolidation clusters with OpenAI
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing consolidation opportunities...</span>';
-                if (consolidationClusters.length > 0) {
+                    // Step 9b: Analyze consolidation clusters with OpenAI
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing consolidation opportunities...</span>';
+                    if (consolidationClusters.length > 0) {
                     for (const cluster of consolidationClusters) {
                         try {
                             const clusterData = cluster.urls.map(url => ({
@@ -3741,6 +3945,7 @@ ${JSON.stringify(clusterData, null, 2)}`;
                         }
                     }
                 }
+                }
 
                 // Step 10: Identify MAIN topic page
                 // Prioritize value score first, then use similarity as tiebreaker
@@ -3765,10 +3970,11 @@ ${JSON.stringify(clusterData, null, 2)}`;
 
                 // Internal linking strategy removed per user request
 
-                // Step 12: Generate Content Recommendations
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Generating content recommendations...</span>';
+                // Step 12: Generate Content Recommendations (only if includeRecommendations is enabled)
                 let contentRecommendations = null;
-                try {
+                if (includeRecommendations) {
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Generating content recommendations...</span>';
+                    try {
                     const recommendationsData = {
                         seedTopic,
                         urls: urls.map(u => ({
@@ -3830,15 +4036,17 @@ ${JSON.stringify(recommendationsData, null, 2)}`;
                             generalRecommendations: lines.length > 0 ? lines : [recommendationsResponse] 
                         };
                     }
-                } catch (e) {
-                    console.warn('Failed to generate content recommendations:', e);
-                    contentRecommendations = { error: e.message };
+                    } catch (e) {
+                        console.warn('Failed to generate content recommendations:', e);
+                        contentRecommendations = { error: e.message };
+                    }
                 }
 
-                // Step 13: Generate New Content to Create
-                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Identifying new content opportunities...</span>';
+                // Step 13: Generate New Content to Create (only if includeNewContent is enabled)
                 let newContentToCreate = null;
-                try {
+                if (includeNewContent) {
+                    allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Identifying new content opportunities...</span>';
+                    try {
                     const newContentData = {
                         seedTopic,
                         existingUrls: urls.map(u => ({
@@ -4064,9 +4272,10 @@ ${JSON.stringify(newContentData, null, 2)}`;
                             }] 
                         };
                     }
-                } catch (e) {
-                    console.warn('Failed to generate new content ideas:', e);
-                    newContentToCreate = { error: e.message };
+                    } catch (e) {
+                        console.warn('Failed to generate new content ideas:', e);
+                        newContentToCreate = { error: e.message };
+                    }
                 }
 
                 return {
@@ -4082,7 +4291,12 @@ ${JSON.stringify(newContentData, null, 2)}`;
                     mainTopicPage,
                     relatedKeywords: relatedKeywords.slice(0, 50),
                     contentRecommendations,
-                    newContentToCreate
+                    newContentToCreate,
+                    urlSimilarityMatrix: includeSimilarityMatrix ? urlSimilarityMatrix : null,
+                    includeConsolidation,
+                    includeRecommendations,
+                    includeNewContent,
+                    includeSimilarityMatrix
                 };
             }
 
@@ -4495,7 +4709,8 @@ ${resultsByUrl[url].summary}`;
                         clusterIndex: idx,
                         urls: cluster.map(urlIdx => validUrls[urlIdx]),
                         label: clusterLabels[idx] || null
-                    }))
+                    })),
+                    intentErrors: intentErrors || []
                 };
             }
 
@@ -4504,6 +4719,34 @@ ${resultsByUrl[url].summary}`;
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
+                
+                // Show/hide intent errors notification
+                const intentErrorsNotification = document.getElementById('intent-errors-notification');
+                const intentErrorsContent = document.getElementById('intent-errors-content');
+                if (payload.intentErrors && payload.intentErrors.length > 0) {
+                    const errorCount = payload.intentErrors.length;
+                    const errorReasons = {};
+                    payload.intentErrors.forEach(err => {
+                        const reason = err.reason || 'Unknown error';
+                        errorReasons[reason] = (errorReasons[reason] || 0) + 1;
+                    });
+                    
+                    let errorSummary = `<strong>${errorCount}</strong> keyword${errorCount !== 1 ? 's' : ''} failed to get search intent data from the API.`;
+                    if (Object.keys(errorReasons).length > 0) {
+                        errorSummary += '<br><br><strong>Error breakdown:</strong><ul class="list-disc list-inside mt-1 space-y-1">';
+                        Object.entries(errorReasons).forEach(([reason, count]) => {
+                            errorSummary += `<li>${reason}: ${count} keyword${count !== 1 ? 's' : ''}</li>`;
+                        });
+                        errorSummary += '</ul>';
+                    }
+                    errorSummary += '<br><span class="text-xs opacity-75">These keywords will show as "Unknown" intent in the analysis.</span>';
+                    
+                    intentErrorsContent.innerHTML = errorSummary;
+                    intentErrorsNotification.classList.remove('hidden');
+                } else {
+                    intentErrorsNotification.classList.add('hidden');
+                }
+                
                 try {
                 const { urls, locale, limit, resultsByUrl, overlaps } = payload;
                 const formatNumber = (num) => {
@@ -4954,11 +5197,38 @@ ${resultsByUrl[url].summary}`;
             }
 
             function showContentClusterDashboard(payload) {
+                // Show/hide intent errors notification
+                const intentErrorsNotification = document.getElementById('intent-errors-notification');
+                const intentErrorsContent = document.getElementById('intent-errors-content');
+                if (payload.intentErrors && payload.intentErrors.length > 0) {
+                    const errorCount = payload.intentErrors.length;
+                    const errorReasons = {};
+                    payload.intentErrors.forEach(err => {
+                        const reason = err.reason || 'Unknown error';
+                        errorReasons[reason] = (errorReasons[reason] || 0) + 1;
+                    });
+                    
+                    let errorSummary = `<strong>${errorCount}</strong> keyword${errorCount !== 1 ? 's' : ''} failed to get search intent data from the API.`;
+                    if (Object.keys(errorReasons).length > 0) {
+                        errorSummary += '<br><br><strong>Error breakdown:</strong><ul class="list-disc list-inside mt-1 space-y-1">';
+                        Object.entries(errorReasons).forEach(([reason, count]) => {
+                            errorSummary += `<li>${reason}: ${count} keyword${count !== 1 ? 's' : ''}</li>`;
+                        });
+                        errorSummary += '</ul>';
+                    }
+                    errorSummary += '<br><span class="text-xs opacity-75">These keywords will show as "Unknown" intent in the analysis.</span>';
+                    
+                    intentErrorsContent.innerHTML = errorSummary;
+                    intentErrorsNotification.classList.remove('hidden');
+                } else {
+                    intentErrorsNotification.classList.add('hidden');
+                }
+                
                 allDOMElements.tableWrapper.classList.add('hidden');
                 allDOMElements.filterBtn.classList.add('hidden');
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 try {
-                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, relatedKeywords, contentRecommendations, newContentToCreate } = payload;
+                const { seedTopic, urls, locale, limit, similarityThreshold, resultsByUrl, seedTopicSimilarities, intentGroups, consolidationClusters, mainTopicPage, relatedKeywords, contentRecommendations, newContentToCreate, urlSimilarityMatrix, includeConsolidation = false, includeRecommendations = false, includeNewContent = false, includeSimilarityMatrix = false } = payload;
                 const formatNumber = (num) => {
                     if (typeof num !== 'number' || num === 'N/A') return num;
                     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -5041,22 +5311,23 @@ ${resultsByUrl[url].summary}`;
                 html += '</div>';
                 html += '</div>';
 
-                // Consolidation Clusters
-                html += '<div id="consolidation-clusters-section" class="mt-6">';
-                html += '<div class="flex items-center justify-between mb-4">';
-                html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Content Consolidation Clusters</h4>';
-                html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="consolidation-clusters-content">Collapse</button>';
-                html += '</div>';
-                html += '<div id="consolidation-clusters-content">';
-                if (consolidationClusters.length > 0) {
-                    html += '<div class="space-y-4">';
-                    const consolidationColors = [
-                        'border-2 border-[var(--text-accent)]', // blue
-                        'border-2 border-fuchsia-400', // pink
-                        'border-2 border-emerald-400', // green
-                        'border-2 border-violet-400'  // purple
-                    ];
-                    consolidationClusters.forEach((cluster, idx) => {
+                // Consolidation Clusters (show if requested, even if empty)
+                if (includeConsolidation) {
+                    html += '<div id="consolidation-clusters-section" class="mt-6">';
+                    html += '<div class="flex items-center justify-between mb-4">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Content Consolidation Clusters</h4>';
+                    html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="consolidation-clusters-content">Collapse</button>';
+                    html += '</div>';
+                    html += '<div id="consolidation-clusters-content">';
+                    if (consolidationClusters && Array.isArray(consolidationClusters) && consolidationClusters.length > 0) {
+                        html += '<div class="space-y-4">';
+                        const consolidationColors = [
+                            'border-2 border-[var(--text-accent)]', // blue
+                            'border-2 border-fuchsia-400', // pink
+                            'border-2 border-emerald-400', // green
+                            'border-2 border-violet-400'  // purple
+                        ];
+                        consolidationClusters.forEach((cluster, idx) => {
                         const aiAnalysis = cluster.aiAnalysis || {};
                         const urlToKeep = aiAnalysis.urlToKeep || cluster.urls[0];
                         const borderClass = consolidationColors[idx % consolidationColors.length];
@@ -5106,16 +5377,17 @@ ${resultsByUrl[url].summary}`;
                         html += '</div>';
                     });
                     html += '</div>';
-                } else {
-                    html += `<p class="text-[var(--text-secondary)]">No consolidation clusters identified. URLs are sufficiently distinct.</p>`;
+                    } else {
+                        html += '<p class="text-[var(--text-secondary)]">No consolidation clusters identified. URLs are sufficiently distinct.</p>';
+                    }
+                    html += '</div>';
+                    html += '</div>';
                 }
-                html += '</div>';
-                html += '</div>';
 
                 // Internal Linking Strategy removed per user request
 
-                // Content Recommendations
-                if (contentRecommendations && !contentRecommendations.error) {
+                // Content Recommendations (only show if requested and has data)
+                if (contentRecommendations && !contentRecommendations.error && (contentRecommendations.recommendations || contentRecommendations.generalRecommendations)) {
                     html += '<div id="content-recommendations-section" class="mt-6">';
                     html += '<div class="flex items-center justify-between mb-4">';
                     html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Recommendations to Update Existing Content</h4>';
@@ -5279,6 +5551,29 @@ ${resultsByUrl[url].summary}`;
                     html += '</div>';
                 }
 
+                // Semantic Similarity Matrix
+                if (urlSimilarityMatrix && Object.keys(urlSimilarityMatrix).length > 0) {
+                    html += '<div id="similarity-matrix-section" class="mt-6">';
+                    html += '<div class="flex items-center justify-between mb-4">';
+                    html += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Semantic Similarity Matrix</h4>';
+                    html += '<button type="button" class="cca-section-toggle px-3 py-1 text-sm rounded-md border border-[var(--border-primary)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:bg-[var(--bg-container)]" data-section="similarity-matrix-content">Collapse</button>';
+                    html += '</div>';
+                    html += '<div id="similarity-matrix-content">';
+                    html += '<p class="text-sm text-[var(--text-secondary)] mb-4">View semantic similarity scores between URLs. Select a URL from the dropdown to filter the table.</p>';
+                    html += '<div class="mb-4">';
+                    html += '<label for="cca-similarity-matrix-filter" class="block text-sm font-semibold text-[var(--text-primary)] mb-2">Filter by URL:</label>';
+                    html += '<select id="cca-similarity-matrix-filter" class="w-full md:w-auto bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded-md p-2 text-[var(--text-primary)]">';
+                    urls.forEach((url, idx) => {
+                        const selected = idx === 0 ? 'selected' : '';
+                        html += `<option value="${idx}" ${selected}>URL ${idx + 1}: ${url.length > 60 ? url.substring(0, 60) + '...' : url}</option>`;
+                    });
+                    html += '</select>';
+                    html += '</div>';
+                    html += '<div id="cca-similarity-matrix-table" class="overflow-x-auto"></div>';
+                    html += '</div>';
+                    html += '</div>';
+                }
+
                 // Individual URL Summaries with Anchor Text
                 html += '<div id="url-metrics-grid" class="metrics-grid-container mt-6">';
                 html += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4 w-full col-span-full">Individual URL Summaries</h4>';
@@ -5299,7 +5594,7 @@ ${resultsByUrl[url].summary}`;
                     const topAnchors = resultsByUrl[u].topAnchors || [];
                     const borderClass = urlSummaryColors[idx % urlSummaryColors.length];
                     
-                    html += `<div class="bg-[var(--bg-container)] ${borderClass} rounded-lg p-4 min-w-0 overflow-hidden" style="max-width: 100%; box-sizing: border-box; word-wrap: break-word;">`;
+                    html += `<div class="bg-[var(--bg-container)] ${borderClass} rounded-lg p-4 min-w-0 overflow-hidden" style="max-width: 100%; box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word;">`;
                     html += `<h4 class="font-semibold text-[var(--text-primary)] mb-1 truncate min-w-0">URL ${idx + 1}</h4>`;
                     html += `<p class="text-xs text-[var(--text-secondary)] break-all mb-3 min-w-0 overflow-wrap-anywhere">${u}</p>`;
                     
@@ -5354,10 +5649,10 @@ ${resultsByUrl[url].summary}`;
                         html += '<div class="text-sm text-[var(--text-secondary)]">No keywords ranking in the top 50 positions</div>';
                     } else {
                         html += '<div class="text-sm text-[var(--text-secondary)]">Top 5:</div>';
-                        html += '<div class="space-y-1 text-sm mt-1 min-w-0">';
+                        html += '<div class="space-y-1 text-sm mt-1 min-w-0 overflow-hidden">';
                         rkList.slice(0, 5).forEach(k => {
                             const keyword = k.keyword || 'N/A';
-                            html += `<div class="min-w-0 break-words"><span class="text-[var(--text-primary)] break-words">${keyword}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
+                            html += `<div class="min-w-0 break-words overflow-wrap-anywhere"><span class="text-[var(--text-primary)] break-words overflow-wrap-anywhere">${keyword}</span> <span class="text-[var(--text-secondary)]">• Rank:</span> <span class="text-[var(--text-primary)]">${k.rank_position ?? 'N/A'}</span></div>`;
                         });
                         html += '</div>';
                         
@@ -5408,9 +5703,11 @@ ${resultsByUrl[url].summary}`;
                     ccaAnchorModal = document.createElement('div');
                     ccaAnchorModal.id = 'cca-anchor-modal';
                     ccaAnchorModal.className = 'hidden';
+                    ccaAnchorModal.style.position = 'fixed';
+                    ccaAnchorModal.style.zIndex = '9999';
                     ccaAnchorModal.innerHTML = `
-                        <div class="fixed inset-0 z-[9998] bg-black/50" data-overlay></div>
-                        <div class="fixed z-[9999] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--bg-container)] text-[var(--text-primary)] w-[min(92vw,800px)] max-h-[80vh] rounded-lg shadow-xl border border-[var(--border-primary)] p-4 overflow-auto" role="dialog" aria-modal="true">
+                        <div class="fixed inset-0 z-[9998] bg-black/50" data-overlay style="position: fixed !important;"></div>
+                        <div class="fixed z-[9999] bg-[var(--bg-container)] text-[var(--text-primary)] w-[min(92vw,800px)] max-h-[80vh] rounded-lg shadow-xl border border-[var(--border-primary)] p-4 overflow-auto" role="dialog" aria-modal="true" style="position: fixed !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 9999 !important;">
                             <div class="flex items-center justify-between mb-3">
                                 <h5 class="font-semibold">Inbound Anchor Texts</h5>
                                 <button type="button" class="cca-modal-close text-sm px-2 py-1 border border-[var(--border-primary)] rounded-md">Close</button>
@@ -5517,7 +5814,7 @@ ${resultsByUrl[url].summary}`;
                                     const tooltip = cell.getRow().getData().valueScoreTooltip || '';
                                     return `<span title="${tooltip}">${cell.getValue()}</span>`;
                                 }},
-                                { title: 'Primary Intent', field: 'primaryIntent', sorter: 'string', width: 150, formatter: (cell) => {
+                                { title: 'Primary Intent', field: 'primaryIntent', sorter: 'string', width: 220, formatter: (cell) => {
                                     const intent = cell.getValue();
                                     const intentColor = cell.getRow().getData().intentColor;
                                     return `<div style="background-color: ${intentColor}20; color: ${intentColor}; font-weight: 600; padding: 4px; border-radius: 4px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: help;" title="${intent}"><span style="background:${intentColor};width:8px;height:8px;border-radius:9999px;display:inline-block"></span><span class="truncate">${intent}</span></div>`;
@@ -5533,6 +5830,141 @@ ${resultsByUrl[url].summary}`;
                         });
                     }
                 }, 100);
+                
+                // Initialize Semantic Similarity Matrix table
+                if (urlSimilarityMatrix && Object.keys(urlSimilarityMatrix).length > 0) {
+                    setTimeout(() => {
+                        const matrixTableEl = document.getElementById('cca-similarity-matrix-table');
+                        const matrixFilterEl = document.getElementById('cca-similarity-matrix-filter');
+                        
+                        if (matrixTableEl && typeof Tabulator !== 'undefined') {
+                            // Store urls and matrix in closure-safe variables
+                            const matrixUrls = [...urls]; // Copy array to ensure it's available
+                            const matrixData = urlSimilarityMatrix; // Store reference
+                            
+                            // Build matrix data
+                            const buildMatrixData = (filterUrlIdx = null) => {
+                                const data = [];
+                                const isFiltered = filterUrlIdx !== null && filterUrlIdx !== '' && !isNaN(filterUrlIdx);
+                                const url1Filter = isFiltered ? matrixUrls[parseInt(filterUrlIdx)] : null;
+                                
+                                if (isFiltered && url1Filter) {
+                                    // When filtered, show only URL 2 and Similarity Score (exclude self-comparison)
+                                    matrixUrls.forEach(url2 => {
+                                        if (url1Filter !== url2) {
+                                            const similarity = matrixData[url1Filter]?.[url2] || matrixData[url2]?.[url1Filter] || 0;
+                                            data.push({
+                                                url1: url1Filter,
+                                                url2: url2,
+                                                similarity: similarity,
+                                                similarityPercent: (similarity * 100).toFixed(1) + '%'
+                                            });
+                                        }
+                                    });
+                                } else {
+                                    // Show all URLs (URL 1, URL 2, Similarity Score)
+                                    matrixUrls.forEach(url1 => {
+                                        matrixUrls.forEach(url2 => {
+                                            if (url1 === url2) {
+                                                data.push({
+                                                    url1: url1,
+                                                    url2: url2,
+                                                    similarity: 1.0,
+                                                    similarityPercent: '100.0%'
+                                                });
+                                            } else {
+                                                const similarity = matrixData[url1]?.[url2] || matrixData[url2]?.[url1] || 0;
+                                                data.push({
+                                                    url1: url1,
+                                                    url2: url2,
+                                                    similarity: similarity,
+                                                    similarityPercent: (similarity * 100).toFixed(1) + '%'
+                                                });
+                                            }
+                                        });
+                                    });
+                                }
+                                return data;
+                            };
+                            
+                            // Build columns based on whether filtered
+                            const buildColumns = (isFiltered) => {
+                                if (isFiltered) {
+                                    // When filtered, show only URL 2 and Similarity Score
+                                    return [
+                                        { title: 'URL 2', field: 'url2', sorter: 'string', widthGrow: 2, formatter: (cell) => {
+                                            return `<span class="break-all">${cell.getValue()}</span>`;
+                                        }},
+                                        { title: 'Similarity Score', field: 'similarity', sorter: 'number', width: 180, formatter: (cell) => {
+                                            const similarity = cell.getValue() || 0;
+                                            const similarityPercent = (similarity * 100).toFixed(1) + '%';
+                                            // Green-to-yellow scale: green (high similarity) to yellow (low similarity)
+                                            const green = Math.round(34 + (234 - 34) * (1 - similarity));
+                                            const blue = Math.round(94 + (8 - 94) * (1 - similarity));
+                                            const red = Math.round(197 + (234 - 197) * (1 - similarity));
+                                            const bgColor = `rgb(${red}, ${green}, ${blue})`;
+                                            return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center; color: ${similarity > 0.5 ? '#ffffff' : '#000000'};">${similarityPercent}</div>`;
+                                        }}
+                                    ];
+                                } else {
+                                    // Show all columns (URL 1, URL 2, Similarity Score)
+                                    return [
+                                        { title: 'URL 1', field: 'url1', sorter: 'string', widthGrow: 2, formatter: (cell) => {
+                                            return `<span class="break-all">${cell.getValue()}</span>`;
+                                        }},
+                                        { title: 'URL 2', field: 'url2', sorter: 'string', widthGrow: 2, formatter: (cell) => {
+                                            return `<span class="break-all">${cell.getValue()}</span>`;
+                                        }},
+                                        { title: 'Similarity Score', field: 'similarity', sorter: 'number', width: 180, formatter: (cell) => {
+                                            const similarity = cell.getValue() || 0;
+                                            const similarityPercent = (similarity * 100).toFixed(1) + '%';
+                                            // Green-to-yellow scale: green (high similarity) to yellow (low similarity)
+                                            const green = Math.round(34 + (234 - 34) * (1 - similarity));
+                                            const blue = Math.round(94 + (8 - 94) * (1 - similarity));
+                                            const red = Math.round(197 + (234 - 197) * (1 - similarity));
+                                            const bgColor = `rgb(${red}, ${green}, ${blue})`;
+                                            return `<div style="background-color: ${bgColor}; padding: 4px; border-radius: 4px; font-weight: 600; text-align: center; color: ${similarity > 0.5 ? '#ffffff' : '#000000'};">${similarityPercent}</div>`;
+                                        }}
+                                    ];
+                                }
+                            };
+                            
+                            // Default to first URL (index 0)
+                            const defaultFilterIdx = '0';
+                            let matrixTable = new Tabulator("#cca-similarity-matrix-table", {
+                                data: buildMatrixData(defaultFilterIdx),
+                                columns: buildColumns(true),
+                                layout: "fitDataStretch",
+                                pagination: "local",
+                                paginationSize: 25,
+                                movableColumns: true,
+                                resizableColumns: true
+                            });
+                            
+                            // Set up filter handler
+                            if (matrixFilterEl) {
+                                matrixFilterEl.addEventListener('change', (e) => {
+                                    const filterValue = e.target.value;
+                                    const isFiltered = filterValue !== null && filterValue !== '' && !isNaN(filterValue);
+                                    const newData = buildMatrixData(filterValue);
+                                    const newColumns = buildColumns(isFiltered);
+                                    
+                                    // Destroy and rebuild table to avoid breaking
+                                    matrixTable.destroy();
+                                    matrixTable = new Tabulator("#cca-similarity-matrix-table", {
+                                        data: newData,
+                                        columns: newColumns,
+                                        layout: "fitDataStretch",
+                                        pagination: "local",
+                                        paginationSize: 25,
+                                        movableColumns: true,
+                                        resizableColumns: true
+                                    });
+                                });
+                            }
+                        }
+                    }, 150);
+                }
                 
                 // Set up collapse/expand handlers for all sections
                 allDOMElements.rawWrapper.querySelectorAll('.cca-section-toggle').forEach(btn => {
@@ -5842,11 +6274,72 @@ ${resultsByUrl[url].summary}`;
                 dashboardHTML += '</div>';
                 dashboardHTML += '</div>';
                 
+                // Calculate winners for high-level summary
+                // Filter out _linkIntersect which is not a domain entry
+                const domainArray = Object.values(data).filter(item => item.domain && !item._linkIntersect);
+                let maxBA = -Infinity, maxBADomain = null;
+                let maxDA = -Infinity, maxDADomain = null;
+                let maxLinkingDomains = -Infinity, maxLinkingDomainsDomain = null;
+                let maxLinks = -Infinity, maxLinksDomain = null;
+                let maxKeywords = -Infinity, maxKeywordsDomain = null;
+                
+                // First pass: find the maximum values for each metric
+                domainArray.forEach((domainData, idx) => {
+                    const sm = domainData.siteMetrics?.data?.site_metrics || {};
+                    const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score;
+                    const da = sm.domain_authority;
+                    const linkingDomains = sm.root_domains_to_root_domain;
+                    const links = sm.external_pages_to_root_domain;
+                    const kc = domainData.keywordCount?.data?.ranking_keyword_count?.total || 0;
+                    const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
+                    
+                    if (typeof ba === 'number' && ba > maxBA) { maxBA = ba; maxBADomain = idx === 0 ? 'Your Domain' : domainName; }
+                    if (typeof da === 'number' && da > maxDA) { maxDA = da; maxDADomain = idx === 0 ? 'Your Domain' : domainName; }
+                    if (typeof linkingDomains === 'number' && linkingDomains > maxLinkingDomains) { maxLinkingDomains = linkingDomains; maxLinkingDomainsDomain = idx === 0 ? 'Your Domain' : domainName; }
+                    if (typeof links === 'number' && links > maxLinks) { maxLinks = links; maxLinksDomain = idx === 0 ? 'Your Domain' : domainName; }
+                    if (kc > maxKeywords) { maxKeywords = kc; maxKeywordsDomain = idx === 0 ? 'Your Domain' : domainName; }
+                });
+                
+                // Second pass: check if "Your Domain" (idx 0) wins each category
+                const yourDomainWins = { ba: 0, da: 0, linkingDomains: 0, links: 0, keywords: 0 };
+                if (domainArray.length > 0) {
+                    const yourDomainData = domainArray[0];
+                    const sm = yourDomainData.siteMetrics?.data?.site_metrics || {};
+                    const yourBA = yourDomainData.brandAuthority?.data?.site_metrics?.brand_authority_score;
+                    const yourDA = sm.domain_authority;
+                    const yourLinkingDomains = sm.root_domains_to_root_domain;
+                    const yourLinks = sm.external_pages_to_root_domain;
+                    const yourKC = yourDomainData.keywordCount?.data?.ranking_keyword_count?.total || 0;
+                    
+                    if (typeof yourBA === 'number' && yourBA === maxBA && maxBADomain === 'Your Domain') yourDomainWins.ba = 1;
+                    if (typeof yourDA === 'number' && yourDA === maxDA && maxDADomain === 'Your Domain') yourDomainWins.da = 1;
+                    if (typeof yourLinkingDomains === 'number' && yourLinkingDomains === maxLinkingDomains && maxLinkingDomainsDomain === 'Your Domain') yourDomainWins.linkingDomains = 1;
+                    if (typeof yourLinks === 'number' && yourLinks === maxLinks && maxLinksDomain === 'Your Domain') yourDomainWins.links = 1;
+                    if (yourKC === maxKeywords && maxKeywordsDomain === 'Your Domain') yourDomainWins.keywords = 1;
+                }
+                
+                const totalWins = yourDomainWins.ba + yourDomainWins.da + yourDomainWins.linkingDomains + yourDomainWins.links + yourDomainWins.keywords;
+                
+                // High-level summary
+                dashboardHTML += '<div class="mb-6 p-4 bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg">';
+                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-3">Competitive Summary</h4>';
+                dashboardHTML += '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">';
+                dashboardHTML += `<div>Highest Brand Authority: <span class="font-semibold text-[var(--text-primary)]">${maxBADomain || 'N/A'}</span></div>`;
+                dashboardHTML += `<div>Highest Domain Authority: <span class="font-semibold text-[var(--text-primary)]">${maxDADomain || 'N/A'}</span></div>`;
+                dashboardHTML += `<div>Most Linking Domains: <span class="font-semibold text-[var(--text-primary)]">${maxLinkingDomainsDomain || 'N/A'}</span></div>`;
+                dashboardHTML += `<div>Most Inbound Links: <span class="font-semibold text-[var(--text-primary)]">${maxLinksDomain || 'N/A'}</span></div>`;
+                dashboardHTML += `<div>Most Ranking Keywords: <span class="font-semibold text-[var(--text-primary)]">${maxKeywordsDomain || 'N/A'}</span></div>`;
+                dashboardHTML += `<div class="md:col-span-2 pt-2 border-t border-[var(--border-primary)]">Your domain to competitors: winning <span class="font-bold text-[var(--text-accent)]">${totalWins}</span> out of 5 categories.</div>`;
+                dashboardHTML += '</div>';
+                dashboardHTML += '</div>';
+                
                 // Create metrics grid - ensure all boxes in one row
-                const domainCount = Object.keys(data).length;
+                // Filter out _linkIntersect which is not a domain entry
+                const domainEntries = Object.values(data).filter(item => item.domain && !item._linkIntersect);
+                const domainCount = domainEntries.length;
                 const initialColumns = domainCount <= 2 ? domainCount : 2; // Start with 2 columns if 2+ domains, else show all
                 dashboardHTML += `<div id=\"competitive-metrics-grid\" class=\"metrics-grid-container\">`;
-                Object.values(data).forEach((domainData, idx) => {
+                domainEntries.forEach((domainData, idx) => {
                     const sm = domainData.siteMetrics?.data?.site_metrics || {};
                     const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
                     const da = sm.domain_authority ?? 'N/A';
@@ -5937,13 +6430,13 @@ ${resultsByUrl[url].summary}`;
                 // Move domain selector here
                 dashboardHTML += '<div><label for="domain-selector" class="inline-block text-sm font-medium text-[var(--text-secondary)] mr-2">View Details For:</label>';
                 dashboardHTML += '<select id="domain-selector" class="inline-block bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)]">';
-                Object.values(data).forEach((domainData, idx) => {
+                domainEntries.forEach((domainData, idx) => {
                     dashboardHTML += `<option value="${idx}">${domainData.label}: ${domainData.domain}</option>`;
                 });
                 dashboardHTML += '</select></div></div>';
                 
                 // Render Top Ranking Keywords tables
-                Object.values(data).forEach((domainData, idx) => {
+                domainEntries.forEach((domainData, idx) => {
                     dashboardHTML += `<div id="keywords-${idx}" class="keywords-panel ${idx === 0 ? '' : 'hidden'}">`;
                     dashboardHTML += `<h5 class="font-semibold text-[var(--text-heading)] mb-2">${domainData.label}</h5>`;
                     
@@ -5959,13 +6452,13 @@ ${resultsByUrl[url].summary}`;
                 
                 // Add Keyword Gap Snapshot section - SECOND
                 // Get your domain's keywords
-                const yourDomainData = Object.values(data)[0];
+                const yourDomainData = domainEntries[0];
                 const yourDomainName = yourDomainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                 const yourKeywords = new Set((yourDomainData.rankingKeywords?.data?.ranking_keywords || []).map(kw => kw.keyword?.toLowerCase()).filter(Boolean));
                 
                 // Find keywords competitors rank for that your domain doesn't
                 const gapKeywords = [];
-                Object.values(data).slice(1).forEach((competitorData) => {
+                domainEntries.slice(1).forEach((competitorData) => {
                     const competitorKeywords = competitorData.rankingKeywords?.data?.ranking_keywords || [];
                     competitorKeywords.forEach(kw => {
                         const kwLower = kw.keyword?.toLowerCase();
@@ -6020,7 +6513,7 @@ ${resultsByUrl[url].summary}`;
                 
                 // Extract all keywords for each domain
                 const domainKeywords = {};
-                Object.values(data).forEach((domainData, idx) => {
+                domainEntries.forEach((domainData, idx) => {
                     const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                     const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                     domainKeywords[domainName] = keywords.map(kw => kw.keyword?.toLowerCase()).filter(Boolean);
@@ -6049,7 +6542,7 @@ ${resultsByUrl[url].summary}`;
                             const keywordData = {};
                             domainNames.forEach(domain => {
                                 // Find the domain data entry that matches this domain name
-                                const domainEntry = Object.values(data).find(d => {
+                                const domainEntry = domainEntries.find(d => {
                                     const dName = d.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                                     return dName === domain;
                                 });
@@ -6077,6 +6570,36 @@ ${resultsByUrl[url].summary}`;
                 }
                 dashboardHTML += '</div>';
                 dashboardHTML += '</div>';
+                
+                // Add Link Intersect section if available
+                if (data._linkIntersect) {
+                    // Check both possible data structures: link_intersects array or direct array
+                    const linkIntersectData = Array.isArray(data._linkIntersect.link_intersects) 
+                        ? data._linkIntersect.link_intersects 
+                        : (Array.isArray(data._linkIntersect) ? data._linkIntersect : []);
+                    
+                    dashboardHTML += '<div id="link-intersect-section" class="mt-6">';
+                    dashboardHTML += '<div class="flex items-center justify-between mb-4">';
+                    dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)]">Link Opportunity Analysis</h4>';
+                    dashboardHTML += '<button id="toggle-link-intersect" class="text-sm text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] font-semibold">Collapse</button>';
+                    dashboardHTML += '</div>';
+                    dashboardHTML += '<p class="text-sm text-[var(--text-secondary)] mb-4">Pages that link to competitors but not to your domain.</p>';
+                    dashboardHTML += '<div id="link-intersect-content">';
+                    
+                    if (data._linkIntersect.error) {
+                        dashboardHTML += `<p class="text-[var(--text-error)] text-sm mt-2">Error: ${data._linkIntersect.error}</p>`;
+                    } else if (linkIntersectData.length > 0) {
+                        dashboardHTML += '<div id="comp-link-intersect-table"></div>';
+                    } else {
+                        const sortValue = data._linkIntersect?.options?.sort || 'unknown';
+                        dashboardHTML += '<p class="text-[var(--text-secondary)]">No link opportunities found with the current search criteria.</p>';
+                        dashboardHTML += `<p class="text-xs text-[var(--text-secondary)] mt-2 opacity-75">Sort: ${sortValue} | Try a different sort option or adjust your search parameters.</p>`;
+                    }
+                    
+                    dashboardHTML += '</div>';
+                    dashboardHTML += '</div>';
+                }
+                
                 dashboardHTML += '</div>';
                 
                 // Store JSON data and replace raw wrapper with dashboard
@@ -6100,17 +6623,19 @@ ${resultsByUrl[url].summary}`;
                 setTimeout(() => {
                     if (typeof Tabulator !== 'undefined') {
                         // Initialize ranking keywords tables
-                        Object.values(data).forEach((domainData, idx) => {
+                        domainEntries.forEach((domainData, idx) => {
                             const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                             if (keywords.length > 0 && document.getElementById(`comp-keywords-table-${idx}`)) {
                                 const limit = currentOriginalParams?.limit || 25;
-                                const tableData = keywords.slice(0, limit).map(kw => ({
-                                    keyword: kw.keyword || 'N/A',
-                                    rank: kw.rank_position ?? 'N/A',
-                                    page: kw.ranking_page || 'N/A',
-                                    difficulty: kw.difficulty ?? 'N/A',
-                                    volume: kw.volume ? formatNumber(kw.volume) : 'N/A'
-                                }));
+                                const tableData = keywords.slice(0, limit).map(kw => {
+                                    return {
+                                        keyword: kw.keyword || 'N/A',
+                                        rank: kw.rank_position ?? 'N/A',
+                                        page: kw.ranking_page || 'N/A',
+                                        difficulty: kw.difficulty ?? 'N/A',
+                                        volume: kw.volume ? formatNumber(kw.volume) : 'N/A'
+                                    };
+                                });
                                 
                                 new Tabulator(`#comp-keywords-table-${idx}`, {
                                     data: tableData,
@@ -6155,6 +6680,76 @@ ${resultsByUrl[url].summary}`;
                             });
                         }
                         
+                        // Initialize link intersect table
+                        const linkIntersectData = data._linkIntersect 
+                            ? (Array.isArray(data._linkIntersect.link_intersects) 
+                                ? data._linkIntersect.link_intersects 
+                                : (Array.isArray(data._linkIntersect) ? data._linkIntersect : []))
+                            : [];
+                        
+                        const linkIntersectTableElement = document.getElementById('comp-link-intersect-table');
+                        if (linkIntersectData.length > 0 && linkIntersectTableElement) {
+                            try {
+                                const linkIntersectTableData = linkIntersectData.map(intersect => {
+                                    if (!intersect || typeof intersect !== 'object') {
+                                        console.warn('Invalid intersect data:', intersect);
+                                        return [];
+                                    }
+                                    const sourcePages = intersect.matching_source_pages || [];
+                                    // If no source pages, create one row with N/A for source page fields
+                                    if (sourcePages.length === 0) {
+                                        return [{
+                                            page: intersect.page || 'N/A',
+                                            title: intersect.title || 'N/A',
+                                            domainAuthority: intersect.domain_authority ?? 'N/A',
+                                            spamScore: intersect.spam_score ?? 'N/A',
+                                            matchingTargetIndexes: (intersect.matching_target_indexes || []).join(', ') || 'N/A',
+                                            sourcePage: 'N/A',
+                                            sourcePageAuthority: 'N/A'
+                                        }];
+                                    }
+                                    return sourcePages.map(sourcePage => ({
+                                        page: intersect.page || 'N/A',
+                                        title: intersect.title || 'N/A',
+                                        domainAuthority: intersect.domain_authority ?? 'N/A',
+                                        spamScore: intersect.spam_score ?? 'N/A',
+                                        matchingTargetIndexes: (intersect.matching_target_indexes || []).join(', ') || 'N/A',
+                                        sourcePage: sourcePage?.page || 'N/A',
+                                        sourcePageAuthority: sourcePage?.page_authority ?? 'N/A'
+                                    }));
+                                }).flat().filter(Boolean); // Filter out any null/undefined entries
+                                
+                                if (linkIntersectTableData.length === 0) {
+                                    console.warn('Link Intersect table data is empty after processing');
+                                    return;
+                                }
+                                
+                                new Tabulator('#comp-link-intersect-table', {
+                                    data: linkIntersectTableData,
+                                    columns: [
+                                        { title: 'Intersecting Page', field: 'page', sorter: 'string', widthGrow: 2 },
+                                        { title: 'Title', field: 'title', sorter: 'string', widthGrow: 2 },
+                                        { title: 'Domain Authority', field: 'domainAuthority', sorter: 'number' },
+                                        { title: 'Spam Score', field: 'spamScore', sorter: 'number' },
+                                        { title: 'Matching Target Indexes', field: 'matchingTargetIndexes', sorter: 'string' },
+                                        { title: 'Source Page', field: 'sourcePage', sorter: 'string', widthGrow: 2 },
+                                        { title: 'Source PA', field: 'sourcePageAuthority', sorter: 'number' }
+                                    ],
+                                    layout: "fitDataStretch",
+                                    pagination: "local",
+                                    paginationSize: 25,
+                                    movableColumns: true,
+                                    resizableColumns: true
+                                });
+                            } catch (e) {
+                                console.error('Error initializing Link Intersect table:', e);
+                                const errorMsg = document.createElement('p');
+                                errorMsg.className = 'text-[var(--text-error)] text-sm mt-2';
+                                errorMsg.textContent = `Error displaying link opportunities: ${e.message}`;
+                                linkIntersectTableElement.parentNode?.appendChild(errorMsg);
+                            }
+                        }
+                        
                         // Initialize overlapping keywords table
                         if (overlappingKeywords && overlappingKeywords.length > 0 && document.getElementById('comp-overlapping-keywords-table')) {
                             const domainNames = Object.keys(domainKeywords);
@@ -6195,7 +6790,7 @@ ${resultsByUrl[url].summary}`;
                     if (gridContainer) {
                         const updateGrid = () => {
                             const width = window.innerWidth;
-                            const domainCount = Object.keys(data).length;
+                            const domainCount = domainEntries.length;
                             
                             // Always try to show all domains in one row
                             if (width >= 1280) {
@@ -6267,6 +6862,22 @@ ${resultsByUrl[url].summary}`;
                         } else {
                             overlappingContent.classList.add('hidden');
                             toggleOverlapping.textContent = 'Expand';
+                        }
+                    });
+                }
+                
+                // Add event listener for link intersect toggle
+                const toggleLinkIntersect = document.getElementById('toggle-link-intersect');
+                const linkIntersectContent = document.getElementById('link-intersect-content');
+                if (toggleLinkIntersect && linkIntersectContent) {
+                    toggleLinkIntersect.addEventListener('click', () => {
+                        const isHidden = linkIntersectContent.classList.contains('hidden');
+                        if (isHidden) {
+                            linkIntersectContent.classList.remove('hidden');
+                            toggleLinkIntersect.textContent = 'Collapse';
+                        } else {
+                            linkIntersectContent.classList.add('hidden');
+                            toggleLinkIntersect.textContent = 'Expand';
                         }
                     });
                 }
@@ -6454,11 +7065,14 @@ ${resultsByUrl[url].summary}`;
                     try {
                         const workbook = XLSX.utils.book_new();
                         
+                        // Filter out _linkIntersect which is not a domain entry
+                        const domainEntries = Object.values(data).filter(item => item.domain && !item._linkIntersect);
+                        
                         // Sheet 1: Domain Metrics Summary
                         const metricsData = [];
                         metricsData.push(['Domain', 'Brand Authority', 'Domain Authority', 'Total Links', 'Linking Domains', 'Spam Score', 'Ranks 1-3', 'Ranks 4-10', 'Ranks 11-20', 'Ranks 21-50', 'Total Keywords']);
                         
-                        Object.values(data).forEach((domainData) => {
+                        domainEntries.forEach((domainData) => {
                             const sm = domainData.siteMetrics?.data?.site_metrics || {};
                             const ba = domainData.brandAuthority?.data?.site_metrics?.brand_authority_score ?? 'N/A';
                             const da = sm.domain_authority ?? 'N/A';
@@ -6493,7 +7107,7 @@ ${resultsByUrl[url].summary}`;
                         XLSX.utils.book_append_sheet(workbook, metricsSheet, 'Domain Metrics');
                         
                         // Sheet 2: Ranking Keywords (one per domain)
-                        Object.values(data).forEach((domainData, idx) => {
+                        domainEntries.forEach((domainData, idx) => {
                             const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                             const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                             const sheetName = idx === 0 ? 'Your Domain Keywords' : `${domainName} Keywords`;
@@ -6515,7 +7129,7 @@ ${resultsByUrl[url].summary}`;
                         
                         // Sheet 3: Overlapping Keywords
                         const domainKeywords = {};
-                        Object.values(data).forEach((domainData) => {
+                        domainEntries.forEach((domainData) => {
                             const keywords = domainData.rankingKeywords?.data?.ranking_keywords || [];
                             const domainName = domainData.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                             domainKeywords[domainName] = keywords.map(kw => kw.keyword?.toLowerCase()).filter(Boolean);
@@ -6540,7 +7154,7 @@ ${resultsByUrl[url].summary}`;
                                 .map(([keyword, domains]) => {
                                     const keywordData = {};
                                     domainNames.forEach(domain => {
-                                        const domainEntry = Object.values(data).find(d => {
+                                        const domainEntry = domainEntries.find(d => {
                                             const dName = d.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0];
                                             return dName === domain;
                                         });
@@ -6570,11 +7184,11 @@ ${resultsByUrl[url].summary}`;
                         }
                         
                         // Sheet 4: Keyword Gap Snapshot
-                        const yourDomainData = Object.values(data)[0];
+                        const yourDomainData = domainEntries[0];
                         const yourKeywords = new Set((yourDomainData.rankingKeywords?.data?.ranking_keywords || []).map(kw => kw.keyword?.toLowerCase()).filter(Boolean));
                         
                         const gapKeywords = [];
-                        Object.values(data).slice(1).forEach((competitorData) => {
+                        domainEntries.slice(1).forEach((competitorData) => {
                             const competitorKeywords = competitorData.rankingKeywords?.data?.ranking_keywords || [];
                             competitorKeywords.forEach(kw => {
                                 const kwLower = kw.keyword?.toLowerCase();
@@ -6607,6 +7221,40 @@ ${resultsByUrl[url].summary}`;
                             
                             const gapSheet = XLSX.utils.aoa_to_sheet(gapData);
                             XLSX.utils.book_append_sheet(workbook, gapSheet, 'Keyword Gap Opportunities');
+                        }
+                        
+                        // Sheet 5: Link Intersect (if available)
+                        if (data._linkIntersect && data._linkIntersect.link_intersects && data._linkIntersect.link_intersects.length > 0) {
+                            const linkIntersectData = [['Intersecting Page', 'Title', 'Domain Authority', 'Spam Score', 'Matching Target Indexes', 'Source Page', 'Source Page Authority']];
+                            data._linkIntersect.link_intersects.forEach(intersect => {
+                                const sourcePages = intersect.matching_source_pages || [];
+                                if (sourcePages.length === 0) {
+                                    linkIntersectData.push([
+                                        intersect.page || 'N/A',
+                                        intersect.title || 'N/A',
+                                        intersect.domain_authority ?? 'N/A',
+                                        intersect.spam_score ?? 'N/A',
+                                        (intersect.matching_target_indexes || []).join(', ') || 'N/A',
+                                        'N/A',
+                                        'N/A'
+                                    ]);
+                                } else {
+                                    sourcePages.forEach(sourcePage => {
+                                        linkIntersectData.push([
+                                            intersect.page || 'N/A',
+                                            intersect.title || 'N/A',
+                                            intersect.domain_authority ?? 'N/A',
+                                            intersect.spam_score ?? 'N/A',
+                                            (intersect.matching_target_indexes || []).join(', ') || 'N/A',
+                                            sourcePage.page || 'N/A',
+                                            sourcePage.page_authority ?? 'N/A'
+                                        ]);
+                                    });
+                                }
+                            });
+                            
+                            const linkIntersectSheet = XLSX.utils.aoa_to_sheet(linkIntersectData);
+                            XLSX.utils.book_append_sheet(workbook, linkIntersectSheet, 'Link Opportunities');
                         }
                         
                         // Export the workbook
@@ -6721,7 +7369,7 @@ ${resultsByUrl[url].summary}`;
                 script.onload = () => {
                     try {
                         const workbook = XLSX.utils.book_new();
-                        const { seedTopic, urls = [], resultsByUrl = {}, seedTopicSimilarities = {}, intentGroups = {}, consolidationClusters = [], mainTopicPage, relatedKeywords = [] } = data || {};
+                        const { seedTopic, urls = [], resultsByUrl = {}, seedTopicSimilarities = {}, intentGroups = {}, consolidationClusters = [], mainTopicPage, relatedKeywords = [], urlSimilarityMatrix = null } = data || {};
 
                         // Sheet 1: Summary
                         const summary = [
@@ -6793,6 +7441,22 @@ ${resultsByUrl[url].summary}`;
                                 rkRows.push([kw]);
                             });
                             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rkRows), 'Related Keywords');
+                        }
+
+                        // Sheet 6: Semantic Similarity Matrix
+                        if (urlSimilarityMatrix && Object.keys(urlSimilarityMatrix).length > 0) {
+                            const matrixRows = [['URL 1', 'URL 2', 'Similarity Score']];
+                            urls.forEach(url1 => {
+                                urls.forEach(url2 => {
+                                    const similarity = url1 === url2 ? 1.0 : (urlSimilarityMatrix[url1]?.[url2] || urlSimilarityMatrix[url2]?.[url1] || 0);
+                                    matrixRows.push([
+                                        url1,
+                                        url2,
+                                        similarity
+                                    ]);
+                                });
+                            });
+                            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(matrixRows), 'Similarity Matrix');
                         }
 
                         // Sheets: Ranking Keywords per URL
@@ -7039,6 +7703,11 @@ ${resultsByUrl[url].summary}`;
             }
 
             function clearResultsData() {
+                // Hide intent errors notification
+                const intentErrorsNotification = document.getElementById('intent-errors-notification');
+                if (intentErrorsNotification) {
+                    intentErrorsNotification.classList.add('hidden');
+                }
                 currentResultsData = null;
                 currentOriginalParams = null;
                 currentMethod = null;
@@ -7172,6 +7841,18 @@ ${resultsByUrl[url].summary}`;
                         })
                         .map(([key, value]) => {
                             if (Array.isArray(value)) {
+                                // Handle arrays of objects (like is_linking_to, not_linking_to)
+                                if (value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
+                                    if (key === 'is_linking_to' || key === 'not_linking_to') {
+                                        const queries = value.map(item => item.query || (typeof item === 'string' ? item : JSON.stringify(item))).filter(Boolean);
+                                        if (queries.length > 3) {
+                                            return `${key}: ${queries.length} items (${queries.slice(0, 2).join(', ')}...)`;
+                                        }
+                                        return `${key}: ${queries.join(', ')}`;
+                                    }
+                                    // For other object arrays, show count
+                                    return `${key}: ${value.length} items`;
+                                }
                                 // For URLs arrays, show count and first few
                                 if (key === 'urls' && value.length > 3) {
                                     return `${key}: ${value.length} URLs (${value.slice(0, 2).join(', ')}...)`;
@@ -7233,10 +7914,13 @@ ${resultsByUrl[url].summary}`;
                             if (element.type === 'checkbox') {
                                 element.checked = value;
                             } else if (Array.isArray(value)) {
-                                // For competitive analysis competitors array, content cluster URLs, or any array value
-                                if (entry.method === 'contentClusterAnalysis' && key === 'urls') {
-                                    element.value = value.join('\n');
+                                // Handle arrays of objects (like is_linking_to, not_linking_to)
+                                if ((key === 'is_linking_to' || key === 'not_linking_to') && value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
+                                    // Extract query values from objects
+                                    const queries = value.map(item => item.query || (typeof item === 'string' ? item : '')).filter(Boolean);
+                                    element.value = queries.join('\n');
                                 } else {
+                                    // For regular arrays (URLs, keywords, etc.)
                                     element.value = value.join('\n');
                                 }
                             } else if (element.type === 'select-one' || element.type === 'select-multiple') {
@@ -7295,10 +7979,13 @@ ${resultsByUrl[url].summary}`;
                             if (element.type === 'checkbox') {
                                 element.checked = value;
                             } else if (Array.isArray(value)) {
-                                // For competitive analysis competitors array, content cluster URLs, or any array value
-                                if (entry.method === 'contentClusterAnalysis' && key === 'urls') {
-                                    element.value = value.join('\n');
+                                // Handle arrays of objects (like is_linking_to, not_linking_to)
+                                if ((key === 'is_linking_to' || key === 'not_linking_to') && value.length > 0 && typeof value[0] === 'object' && value[0] !== null) {
+                                    // Extract query values from objects
+                                    const queries = value.map(item => item.query || (typeof item === 'string' ? item : '')).filter(Boolean);
+                                    element.value = queries.join('\n');
                                 } else {
+                                    // For regular arrays (URLs, keywords, etc.)
                                     element.value = value.join('\n');
                                 }
                             } else if (element.type === 'select-one' || element.type === 'select-multiple') {
@@ -7403,10 +8090,10 @@ ${resultsByUrl[url].summary}`;
                     'linkIntersect': {
                         'scope': 'liScopeSelect',
                         'sort': 'liSortSelect',
-                        'minMatch': 'liMinMatch',
+                        'minimum_matching_targets': 'liMinMatch',
                         'limit': 'liLimit',
-                        'isLinkingTo': 'liIsLinkingTo',
-                        'notLinkingTo': 'liNotLinkingTo'
+                        'is_linking_to': 'liIsLinkingTo',
+                        'not_linking_to': 'liNotLinkingTo'
                     },
                     'listLinks': {
                         'scope': 'llScopeSelect',
@@ -7768,12 +8455,25 @@ ${resultsByUrl[url].summary}`;
                     case 'topPages': payload.params = { scope: getInputValue('tpScopeSelect'), targets: getCleanedList('tpUrlsInput'), limit: parseInt(getInputValue('tpLimit'), 10) || 25, filter: getInputValue('tpFilterSelect'), sort: getInputValue('tpSortSelect') }; break;
                     case 'linkIntersect': {
                         const intersectScope = getInputValue('liScopeSelect');
+                        const sortValue = getInputValue('liSortSelect');
+                        const validSortValues = ['matching_target_count', 'source_spam_score', 'source_domain_authority'];
+                        const isLinkingTo = getCleanedList('liIsLinkingTo');
+                        const notLinkingTo = getCleanedList('liNotLinkingTo');
+                        const totalTargets = isLinkingTo.length + notLinkingTo.length;
+                        
+                        if (isLinkingTo.length === 0) {
+                            throw new Error('Please enter at least one target in "Linking To".');
+                        }
+                        if (totalTargets > 6) {
+                            throw new Error(`Total targets cannot exceed 6. You have ${totalTargets} targets (${isLinkingTo.length} in "Linking To" + ${notLinkingTo.length} in "NOT Linking To"). Please reduce the number of targets.`);
+                        }
+                        
                         payload.params = { 
                             scope: intersectScope, 
                             limit: parseInt(getInputValue('liLimit'), 10) || 25, 
-                            is_linking_to: getCleanedList('liIsLinkingTo').map(q => ({query: q, scope: intersectScope})), 
-                            not_linking_to: getCleanedList('liNotLinkingTo').map(q => ({query: q, scope: intersectScope})), 
-                            sort: getInputValue('liSortSelect'), 
+                            is_linking_to: isLinkingTo.map(q => ({query: q, scope: intersectScope})), 
+                            not_linking_to: notLinkingTo.map(q => ({query: q, scope: intersectScope})), 
+                            sort: validSortValues.includes(sortValue) ? sortValue : 'matching_target_count', 
                             minimum_matching_targets: parseInt(getInputValue('liMinMatch'), 10) || 1 
                         }; 
                         break;
@@ -7787,12 +8487,28 @@ ${resultsByUrl[url].summary}`;
                         const competitors = getInputValue('caCompetitors')?.split(/[\n,]/).map(item => item.trim()).filter(Boolean).slice(0, 3);
                         if (!yourDomain) throw new Error('Please enter your domain.');
                         if (!competitors || competitors.length === 0) throw new Error('Please enter at least one competitor domain.');
+                        const includeLinkIntersect = document.getElementById('caIncludeLinkIntersect')?.checked || false;
                         payload.params = { 
                             yourDomain, 
                             competitors, 
                             locale: getInputValue('caLocaleSelect') || 'en-US',
-                            limit: parseInt(getInputValue('caLimit'), 10) || 25
+                            limit: parseInt(getInputValue('caLimit'), 10) || 25,
+                            includeLinkIntersect
                         };
+                        if (includeLinkIntersect) {
+                            const competitorCount = competitors.length;
+                            const minMatch = parseInt(getInputValue('caLinkIntersectMinMatch'), 10) || 1;
+                            if (minMatch > competitorCount) {
+                                throw new Error(`Minimum matching targets (${minMatch}) cannot exceed the number of competitors (${competitorCount})`);
+                            }
+                            const sortValue = getInputValue('caLinkIntersectSort');
+                            const validSortValues = ['matching_target_count', 'source_spam_score', 'source_domain_authority'];
+                            payload.params.linkIntersectParams = {
+                                limit: parseInt(getInputValue('caLinkIntersectLimit'), 10) || 25,
+                                minimum_matching_targets: minMatch,
+                                sort: validSortValues.includes(sortValue) ? sortValue : 'matching_target_count'
+                            };
+                        }
                         break;
                     }
                     case 'keywordTargetingAnalysis': {
@@ -7818,9 +8534,13 @@ ${resultsByUrl[url].summary}`;
                             seedTopic,
                             urls,
                             locale: getInputValue('ccaLocaleSelect') || 'en-US',
-                            similarityThreshold: parseFloat(getInputValue('ccaSimilarityThreshold')) || 0.85,
+                            similarityThreshold: parseFloat(getInputValue('ccaSimilarityThreshold')) || 0.9,
                             limit: parseInt(getInputValue('ccaLimit'), 10) || 25,
-                            model
+                            model,
+                            includeConsolidation: document.getElementById('ccaIncludeConsolidation')?.checked || false,
+                            includeRecommendations: document.getElementById('ccaIncludeRecommendations')?.checked || false,
+                            includeNewContent: document.getElementById('ccaIncludeNewContent')?.checked || false,
+                            includeSimilarityMatrix: document.getElementById('ccaIncludeSimilarityMatrix')?.checked || false
                         };
                         break;
                     }
@@ -7862,16 +8582,23 @@ ${resultsByUrl[url].summary}`;
                 const rows = DataProcessor.processResults(results, method, originalParams);
                 if (rows.length === 0) { displayError("No valid data to export."); return; }
                 
+                // Helper function to sanitize CSV values - removes newlines, tabs, and handles quotes
+                const sanitizeCsvValue = (value) => {
+                    if (value === undefined || value === null) return '';
+                    const stringValue = String(value);
+                    // Replace newlines (\n), carriage returns (\r), and tabs (\t) with spaces, then trim
+                    // This prevents CSV row breaks while preserving text content
+                    const sanitized = stringValue.replace(/[\n\r\t]+/g, ' ').trim();
+                    // Handle commas and quotes by wrapping in quotes and escaping internal quotes
+                    if (sanitized.includes(',') || sanitized.includes('"')) {
+                        return `"${sanitized.replace(/"/g, '""')}"`;
+                    }
+                    return sanitized;
+                };
+                
                 const allKeys = [...new Set(rows.flatMap(row => Object.keys(row)))];
                 const header = allKeys.join(',');
-                const csvRows = rows.map(row => allKeys.map(key => {
-                    const value = row[key] === undefined || row[key] === null ? '' : row[key];
-                    const stringValue = String(value);
-                    if (stringValue.includes(',') || stringValue.includes('"')) {
-                        return `"${stringValue.replace(/"/g, '""')}"`;
-                    }
-                    return stringValue;
-                }).join(','));
+                const csvRows = rows.map(row => allKeys.map(key => sanitizeCsvValue(row[key])).join(','));
                 const csvString = '\uFEFF' + [header, ...csvRows].join('\n');
                 const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
