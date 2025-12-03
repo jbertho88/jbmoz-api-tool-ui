@@ -1628,14 +1628,15 @@
                     createTextarea('cciContentClusters', 'Enter seed topics/clusters for content assignment, one per line (e.g., "Digital Marketing", "SEO Best Practices"). Leave blank to auto-generate clusters.') +
                     createDescription('If provided, pages will be mapped to these clusters. If blank, clusters will be auto-generated from the content.');
                 document.getElementById('aiVisibilityResearchInputs').innerHTML = 
-                    createDescription('Generate AI Visibility dashboard suggestions including prompts to track and brand/product terms for your brand and competitors.') +
+                    createDescription('Generate AI Visibility dashboard suggestions including 25 prompts to track (based on your topics) and product/sub-brand terms for your brand and competitors.') +
                     createLabel('Brand Name') +
                     createTextarea('avrBrandName', 'Enter your brand name (e.g., Bose)') +
                     createLabel('Website Domain (Optional)') +
                     createTextarea('avrWebsite', 'Enter your website domain (e.g., bose.com)') +
+                    createDescription('The website will be used to help identify product/sub-brand names for your brand.') +
                     createLabel('Topics to Cover (up to 3)') +
                     createTextarea('avrTopics', 'Enter topics your brand is in, one per line (e.g., Audio Equipment, Noise Cancelling Headphones)') +
-                    createDescription('Enter up to 3 topics, one per line.') +
+                    createDescription('These topics will be used to generate 25 suggested prompts to track. Enter up to 3 topics, one per line.') +
                     createLabel('Competitors (up to 4)') +
                     createTextarea('avrCompetitors', 'Enter competitor brand names, one per line (e.g., Sony, Sennheiser)') +
                     createDescription('Enter up to 4 competitor brand names, one per line.') +
@@ -4753,7 +4754,7 @@ ${resultsByUrl[url].summary}`;
                         urls: cluster.map(urlIdx => validUrls[urlIdx]),
                         label: clusterLabels[idx] || null
                     })),
-                    intentErrors: intentErrors || []
+                    intentErrors: []
                 };
             }
 
@@ -4769,15 +4770,18 @@ Here are the competitor brands: ${competitors.join(', ')}
 
 Return the following:
 
--- Suggested prompts to track based on my topics
--- Suggested product/brand related terms to track for each of these brands (e.g. If I put "Bose", I would expect "QuietComfort to come up as a product/sub-brand term")
+1. Generate exactly 25 suggested prompts to track based on the topics provided. These prompts should be relevant search queries that users might ask related to these topics.
+
+2. For the main brand "${brandName}"${website ? ` (website: ${website})` : ''}, provide a list of product names and sub-brand names that are associated with this brand. Research and identify actual products and sub-brands that this company offers.
+
+3. For each competitor brand, provide a list of product names and sub-brand names associated with that competitor brand.
 
 Return ONLY valid JSON in this format:
 {
-  "suggestedPrompts": ["prompt 1", "prompt 2", "prompt 3"],
+  "suggestedPrompts": ["prompt 1", "prompt 2", "prompt 3", ... (exactly 25 prompts)],
   "brandTerms": {
-    "${brandName}": ["term1", "term2", "term3"],
-    ${competitors.map(c => `"${c}": ["term1", "term2", "term3"]`).join(',\n    ')}
+    "${brandName}": ["product1", "product2", "sub-brand1", ...],
+    ${competitors.map(c => `"${c}": ["product1", "product2", "sub-brand1", ...]`).join(',\n    ')}
   }
 }`;
 
