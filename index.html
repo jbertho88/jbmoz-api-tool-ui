@@ -1628,7 +1628,7 @@
                     createTextarea('cciContentClusters', 'Enter seed topics/clusters for content assignment, one per line (e.g., "Digital Marketing", "SEO Best Practices"). Leave blank to auto-generate clusters.') +
                     createDescription('If provided, pages will be mapped to these clusters. If blank, clusters will be auto-generated from the content.');
                 document.getElementById('aiVisibilityResearchInputs').innerHTML = 
-                    createDescription('Generate AI Visibility dashboard suggestions including 25 prompts to track (based on your topics) and product/sub-brand terms for your brand and competitors.') +
+                    createDescription('Generate AI Visibility dashboard suggestions including prompts to track (based on your topics) and product/sub-brand terms for your brand and competitors.') +
                     createLabel('Brand Name') +
                     createTextarea('avrBrandName', 'Enter your brand name (e.g., Bose)') +
                     createLabel('Website Domain (Optional)') +
@@ -1636,10 +1636,12 @@
                     createDescription('The website will be used to help identify product/sub-brand names for your brand.') +
                     createLabel('Topics to Cover (up to 3)') +
                     createTextarea('avrTopics', 'Enter topics your brand is in, one per line (e.g., Audio Equipment, Noise Cancelling Headphones)') +
-                    createDescription('These topics will be used to generate 25 suggested prompts to track. Enter up to 3 topics, one per line.') +
+                    createDescription('These topics will be used to generate suggested prompts to track. Enter up to 3 topics, one per line.') +
                     createLabel('Competitors (up to 4)') +
                     createTextarea('avrCompetitors', 'Enter competitor brand names, one per line (e.g., Sony, Sennheiser)') +
                     createDescription('Enter up to 4 competitor brand names, one per line.') +
+                    createNumberInput('avrPromptCount', 25, 25, 100, 'Number of Prompt Suggestions') +
+                    createDescription('Enter the number of prompt suggestions to generate (25-100). Default is 25.') +
                     createLabel('OpenAI Model') +
                     createSelect('avrModelSelect', modelOptions) +
                     createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive.');
@@ -4759,7 +4761,7 @@ ${resultsByUrl[url].summary}`;
             }
 
             async function runAIVisibilityResearch(openaiApiKey, params, proxyUrl, inFlightRequest) {
-                const { brandName, website, topics, competitors, model } = params;
+                const { brandName, website, topics, competitors, promptCount = 25, model } = params;
                 
                 // Build the prompt
                 const prompt = `You are an SEO / GEO analyst creating an AI Visibility dashboard. 
@@ -4770,7 +4772,7 @@ Competitor brands: ${competitors.join(', ')}
 
 TASKS:
 
-1. Generate exactly 25 suggested search prompts based on the topics. These should be actual search queries users might type related to these topics.
+1. Generate exactly ${promptCount} suggested search prompts based on the topics. These should be actual search queries users might type related to these topics.
 
 2. For "${brandName}"${website ? ` (visit ${website} conceptually)` : ''}, provide 5-15 specific product names, model names, and sub-brand names. Examples: If the brand is "Bose", you might include "QuietComfort", "SoundLink", "Bose 700", "Bose Sport Earbuds", etc. These should be REAL products/models this brand actually offers.
 
@@ -4783,7 +4785,7 @@ IMPORTANT:
 
 Return ONLY valid JSON in this exact format (replace with actual data):
 {
-  "suggestedPrompts": ["best wireless earbuds for gym", "how to choose wireless earbuds", "wireless earbuds with noise cancellation", ... (exactly 25 prompts total)],
+  "suggestedPrompts": ["best wireless earbuds for gym", "how to choose wireless earbuds", "wireless earbuds with noise cancellation", ... (exactly ${promptCount} prompts total)],
   "brandTerms": {
     "${brandName}": ["EAH-AZ60", "EAH-AZ40", "EAH-AZ70", "R1", "SL-G700", ... (5-15 actual product/model names)],
     ${competitors.map(c => `"${c}": ["QuietComfort 45", "SoundLink", "Bose 700", ... (5-15 actual product/model names for ${c})]`).join(',\n    ')}
@@ -4845,13 +4847,37 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                         }
                     });
                     
+                    // Calculate brand presence in prompts
+                    const allBrands = [brandName, ...competitors];
+                    const brandPresence = {};
+                    const totalPrompts = parsedData.suggestedPrompts.length;
+                    
+                    allBrands.forEach(brand => {
+                        const brandLower = brand.toLowerCase();
+                        const brandTermsLower = (parsedData.brandTerms[brand] || []).map(term => term.toLowerCase());
+                        const allBrandTerms = [brandLower, ...brandTermsLower];
+                        
+                        let promptCount = 0;
+                        parsedData.suggestedPrompts.forEach(prompt => {
+                            const promptLower = prompt.toLowerCase();
+                            // Check if prompt contains brand name or any brand term
+                            if (allBrandTerms.some(term => promptLower.includes(term))) {
+                                promptCount++;
+                            }
+                        });
+                        
+                        brandPresence[brand] = totalPrompts > 0 ? Math.round((promptCount / totalPrompts) * 100 * 100) / 100 : 0;
+                    });
+                    
                     return {
                         brandName,
                         website: website || '',
                         topics,
                         competitors,
+                        promptCount,
                         suggestedPrompts: parsedData.suggestedPrompts,
-                        brandTerms: parsedData.brandTerms
+                        brandTerms: parsedData.brandTerms,
+                        brandPresence
                     };
                 } catch (error) {
                     throw new Error(`Failed to generate AI Visibility Research: ${error.message}`);
@@ -6396,7 +6422,24 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                 // Show results container
                 allDOMElements.resultsContainer.classList.remove('hidden');
                 
-                const { brandName, website, topics, competitors, suggestedPrompts, brandTerms } = data;
+                const { brandName, website, topics, competitors, suggestedPrompts, brandTerms, brandPresence } = data;
+                
+                // Helper function to check if prompt is branded
+                const isPromptBranded = (prompt) => {
+                    const promptLower = prompt.toLowerCase();
+                    const allBrands = [brandName, ...competitors];
+                    
+                    for (const brand of allBrands) {
+                        const brandLower = brand.toLowerCase();
+                        const brandTermsLower = (brandTerms[brand] || []).map(term => term.toLowerCase());
+                        const allBrandTerms = [brandLower, ...brandTermsLower];
+                        
+                        if (allBrandTerms.some(term => promptLower.includes(term))) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
                 
                 // Create dashboard HTML
                 let dashboardHTML = '<div id="ai-visibility-dashboard" class="space-y-6">';
@@ -6411,22 +6454,73 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                 }
                 dashboardHTML += `<div>Topics: <span class="text-[var(--text-primary)]">${topics.join(', ')}</span></div>`;
                 dashboardHTML += `<div>Competitors: <span class="text-[var(--text-primary)]">${competitors.join(', ')}</span></div>`;
+                dashboardHTML += `<div>Total Prompts: <span class="text-[var(--text-primary)]">${suggestedPrompts?.length || 0}</span></div>`;
                 dashboardHTML += `</div>`;
                 dashboardHTML += '</div>';
                 
-                // Suggested Prompts Section
+                // AI Visibility Results Section (show before prompts)
+                if (brandPresence) {
+                    dashboardHTML += '<div class="mb-6">';
+                    dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">AI Visibility Results</h4>';
+                    dashboardHTML += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                    dashboardHTML += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+                    
+                    // Show main brand first with highlight
+                    const mainBrandPercent = brandPresence[brandName] || 0;
+                    dashboardHTML += '<div class="bg-[var(--text-accent)]/10 border-2 border-[var(--text-accent)] rounded-lg p-4">';
+                    dashboardHTML += `<div class="font-semibold text-[var(--text-primary)] mb-1">${brandName} (Your Brand)</div>`;
+                    dashboardHTML += `<div class="text-2xl font-bold text-[var(--text-accent)]">${mainBrandPercent}%</div>`;
+                    dashboardHTML += `<div class="text-xs text-[var(--text-secondary)] mt-1">${Math.round((mainBrandPercent / 100) * (suggestedPrompts?.length || 0))} of ${suggestedPrompts?.length || 0} prompts</div>`;
+                    dashboardHTML += '</div>';
+                    
+                    // Show competitors
+                    competitors.forEach(competitor => {
+                        const competitorPercent = brandPresence[competitor] || 0;
+                        dashboardHTML += '<div class="bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg p-4">';
+                        dashboardHTML += `<div class="font-semibold text-[var(--text-primary)] mb-1">${competitor}</div>`;
+                        dashboardHTML += `<div class="text-2xl font-bold text-[var(--text-primary)]">${competitorPercent}%</div>`;
+                        dashboardHTML += `<div class="text-xs text-[var(--text-secondary)] mt-1">${Math.round((competitorPercent / 100) * (suggestedPrompts?.length || 0))} of ${suggestedPrompts?.length || 0} prompts</div>`;
+                        dashboardHTML += '</div>';
+                    });
+                    
+                    dashboardHTML += '</div>';
+                    dashboardHTML += '</div>';
+                    dashboardHTML += '</div>';
+                }
+                
+                // Suggested Prompts Section - Table Format
                 dashboardHTML += '<div class="mb-6">';
                 dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Suggested Prompts to Track</h4>';
                 if (suggestedPrompts && suggestedPrompts.length > 0) {
-                    dashboardHTML += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
-                    dashboardHTML += '<ul class="space-y-2">';
+                    dashboardHTML += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg overflow-hidden">';
+                    dashboardHTML += '<div class="overflow-x-auto">';
+                    dashboardHTML += '<table class="w-full">';
+                    dashboardHTML += '<thead class="bg-[var(--bg-input)] border-b border-[var(--border-primary)]">';
+                    dashboardHTML += '<tr>';
+                    dashboardHTML += '<th class="px-4 py-3 text-left text-sm font-semibold text-[var(--text-primary)]">#</th>';
+                    dashboardHTML += '<th class="px-4 py-3 text-left text-sm font-semibold text-[var(--text-primary)]">Prompt</th>';
+                    dashboardHTML += '<th class="px-4 py-3 text-left text-sm font-semibold text-[var(--text-primary)]">Type</th>';
+                    dashboardHTML += '</tr>';
+                    dashboardHTML += '</thead>';
+                    dashboardHTML += '<tbody>';
+                    
                     suggestedPrompts.forEach((prompt, idx) => {
-                        dashboardHTML += `<li class="flex items-start gap-2">`;
-                        dashboardHTML += `<span class="text-[var(--text-accent)] font-semibold">${idx + 1}.</span>`;
-                        dashboardHTML += `<span class="text-[var(--text-primary)]">${prompt}</span>`;
-                        dashboardHTML += `</li>`;
+                        const isBranded = isPromptBranded(prompt);
+                        const rowClass = idx % 2 === 0 ? 'bg-[var(--bg-container)]' : 'bg-[var(--bg-input)]';
+                        dashboardHTML += `<tr class="${rowClass} border-b border-[var(--border-primary)]">`;
+                        dashboardHTML += `<td class="px-4 py-3 text-sm text-[var(--text-primary)]">${idx + 1}</td>`;
+                        dashboardHTML += `<td class="px-4 py-3 text-sm text-[var(--text-primary)]">${prompt}</td>`;
+                        if (isBranded) {
+                            dashboardHTML += `<td class="px-4 py-3"><span class="px-2 py-1 rounded-md text-xs font-semibold bg-[#0284c7]/20 text-[#0284c7] border border-[#0284c7]/30">Branded</span></td>`;
+                        } else {
+                            dashboardHTML += `<td class="px-4 py-3"><span class="px-2 py-1 rounded-md text-xs font-semibold bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/30">Non-Branded</span></td>`;
+                        }
+                        dashboardHTML += '</tr>';
                     });
-                    dashboardHTML += '</ul>';
+                    
+                    dashboardHTML += '</tbody>';
+                    dashboardHTML += '</table>';
+                    dashboardHTML += '</div>';
                     dashboardHTML += '</div>';
                 } else {
                     dashboardHTML += '<div class="bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg p-4 text-[var(--text-secondary)]">No suggested prompts generated.</div>';
@@ -7832,7 +7926,25 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                 script.onload = () => {
                     try {
                         const workbook = XLSX.utils.book_new();
-                        const { brandName, website, topics, competitors, suggestedPrompts, brandTerms } = data || {};
+                        const { brandName, website, topics, competitors, suggestedPrompts, brandTerms, brandPresence, promptCount } = data || {};
+
+                        // Helper function to check if prompt is branded
+                        const isPromptBranded = (prompt) => {
+                            const promptLower = prompt.toLowerCase();
+                            const allBrands = [brandName, ...(competitors || [])];
+                            
+                            for (const brand of allBrands) {
+                                if (!brand) continue;
+                                const brandLower = brand.toLowerCase();
+                                const brandTermsLower = ((brandTerms && brandTerms[brand]) || []).map(term => term.toLowerCase());
+                                const allBrandTerms = [brandLower, ...brandTermsLower];
+                                
+                                if (allBrandTerms.some(term => promptLower.includes(term))) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        };
 
                         // Sheet 1: Summary
                         const summary = [
@@ -7840,19 +7952,36 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                             ['Website', website || 'N/A'],
                             ['Topics', topics && topics.length > 0 ? topics.join(', ') : 'N/A'],
                             ['Competitors', competitors && competitors.length > 0 ? competitors.join(', ') : 'N/A'],
+                            ['Prompt Count Requested', promptCount || suggestedPrompts?.length || 0],
                             ['Suggested Prompts Count', suggestedPrompts ? suggestedPrompts.length : 0],
                             ['Brands with Terms', brandTerms ? Object.keys(brandTerms).length : 0]
                         ];
+                        
+                        // Add brand presence percentages to summary
+                        if (brandPresence) {
+                            summary.push(['', '']);
+                            summary.push(['Brand Presence Percentages', '']);
+                            if (brandPresence[brandName] !== undefined) {
+                                summary.push([`${brandName} (Your Brand)`, `${brandPresence[brandName]}%`]);
+                            }
+                            (competitors || []).forEach(competitor => {
+                                if (brandPresence[competitor] !== undefined) {
+                                    summary.push([competitor, `${brandPresence[competitor]}%`]);
+                                }
+                            });
+                        }
+                        
                         XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summary), 'Summary');
 
-                        // Sheet 2: Suggested Prompts
-                        const promptRows = [['#', 'Suggested Prompt']];
+                        // Sheet 2: Suggested Prompts with Type
+                        const promptRows = [['#', 'Suggested Prompt', 'Type']];
                         if (suggestedPrompts && suggestedPrompts.length > 0) {
                             suggestedPrompts.forEach((prompt, idx) => {
-                                promptRows.push([idx + 1, prompt]);
+                                const isBranded = isPromptBranded(prompt);
+                                promptRows.push([idx + 1, prompt, isBranded ? 'Branded' : 'Non-Branded']);
                             });
                         } else {
-                            promptRows.push(['N/A', 'No prompts generated']);
+                            promptRows.push(['N/A', 'No prompts generated', 'N/A']);
                         }
                         XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(promptRows), 'Suggested Prompts');
 
@@ -8473,6 +8602,7 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                         'website': 'avrWebsite',
                         'topics': 'avrTopics',
                         'competitors': 'avrCompetitors',
+                        'promptCount': 'avrPromptCount',
                         'model': 'avrModelSelect'
                     }
                 };
@@ -8899,6 +9029,7 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                         const website = getInputValue('avrWebsite')?.trim() || '';
                         const topics = getCleanedList('avrTopics').slice(0, 3);
                         const competitors = getCleanedList('avrCompetitors').slice(0, 4);
+                        const promptCount = Math.max(25, Math.min(100, parseInt(getInputValue('avrPromptCount')) || 25));
                         const model = getInputValue('avrModelSelect') || 'gpt-3.5-turbo';
                         if (!brandName) throw new Error('Please enter a brand name.');
                         if (!topics || topics.length === 0) throw new Error('Please enter at least one topic.');
@@ -8908,6 +9039,7 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                             website,
                             topics,
                             competitors,
+                            promptCount,
                             model
                         };
                         break;
