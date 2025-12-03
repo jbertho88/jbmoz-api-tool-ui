@@ -4762,28 +4762,35 @@ ${resultsByUrl[url].summary}`;
                 const { brandName, website, topics, competitors, model } = params;
                 
                 // Build the prompt
-                const prompt = `Pretend you are an SEO / GEO analyst and looking to create an AI Visibility dashboard. Your main brand is ${brandName}${website ? ` and website is ${website}` : ''}.
+                const prompt = `You are an SEO / GEO analyst creating an AI Visibility dashboard. 
 
-Here are the topics my brand is in: ${topics.join(', ')}
+Main brand: ${brandName}${website ? ` (Website: ${website})` : ''}
+Topics: ${topics.join(', ')}
+Competitor brands: ${competitors.join(', ')}
 
-Here are the competitor brands: ${competitors.join(', ')}
+TASKS:
 
-Return the following:
+1. Generate exactly 25 suggested search prompts based on the topics. These should be actual search queries users might type related to these topics.
 
-1. Generate exactly 25 suggested prompts to track based on the topics provided. These prompts should be relevant search queries that users might ask related to these topics.
+2. For "${brandName}"${website ? ` (visit ${website} conceptually)` : ''}, provide 5-15 specific product names, model names, and sub-brand names. Examples: If the brand is "Bose", you might include "QuietComfort", "SoundLink", "Bose 700", "Bose Sport Earbuds", etc. These should be REAL products/models this brand actually offers.
 
-2. For the main brand "${brandName}"${website ? ` (website: ${website})` : ''}, provide a list of product names and sub-brand names that are associated with this brand. Research and identify actual products and sub-brands that this company offers.
+3. For each competitor brand, provide 5-15 specific product names, model names, and sub-brand names for that competitor.
 
-3. For each competitor brand, provide a list of product names and sub-brand names associated with that competitor brand.
+IMPORTANT: 
+- Do NOT return empty arrays. You MUST provide actual product/model names for each brand.
+- Use your knowledge of these brands to identify their actual products and models.
+- For each brand, include at least 5 product or model names.
 
-Return ONLY valid JSON in this format:
+Return ONLY valid JSON in this exact format (replace with actual data):
 {
-  "suggestedPrompts": ["prompt 1", "prompt 2", "prompt 3", ... (exactly 25 prompts)],
+  "suggestedPrompts": ["best wireless earbuds for gym", "how to choose wireless earbuds", "wireless earbuds with noise cancellation", ... (exactly 25 prompts total)],
   "brandTerms": {
-    "${brandName}": ["product1", "product2", "sub-brand1", ...],
-    ${competitors.map(c => `"${c}": ["product1", "product2", "sub-brand1", ...]`).join(',\n    ')}
+    "${brandName}": ["EAH-AZ60", "EAH-AZ40", "EAH-AZ70", "R1", "SL-G700", ... (5-15 actual product/model names)],
+    ${competitors.map(c => `"${c}": ["QuietComfort 45", "SoundLink", "Bose 700", ... (5-15 actual product/model names for ${c})]`).join(',\n    ')}
   }
-}`;
+}
+
+CRITICAL: You MUST provide actual product and model names for each brand. Do not return empty arrays. Use your knowledge of these brands' actual products.`;
 
                 allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Generating AI Visibility suggestions...</span>';
                 
@@ -4827,6 +4834,16 @@ Return ONLY valid JSON in this format:
                     // Ensure we have the structure
                     if (!parsedData.suggestedPrompts) parsedData.suggestedPrompts = [];
                     if (!parsedData.brandTerms) parsedData.brandTerms = {};
+                    
+                    // Ensure all brands are present in brandTerms (even if empty)
+                    if (!parsedData.brandTerms[brandName]) {
+                        parsedData.brandTerms[brandName] = [];
+                    }
+                    competitors.forEach(competitor => {
+                        if (!parsedData.brandTerms[competitor]) {
+                            parsedData.brandTerms[competitor] = [];
+                        }
+                    });
                     
                     return {
                         brandName,
