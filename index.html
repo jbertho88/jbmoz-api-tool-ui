@@ -878,6 +878,7 @@
                     <option value="keywordTargetingAnalysis">Keyword Targeting Analysis</option>
                     <option value="contentClusterAnalysis">Content Cluster Analysis</option>
                     <option value="contentClustersIdentification">Content Clusters Identification</option>
+                    <option value="aiVisibilityResearch">AI Visibility Research</option>
                 </optgroup>
                 <optgroup label="Website Research">
                     <option value="siteMetrics">Fetch Site Metrics</option>
@@ -925,6 +926,7 @@
                 <fieldset id="keywordTargetingAnalysisInputs" class="input-section space-y-4"><legend class="sr-only">Keyword Targeting Analysis Inputs</legend></fieldset>
                 <fieldset id="contentClusterAnalysisInputs" class="input-section space-y-4"><legend class="sr-only">Content Cluster Analysis Inputs</legend></fieldset>
                 <fieldset id="contentClustersIdentificationInputs" class="input-section space-y-4"><legend class="sr-only">Content Clusters Identification Inputs</legend></fieldset>
+                <fieldset id="aiVisibilityResearchInputs" class="input-section space-y-4"><legend class="sr-only">AI Visibility Research Inputs</legend></fieldset>
             </div>
             <div class="mt-8 text-center">
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -1625,6 +1627,21 @@
                     createLabel('Content Clusters (Optional)') +
                     createTextarea('cciContentClusters', 'Enter seed topics/clusters for content assignment, one per line (e.g., "Digital Marketing", "SEO Best Practices"). Leave blank to auto-generate clusters.') +
                     createDescription('If provided, pages will be mapped to these clusters. If blank, clusters will be auto-generated from the content.');
+                document.getElementById('aiVisibilityResearchInputs').innerHTML = 
+                    createDescription('Generate AI Visibility dashboard suggestions including prompts to track and brand/product terms for your brand and competitors.') +
+                    createLabel('Brand Name') +
+                    createTextarea('avrBrandName', 'Enter your brand name (e.g., Bose)') +
+                    createLabel('Website Domain (Optional)') +
+                    createTextarea('avrWebsite', 'Enter your website domain (e.g., bose.com)') +
+                    createLabel('Topics to Cover (up to 3)') +
+                    createTextarea('avrTopics', 'Enter topics your brand is in, one per line (e.g., Audio Equipment, Noise Cancelling Headphones)') +
+                    createDescription('Enter up to 3 topics, one per line.') +
+                    createLabel('Competitors (up to 4)') +
+                    createTextarea('avrCompetitors', 'Enter competitor brand names, one per line (e.g., Sony, Sennheiser)') +
+                    createDescription('Enter up to 4 competitor brand names, one per line.') +
+                    createLabel('OpenAI Model') +
+                    createSelect('avrModelSelect', modelOptions) +
+                    createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive.');
             };
             
             const readmeContent = `
@@ -2753,7 +2770,8 @@
                     (selectedMethod === 'competitiveAnalysis' && document.getElementById('caTestMode')?.checked) ||
                     (selectedMethod === 'keywordTargetingAnalysis' && document.getElementById('ktaTestMode')?.checked) ||
                     (selectedMethod === 'contentClusterAnalysis' && document.getElementById('ccaTestMode')?.checked) ||
-                    (selectedMethod === 'contentClustersIdentification' && document.getElementById('cciTestMode')?.checked);
+                    (selectedMethod === 'contentClustersIdentification' && document.getElementById('cciTestMode')?.checked) ||
+                    (selectedMethod === 'aiVisibilityResearch' && false); // No test mode for AI Visibility Research
                 
                 const apiKey = allDOMElements.apiKeyInput.value.trim();
                 if (!testModeEnabled && !apiKey) {
@@ -2885,6 +2903,31 @@
                         currentOriginalParams = payload.params;
                         currentMethod = selectedMethod;
                         showContentClustersIdentificationDashboard(cciData);
+                        updateSaveButtonVisibility();
+                        autoSaveToHistory();
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            displayError(error.message);
+                        }
+                    } finally {
+                        resetSubmitButton();
+                        inFlightRequest = null;
+                    }
+                    return;
+                }
+                if (selectedMethod === 'aiVisibilityResearch') {
+                    try {
+                        const openaiApiKey = allDOMElements.openaiApiKeyInput.value.trim();
+                        if (!openaiApiKey) {
+                            displayError('Please provide an OpenAI API Key for AI Visibility Research.');
+                            resetSubmitButton();
+                            return;
+                        }
+                        const avrData = await runAIVisibilityResearch(openaiApiKey, payload.params, PROXY_URL, inFlightRequest);
+                        currentResultsData = avrData;
+                        currentOriginalParams = payload.params;
+                        currentMethod = selectedMethod;
+                        showAIVisibilityDashboard(avrData);
                         updateSaveButtonVisibility();
                         autoSaveToHistory();
                     } catch (error) {
@@ -4714,6 +4757,86 @@ ${resultsByUrl[url].summary}`;
                 };
             }
 
+            async function runAIVisibilityResearch(openaiApiKey, params, proxyUrl, inFlightRequest) {
+                const { brandName, website, topics, competitors, model } = params;
+                
+                // Build the prompt
+                const prompt = `Pretend you are an SEO / GEO analyst and looking to create an AI Visibility dashboard. Your main brand is ${brandName}${website ? ` and website is ${website}` : ''}.
+
+Here are the topics my brand is in: ${topics.join(', ')}
+
+Here are the competitor brands: ${competitors.join(', ')}
+
+Return the following:
+
+-- Suggested prompts to track based on my topics
+-- Suggested product/brand related terms to track for each of these brands (e.g. If I put "Bose", I would expect "QuietComfort to come up as a product/sub-brand term")
+
+Return ONLY valid JSON in this format:
+{
+  "suggestedPrompts": ["prompt 1", "prompt 2", "prompt 3"],
+  "brandTerms": {
+    "${brandName}": ["term1", "term2", "term3"],
+    ${competitors.map(c => `"${c}": ["term1", "term2", "term3"]`).join(',\n    ')}
+  }
+}`;
+
+                allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Generating AI Visibility suggestions...</span>';
+                
+                try {
+                    const response = await analyzeWithOpenAI({ analysisData: { prompt } }, openaiApiKey, proxyUrl, model);
+                    
+                    // Parse the response
+                    let jsonStr = response.trim();
+                    if (jsonStr.includes('```json')) {
+                        jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+                    } else if (jsonStr.includes('```')) {
+                        jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+                    }
+                    
+                    let parsedData;
+                    try {
+                        parsedData = JSON.parse(jsonStr);
+                    } catch (e) {
+                        // Fallback: try to extract data from text response
+                        parsedData = {
+                            suggestedPrompts: [],
+                            brandTerms: {}
+                        };
+                        
+                        // Try to extract prompts
+                        const promptMatches = jsonStr.match(/suggested.*prompts?[:\[]([^\]]+)/i);
+                        if (promptMatches) {
+                            parsedData.suggestedPrompts = promptMatches[1].split(',').map(p => p.trim().replace(/["\[\]]/g, '')).filter(Boolean);
+                        }
+                        
+                        // Try to extract brand terms
+                        competitors.concat([brandName]).forEach(brand => {
+                            const brandRegex = new RegExp(`"${brand}"\\s*:\\s*\\[([^\\]]+)\\]`, 'i');
+                            const match = jsonStr.match(brandRegex);
+                            if (match) {
+                                parsedData.brandTerms[brand] = match[1].split(',').map(t => t.trim().replace(/["\[\]]/g, '')).filter(Boolean);
+                            }
+                        });
+                    }
+                    
+                    // Ensure we have the structure
+                    if (!parsedData.suggestedPrompts) parsedData.suggestedPrompts = [];
+                    if (!parsedData.brandTerms) parsedData.brandTerms = {};
+                    
+                    return {
+                        brandName,
+                        website: website || '',
+                        topics,
+                        competitors,
+                        suggestedPrompts: parsedData.suggestedPrompts,
+                        brandTerms: parsedData.brandTerms
+                    };
+                } catch (error) {
+                    throw new Error(`Failed to generate AI Visibility Research: ${error.message}`);
+                }
+            }
+
             function showKeywordTargetingDashboard(payload) {
                 // Hide regular view elements
                 allDOMElements.tableWrapper.classList.add('hidden');
@@ -6244,6 +6367,102 @@ ${resultsByUrl[url].summary}`;
                 }
             }
 
+            function showAIVisibilityDashboard(data) {
+                // Hide regular view elements
+                allDOMElements.tableWrapper.classList.add('hidden');
+                allDOMElements.filterBtn.classList.add('hidden');
+                
+                // Show results container
+                allDOMElements.resultsContainer.classList.remove('hidden');
+                
+                const { brandName, website, topics, competitors, suggestedPrompts, brandTerms } = data;
+                
+                // Create dashboard HTML
+                let dashboardHTML = '<div id="ai-visibility-dashboard" class="space-y-6">';
+                
+                // Header
+                dashboardHTML += '<div class="mb-6">';
+                dashboardHTML += '<h3 class="text-xl font-bold text-[var(--text-heading)] mb-2">AI Visibility Research Dashboard</h3>';
+                dashboardHTML += `<div class="text-sm text-[var(--text-secondary)]">`;
+                dashboardHTML += `<div>Brand: <span class="text-[var(--text-primary)] font-semibold">${brandName}</span></div>`;
+                if (website) {
+                    dashboardHTML += `<div>Website: <span class="text-[var(--text-primary)]">${website}</span></div>`;
+                }
+                dashboardHTML += `<div>Topics: <span class="text-[var(--text-primary)]">${topics.join(', ')}</span></div>`;
+                dashboardHTML += `<div>Competitors: <span class="text-[var(--text-primary)]">${competitors.join(', ')}</span></div>`;
+                dashboardHTML += `</div>`;
+                dashboardHTML += '</div>';
+                
+                // Suggested Prompts Section
+                dashboardHTML += '<div class="mb-6">';
+                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Suggested Prompts to Track</h4>';
+                if (suggestedPrompts && suggestedPrompts.length > 0) {
+                    dashboardHTML += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                    dashboardHTML += '<ul class="space-y-2">';
+                    suggestedPrompts.forEach((prompt, idx) => {
+                        dashboardHTML += `<li class="flex items-start gap-2">`;
+                        dashboardHTML += `<span class="text-[var(--text-accent)] font-semibold">${idx + 1}.</span>`;
+                        dashboardHTML += `<span class="text-[var(--text-primary)]">${prompt}</span>`;
+                        dashboardHTML += `</li>`;
+                    });
+                    dashboardHTML += '</ul>';
+                    dashboardHTML += '</div>';
+                } else {
+                    dashboardHTML += '<div class="bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg p-4 text-[var(--text-secondary)]">No suggested prompts generated.</div>';
+                }
+                dashboardHTML += '</div>';
+                
+                // Brand Terms Section
+                dashboardHTML += '<div class="mb-6">';
+                dashboardHTML += '<h4 class="font-bold text-lg text-[var(--text-primary)] mb-4">Suggested Brand Terms by Brand</h4>';
+                
+                // Show main brand first
+                if (brandTerms[brandName] && brandTerms[brandName].length > 0) {
+                    dashboardHTML += '<div class="mb-4">';
+                    dashboardHTML += `<h5 class="font-semibold text-md text-[var(--text-primary)] mb-2">${brandName} (Your Brand)</h5>`;
+                    dashboardHTML += '<div class="bg-[var(--bg-container)] border-2 border-[var(--text-accent)] rounded-lg p-4">';
+                    dashboardHTML += '<div class="flex flex-wrap gap-2">';
+                    brandTerms[brandName].forEach(term => {
+                        dashboardHTML += `<span class="px-3 py-1 bg-[var(--text-accent)]/10 border border-[var(--text-accent)] text-[var(--text-primary)] rounded-md text-sm">${term}</span>`;
+                    });
+                    dashboardHTML += '</div>';
+                    dashboardHTML += '</div>';
+                    dashboardHTML += '</div>';
+                }
+                
+                // Show competitors
+                competitors.forEach(competitor => {
+                    if (brandTerms[competitor] && brandTerms[competitor].length > 0) {
+                        dashboardHTML += '<div class="mb-4">';
+                        dashboardHTML += `<h5 class="font-semibold text-md text-[var(--text-primary)] mb-2">${competitor}</h5>`;
+                        dashboardHTML += '<div class="bg-[var(--bg-container)] border border-[var(--border-primary)] rounded-lg p-4">';
+                        dashboardHTML += '<div class="flex flex-wrap gap-2">';
+                        brandTerms[competitor].forEach(term => {
+                            dashboardHTML += `<span class="px-3 py-1 bg-[var(--bg-input)] border border-[var(--border-primary)] text-[var(--text-primary)] rounded-md text-sm">${term}</span>`;
+                        });
+                        dashboardHTML += '</div>';
+                        dashboardHTML += '</div>';
+                        dashboardHTML += '</div>';
+                    }
+                });
+                
+                // If no brand terms found
+                const hasAnyBrandTerms = Object.keys(brandTerms).some(brand => brandTerms[brand] && brandTerms[brand].length > 0);
+                if (!hasAnyBrandTerms) {
+                    dashboardHTML += '<div class="bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg p-4 text-[var(--text-secondary)]">No brand terms generated.</div>';
+                }
+                
+                dashboardHTML += '</div>';
+                dashboardHTML += '</div>';
+                
+                // Store JSON data and replace raw wrapper with dashboard
+                allDOMElements.rawCode.textContent = JSON.stringify(data, null, 2);
+                allDOMElements.rawWrapper.innerHTML = dashboardHTML;
+                allDOMElements.rawWrapper.classList.remove('hidden');
+                allDOMElements.viewDataBtn.textContent = 'View JSON';
+                allDOMElements.exportPdfBtn.classList.add('hidden');
+            }
+
             function showCompetitiveDashboard(data) {
                 // Hide regular view elements
                 allDOMElements.tableWrapper.classList.add('hidden');
@@ -7050,6 +7269,8 @@ ${resultsByUrl[url].summary}`;
         exportContentClusterAnalysisToCsv(currentResultsData);
     } else if (currentMethod === 'contentClustersIdentification' && currentResultsData) {
         exportContentClustersIdentificationToCsv(currentResultsData);
+    } else if (currentMethod === 'aiVisibilityResearch' && currentResultsData) {
+        exportAIVisibilityResearchToCsv(currentResultsData);
     } else if (currentResultsData) {
                     exportDataToCsv(currentResultsData, currentMethod, currentOriginalParams);
                 } else {
@@ -7584,14 +7805,74 @@ ${resultsByUrl[url].summary}`;
                 document.head.appendChild(script);
             }
 
+            function exportAIVisibilityResearchToCsv(data) {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                script.onload = () => {
+                    try {
+                        const workbook = XLSX.utils.book_new();
+                        const { brandName, website, topics, competitors, suggestedPrompts, brandTerms } = data || {};
+
+                        // Sheet 1: Summary
+                        const summary = [
+                            ['Brand Name', brandName || 'N/A'],
+                            ['Website', website || 'N/A'],
+                            ['Topics', topics && topics.length > 0 ? topics.join(', ') : 'N/A'],
+                            ['Competitors', competitors && competitors.length > 0 ? competitors.join(', ') : 'N/A'],
+                            ['Suggested Prompts Count', suggestedPrompts ? suggestedPrompts.length : 0],
+                            ['Brands with Terms', brandTerms ? Object.keys(brandTerms).length : 0]
+                        ];
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summary), 'Summary');
+
+                        // Sheet 2: Suggested Prompts
+                        const promptRows = [['#', 'Suggested Prompt']];
+                        if (suggestedPrompts && suggestedPrompts.length > 0) {
+                            suggestedPrompts.forEach((prompt, idx) => {
+                                promptRows.push([idx + 1, prompt]);
+                            });
+                        } else {
+                            promptRows.push(['N/A', 'No prompts generated']);
+                        }
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(promptRows), 'Suggested Prompts');
+
+                        // Sheet 3: Brand Terms
+                        const brandTermRows = [['Brand', 'Term']];
+                        if (brandTerms) {
+                            Object.keys(brandTerms).forEach(brand => {
+                                const terms = brandTerms[brand];
+                                if (terms && terms.length > 0) {
+                                    terms.forEach(term => {
+                                        brandTermRows.push([brand, term]);
+                                    });
+                                } else {
+                                    brandTermRows.push([brand, 'No terms generated']);
+                                }
+                            });
+                        }
+                        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(brandTermRows), 'Brand Terms');
+
+                        const dateStr = new Date().toISOString().split('T')[0];
+                        XLSX.writeFile(workbook, `ai-visibility-research-${dateStr}.xlsx`);
+                    } catch (error) {
+                        console.error('Export error:', error);
+                        displayError('Failed to export to Excel. Please try again.');
+                    }
+                };
+                script.onerror = () => {
+                    displayError('Failed to load Excel export library. Please try again.');
+                };
+                document.head.appendChild(script);
+            }
+
             function toggleDataView() {
                 // Handle multi-endpoint dashboards specially
-                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis' || currentMethod === 'contentClusterAnalysis' || currentMethod === 'contentClustersIdentification') {
+                if (currentMethod === 'competitiveAnalysis' || currentMethod === 'keywordTargetingAnalysis' || currentMethod === 'contentClusterAnalysis' || currentMethod === 'contentClustersIdentification' || currentMethod === 'aiVisibilityResearch') {
                     const dashboard = document.getElementById('competitive-dashboard');
                     const altDashboard = document.getElementById('keyword-targeting-dashboard');
                     const ccaDashboard = document.getElementById('content-cluster-dashboard');
                     const cciDashboard = document.getElementById('content-clusters-identification-dashboard');
-                    const activeDash = dashboard || altDashboard || ccaDashboard || cciDashboard;
+                    const avrDashboard = document.getElementById('ai-visibility-dashboard');
+                    const activeDash = dashboard || altDashboard || ccaDashboard || cciDashboard || avrDashboard;
                     const isDashboardVisible = activeDash && !activeDash.closest('.hidden');
                     
                     if (isDashboardVisible) {
@@ -7612,6 +7893,8 @@ ${resultsByUrl[url].summary}`;
                             showContentClusterDashboard(currentResultsData);
                         } else if (currentMethod === 'contentClustersIdentification') {
                             showContentClustersIdentificationDashboard(currentResultsData);
+                        } else if (currentMethod === 'aiVisibilityResearch') {
+                            showAIVisibilityDashboard(currentResultsData);
                         }
                         allDOMElements.viewDataBtn.textContent = 'View JSON';
                         allDOMElements.exportPdfBtn.classList.add('hidden');
@@ -7664,9 +7947,11 @@ ${resultsByUrl[url].summary}`;
                 const dashboard = document.getElementById('competitive-dashboard');
                 const ktaDashboard = document.getElementById('keyword-targeting-dashboard');
                 const ccaDashboard = document.getElementById('content-cluster-dashboard');
+                const avrDashboard = document.getElementById('ai-visibility-dashboard');
                 if (dashboard) dashboard.remove();
                 if (ktaDashboard) ktaDashboard.remove();
                 if (ccaDashboard) ccaDashboard.remove();
+                if (avrDashboard) avrDashboard.remove();
                 
                 // Reset "Reset" button back to "Clear Data" if it was changed
                 if (allDOMElements.clearDataBtn && allDOMElements.clearDataBtn.dataset.originalText) {
@@ -7722,6 +8007,8 @@ ${resultsByUrl[url].summary}`;
                 if (compDash) compDash.remove();
                 const ktaDash = document.getElementById('keyword-targeting-dashboard');
                 if (ktaDash) ktaDash.remove();
+                const avrDash = document.getElementById('ai-visibility-dashboard');
+                if (avrDash) avrDash.remove();
                 
                 // Reset "Reset" button back to "Clear Data" if it was changed
                 if (allDOMElements.clearDataBtn && allDOMElements.clearDataBtn.dataset.originalText) {
@@ -7759,6 +8046,8 @@ ${resultsByUrl[url].summary}`;
                         resultCount = Object.keys(currentResultsData).length;
                     } else if (currentMethod === 'keywordTargetingAnalysis' && currentResultsData.urls) {
                         resultCount = currentResultsData.urls.length;
+                    } else if (currentMethod === 'aiVisibilityResearch' && typeof currentResultsData === 'object') {
+                        resultCount = (currentResultsData.suggestedPrompts?.length || 0) + (Object.values(currentResultsData.brandTerms || {}).reduce((sum, terms) => sum + (terms?.length || 0), 0));
                     } else if (typeof currentResultsData === 'object') {
                         resultCount = Object.keys(currentResultsData).length;
                     }
@@ -8157,6 +8446,13 @@ ${resultsByUrl[url].summary}`;
                         'scope': 'cciScopeSelect',
                         'model': 'cciModelSelect',
                         'contentClusters': 'cciContentClusters'
+                    },
+                    'aiVisibilityResearch': {
+                        'brandName': 'avrBrandName',
+                        'website': 'avrWebsite',
+                        'topics': 'avrTopics',
+                        'competitors': 'avrCompetitors',
+                        'model': 'avrModelSelect'
                     }
                 };
 
@@ -8348,6 +8644,8 @@ ${resultsByUrl[url].summary}`;
                     showContentClusterDashboard(currentResultsData);
                 } else if (currentMethod === 'contentClustersIdentification') {
                     showContentClustersIdentificationDashboard(currentResultsData);
+                } else if (currentMethod === 'aiVisibilityResearch') {
+                    showAIVisibilityDashboard(currentResultsData);
                 } else if (currentMethod === 'competitiveAnalysis') {
                     showCompetitiveDashboard(currentResultsData);
                 } else if (currentMethod === 'keywordTargetingAnalysis') {
@@ -8573,6 +8871,24 @@ ${resultsByUrl[url].summary}`;
                             contentClusters: contentClusters && contentClusters.length > 0 ? contentClusters : null
                         };
                         console.log('[Content Clusters Identification] Payload params.model:', payload.params.model);
+                        break;
+                    }
+                    case 'aiVisibilityResearch': {
+                        const brandName = getInputValue('avrBrandName')?.trim();
+                        const website = getInputValue('avrWebsite')?.trim() || '';
+                        const topics = getCleanedList('avrTopics').slice(0, 3);
+                        const competitors = getCleanedList('avrCompetitors').slice(0, 4);
+                        const model = getInputValue('avrModelSelect') || 'gpt-3.5-turbo';
+                        if (!brandName) throw new Error('Please enter a brand name.');
+                        if (!topics || topics.length === 0) throw new Error('Please enter at least one topic.');
+                        if (!competitors || competitors.length === 0) throw new Error('Please enter at least one competitor.');
+                        payload.params = {
+                            brandName,
+                            website,
+                            topics,
+                            competitors,
+                            model
+                        };
                         break;
                     }
                     default: throw new Error('Invalid method selected.');
