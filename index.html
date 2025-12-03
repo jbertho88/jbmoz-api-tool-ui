@@ -1642,6 +1642,11 @@
                     createDescription('Enter up to 4 competitor brand names, one per line.') +
                     createNumberInput('avrPromptCount', 25, 25, 100, 'Number of Prompt Suggestions') +
                     createDescription('Enter the number of prompt suggestions to generate (25-100). Default is 25.') +
+                    '<div class="flex items-center gap-2 mt-4">' +
+                    '<input type="checkbox" id="avrAnalyzeResponses" class="w-4 h-4 text-[var(--text-accent)] bg-[var(--bg-input-secondary)] border-[var(--border-secondary)] rounded focus:ring-[var(--text-accent)]">' +
+                    '<label for="avrAnalyzeResponses" class="text-sm text-[var(--text-primary)]">Analyze AI Responses for Brand Presence</label>' +
+                    '</div>' +
+                    createDescription('<strong>Note:</strong> Enabling this will analyze each prompt\'s AI response to calculate brand visibility percentages. This adds significant API calls and processing time (one call per prompt).') +
                     createLabel('OpenAI Model') +
                     createSelect('avrModelSelect', modelOptions) +
                     createDescription('<strong>Model Selection:</strong> GPT-3.5 Turbo is recommended for most use cases (~90% cost savings). GPT-4o mini provides better quality at moderate cost. GPT-4o offers the best quality but is more expensive.');
@@ -4761,7 +4766,7 @@ ${resultsByUrl[url].summary}`;
             }
 
             async function runAIVisibilityResearch(openaiApiKey, params, proxyUrl, inFlightRequest) {
-                const { brandName, website, topics, competitors, promptCount = 25, model } = params;
+                const { brandName, website, topics, competitors, promptCount = 25, analyzeResponses = false, model } = params;
                 
                 // Build the prompt
                 const prompt = `You are an SEO / GEO analyst creating an AI Visibility dashboard. 
@@ -4847,27 +4852,74 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                         }
                     });
                     
-                    // Calculate brand presence in prompts
+                    // Get AI responses for each prompt to check brand presence (only if enabled)
+                    const promptResponses = [];
                     const allBrands = [brandName, ...competitors];
-                    const brandPresence = {};
-                    const totalPrompts = parsedData.suggestedPrompts.length;
+                    let brandPresence = null;
                     
-                    allBrands.forEach(brand => {
-                        const brandLower = brand.toLowerCase();
-                        const brandTermsLower = (parsedData.brandTerms[brand] || []).map(term => term.toLowerCase());
-                        const allBrandTerms = [brandLower, ...brandTermsLower];
+                    if (analyzeResponses && parsedData.suggestedPrompts && parsedData.suggestedPrompts.length > 0) {
+                        allDOMElements.submitBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Analyzing AI responses for brand presence...</span>';
                         
-                        let promptCount = 0;
-                        parsedData.suggestedPrompts.forEach(prompt => {
-                            const promptLower = prompt.toLowerCase();
-                            // Check if prompt contains brand name or any brand term
-                            if (allBrandTerms.some(term => promptLower.includes(term))) {
-                                promptCount++;
+                        // Process prompts in batches to avoid rate limits
+                        await processInBatches(
+                            parsedData.suggestedPrompts,
+                            3, // Process 3 at a time
+                            2000, // 2 second delay between items
+                            async (prompt, index) => {
+                                try {
+                                    allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Analyzing AI responses... ${index + 1}/${parsedData.suggestedPrompts.length}</span>`;
+                                    
+                                    // Simulate what an AI assistant would respond to this prompt
+                                    const responsePrompt = `Answer this user query as an AI assistant would: "${prompt}"\n\nProvide a helpful, informative response.`;
+                                    
+                                    const aiResponse = await analyzeWithOpenAI(
+                                        { analysisData: { prompt: responsePrompt } }, 
+                                        openaiApiKey, 
+                                        proxyUrl, 
+                                        model
+                                    );
+                                    
+                                    promptResponses.push({
+                                        prompt: prompt,
+                                        response: aiResponse.trim()
+                                    });
+                                } catch (error) {
+                                    console.warn(`Failed to get AI response for prompt "${prompt}":`, error);
+                                    // Continue with empty response if API call fails
+                                    promptResponses.push({
+                                        prompt: prompt,
+                                        response: ''
+                                    });
+                                }
+                            },
+                            (processed, total) => {
+                                allDOMElements.submitBtn.innerHTML = `<div class="spinner"></div><span class="ml-2">Analyzing AI responses... ${processed}/${total}</span>`;
                             }
-                        });
+                        );
                         
-                        brandPresence[brand] = totalPrompts > 0 ? Math.round((promptCount / totalPrompts) * 100 * 100) / 100 : 0;
-                    });
+                        // Calculate brand presence based on AI responses
+                        brandPresence = {};
+                        const totalPrompts = promptResponses.length;
+                        
+                        allBrands.forEach(brand => {
+                            const brandLower = brand.toLowerCase();
+                            const brandTermsLower = (parsedData.brandTerms[brand] || []).map(term => term.toLowerCase());
+                            const allBrandTerms = [brandLower, ...brandTermsLower];
+                            
+                            let responseCount = 0;
+                            promptResponses.forEach(({ response }) => {
+                                if (response) {
+                                    const responseLower = response.toLowerCase();
+                                    // Check if response contains brand name or any brand term
+                                    if (allBrandTerms.some(term => responseLower.includes(term))) {
+                                        responseCount++;
+                                    }
+                                }
+                            });
+                            
+                            brandPresence[brand] = totalPrompts > 0 ? Math.round((responseCount / totalPrompts) * 100 * 100) / 100 : 0;
+                        });
+                    }
                     
                     return {
                         brandName,
@@ -4875,9 +4927,11 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                         topics,
                         competitors,
                         promptCount,
+                        analyzeResponses,
                         suggestedPrompts: parsedData.suggestedPrompts,
                         brandTerms: parsedData.brandTerms,
-                        brandPresence
+                        brandPresence: brandPresence || null,
+                        promptResponses: analyzeResponses ? promptResponses : [] // Store responses only if analysis was enabled
                     };
                 } catch (error) {
                     throw new Error(`Failed to generate AI Visibility Research: ${error.message}`);
@@ -7926,7 +7980,7 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                 script.onload = () => {
                     try {
                         const workbook = XLSX.utils.book_new();
-                        const { brandName, website, topics, competitors, suggestedPrompts, brandTerms, brandPresence, promptCount } = data || {};
+                        const { brandName, website, topics, competitors, suggestedPrompts, brandTerms, brandPresence, promptCount, promptResponses } = data || {};
 
                         // Helper function to check if prompt is branded
                         const isPromptBranded = (prompt) => {
@@ -8000,6 +8054,15 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                             });
                         }
                         XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(brandTermRows), 'Brand Terms');
+
+                        // Sheet 4: Prompt Responses (if available)
+                        if (promptResponses && promptResponses.length > 0) {
+                            const responseRows = [['#', 'Prompt', 'AI Response']];
+                            promptResponses.forEach((item, idx) => {
+                                responseRows.push([idx + 1, item.prompt, item.response || 'No response']);
+                            });
+                            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(responseRows), 'Prompt Responses');
+                        }
 
                         const dateStr = new Date().toISOString().split('T')[0];
                         XLSX.writeFile(workbook, `ai-visibility-research-${dateStr}.xlsx`);
@@ -8603,6 +8666,7 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                         'topics': 'avrTopics',
                         'competitors': 'avrCompetitors',
                         'promptCount': 'avrPromptCount',
+                        'analyzeResponses': 'avrAnalyzeResponses',
                         'model': 'avrModelSelect'
                     }
                 };
@@ -9030,6 +9094,7 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                         const topics = getCleanedList('avrTopics').slice(0, 3);
                         const competitors = getCleanedList('avrCompetitors').slice(0, 4);
                         const promptCount = Math.max(25, Math.min(100, parseInt(getInputValue('avrPromptCount')) || 25));
+                        const analyzeResponses = document.getElementById('avrAnalyzeResponses')?.checked || false;
                         const model = getInputValue('avrModelSelect') || 'gpt-3.5-turbo';
                         if (!brandName) throw new Error('Please enter a brand name.');
                         if (!topics || topics.length === 0) throw new Error('Please enter at least one topic.');
@@ -9040,6 +9105,7 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
                             topics,
                             competitors,
                             promptCount,
+                            analyzeResponses,
                             model
                         };
                         break;
