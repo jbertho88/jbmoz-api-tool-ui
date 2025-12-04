@@ -2124,7 +2124,15 @@
             `;
             
             const setupEventListeners = () => {
-                allDOMElements.readmeBtn.addEventListener('click', () => allDOMElements.readmeModal.classList.remove('hidden'));
+                let readmeContentLoaded = false;
+                allDOMElements.readmeBtn.addEventListener('click', () => {
+                    // Lazy load readme content only when modal is opened for the first time
+                    if (!readmeContentLoaded) {
+                        allDOMElements.readmeModalContent.innerHTML = readmeContent;
+                        readmeContentLoaded = true;
+                    }
+                    allDOMElements.readmeModal.classList.remove('hidden');
+                });
                 allDOMElements.closeReadmeBtn.addEventListener('click', () => allDOMElements.readmeModal.classList.add('hidden'));
                 allDOMElements.readmeModal.addEventListener('click', (e) => {
                     if (e.target === allDOMElements.readmeModal) allDOMElements.readmeModal.classList.add('hidden');
@@ -9305,7 +9313,7 @@ CRITICAL: You MUST provide actual product and model names for each brand. Do not
             }
 
             // Initial calls
-            allDOMElements.readmeModalContent.innerHTML = readmeContent;
+            // Note: readmeContent is now lazy-loaded when the modal is opened (see setupEventListeners)
             populateInputs();
             setupEventListeners();
             loadApiKey();
